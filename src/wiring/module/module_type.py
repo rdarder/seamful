@@ -1,6 +1,6 @@
 from typing import Any, Iterable
 
-from .resource import Resource, ResourceType
+from wiring.resource import Resource, ResourceType
 
 
 class ModuleType(type):
@@ -19,7 +19,3 @@ class ModuleType(type):
 
     def _list_resources(self) -> Iterable[Resource]:
         return self._resources_by_name.values()
-
-
-class Module(metaclass=ModuleType):
-    pass

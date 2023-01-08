@@ -1,14 +1,15 @@
 from unittest import TestCase
 
+from wiring.module import Module
+from wiring.provider import Provider
+from wiring.resource import Resource
+
 from .container import (
     Container,
     UnknownResource,
     ModuleAlreadyRegistered,
     ProviderModuleMismatch,
 )
-from .module import Module
-from .provider import Provider
-from .resource import Resource
 
 
 class TestContainer(TestCase):

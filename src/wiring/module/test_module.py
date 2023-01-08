@@ -1,7 +1,8 @@
 from unittest import TestCase
 
-from .module import Module
-from .resource import Resource
+from wiring.resource import Resource
+
+from . import Module
 
 
 class TestModule(TestCase):
