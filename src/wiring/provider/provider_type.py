@@ -1,11 +1,19 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING, get_args, Generic, TypeVar
+from typing import Any, Generic, get_args
 
-from .resource import ResourceType
+from wiring.module import ModuleType
+from wiring.resource import ResourceType
 
-if TYPE_CHECKING:
-    from .module import ModuleType
+from .errors import (
+    MissingProviderMethod,
+    ProviderMethodNotCallable,
+    MissingProviderModuleAnnotation,
+    InvalidProviderModuleAnnotation,
+    CannotProvideBaseModule,
+    ProviderMethodNotFound,
+    UnrelatedResource,
+)
 
 
 class ProviderType(type):
@@ -31,7 +39,7 @@ class ProviderType(type):
             self._provider_methods_by_resource[resource] = provider_method
 
     def _determine_module_from_generic_argument(self, dct) -> ModuleType:
-        from .module import ModuleType, Module  # circular import
+        from wiring.module import ModuleType, Module  # circular import
 
         bases = dct.get("__orig_bases__")
         if bases is None or len(bases) == 0:
@@ -59,51 +67,3 @@ class ProviderMethod:
     method: callable
     provider: ProviderType
     resource: ResourceType
-
-
-class MissingProviderMethod(Exception):
-    def __init__(self, resource: ResourceType, provider: ProviderType):
-        self.resource = resource
-        self.provider = provider
-
-
-class ProviderMethodNotCallable(Exception):
-    def __init__(self, resource: ResourceType, provider: ProviderType):
-        self.resource = resource
-        self.provider = provider
-
-
-class MissingProviderModuleAnnotation(Exception):
-    def __init__(self, provider: ProviderType):
-        self.provider = provider
-
-
-class InvalidProviderModuleAnnotation(Exception):
-    def __init__(self, provider: ProviderType, invalid_module: Any):
-        self.provider = provider
-        self.invalid_module = invalid_module
-
-
-class CannotProvideBaseModule(Exception):
-    def __init__(self, provider: ProviderType):
-        self.provider = provider
-
-
-class ProviderMethodNotFound(Exception):
-    # This means there's a problem with the implementation than a user error.
-    def __init__(self, provider: ProviderType, resource: ResourceType):
-        self.provider = provider
-        self.resource = resource
-
-
-class UnrelatedResource(Exception):
-    def __init__(self, provider: ProviderType, resource: ResourceType):
-        self.provider = provider
-        self.resource = resource
-
-
-M = TypeVar("M")
-
-
-class Provider(Generic[M], metaclass=ProviderType):
-    pass

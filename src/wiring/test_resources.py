@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from .module import Module
-from .resource import ResourceIsNotBound, Resource, CannotRebindModule
+from wiring.resource import ResourceIsNotBound, Resource, CannotRebindModule
 
 
 class TestResource(TestCase):

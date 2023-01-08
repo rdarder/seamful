@@ -1,6 +1,6 @@
 from wiring.module import ModuleType
-from wiring.provider import ProviderType
 from wiring.resource import Resource
+from wiring.provider.provider_type import ProviderType
 
 
 class UnknownResource(Exception):

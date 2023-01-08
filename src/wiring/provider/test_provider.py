@@ -1,17 +1,17 @@
 from unittest import TestCase
 
-from .module import Module
-from .provider import (
-    Provider,
+from wiring.module import Module
+from wiring.provider.provider import Provider
+from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
     MissingProviderModuleAnnotation,
     InvalidProviderModuleAnnotation,
     CannotProvideBaseModule,
-    UnrelatedResource,
     ProviderMethodNotFound,
+    UnrelatedResource,
 )
-from .resource import Resource
+from wiring.resource import Resource
 
 
 class TestProvider(TestCase):

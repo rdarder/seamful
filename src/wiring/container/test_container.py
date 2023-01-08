@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from wiring.module import Module
-from wiring.provider import Provider
+from ..provider.provider import Provider
 from wiring.resource import Resource
 
 from .container import (

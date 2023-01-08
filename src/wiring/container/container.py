@@ -2,7 +2,7 @@ from typing import TypeVar
 
 from wiring.resource import ResourceType
 from wiring.module import ModuleType
-from wiring.provider import ProviderType
+from wiring.provider.provider_type import ProviderType
 
 from .errors import UnknownResource, ModuleAlreadyRegistered, ProviderModuleMismatch
 
