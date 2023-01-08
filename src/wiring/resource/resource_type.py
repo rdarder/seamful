@@ -1,24 +1,12 @@
 from __future__ import annotations
-from typing import TypeVar, Type, Generic, TYPE_CHECKING
+from typing import TypeVar, Generic, Type, TYPE_CHECKING
+
+from .errors import CannotRebindModule, ResourceIsNotBound
 
 if TYPE_CHECKING:
-    from .module import ModuleType
+    from wiring.module import ModuleType
 
 T = TypeVar("T")
-
-
-class CannotRebindModule(Exception):
-    def __init__(
-        self, resource: ResourceType, rebind_name: str, rebind_module: ModuleType
-    ):
-        self.resource = resource
-        self.rebind_name = rebind_name
-        self.rebind_module = rebind_module
-
-
-class ResourceIsNotBound(Exception):
-    def __init__(self, resource: ResourceType):
-        self.resource = resource
 
 
 class ResourceType(Generic[T], type):
@@ -41,7 +29,3 @@ class ResourceType(Generic[T], type):
     @classmethod
     def make(cls, t: Type[T]) -> ResourceType[T]:
         return ResourceType("Resource", (), dict(type=t, is_bound=False))
-
-
-def Resource(t: Type[T]) -> ResourceType[T]:
-    return ResourceType.make(t)
