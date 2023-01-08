@@ -19,3 +19,15 @@ class ProviderModuleMismatch(Exception):
     def __init__(self, provider: ProviderType, module: ModuleType):
         self.provider = provider
         self.module = module
+
+
+class CannotRegisterProviderToUnknownModule(Exception):
+    def __init__(self, provider: ProviderType, known_modules: set[ModuleType]):
+        self.provider = provider
+        self.known_modules = known_modules
+
+
+class ModuleProviderAlreadyRegistered(Exception):
+    def __init__(self, module: ModuleType, registering: ProviderType):
+        self.module = module
+        self.registering = registering
