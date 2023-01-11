@@ -1,3 +1,5 @@
+from typing import Union
+
 from wiring.module import ModuleType
 from wiring.resource import Resource
 from wiring.provider.provider_type import ProviderType
@@ -30,4 +32,18 @@ class CannotRegisterProviderToUnknownModule(Exception):
 class ModuleProviderAlreadyRegistered(Exception):
     def __init__(self, module: ModuleType, registering: ProviderType):
         self.module = module
+        self.registering = registering
+
+
+class ModuleWithoutProvider(Exception):
+    def __init__(self, module: ModuleType):
+        self.module = module
+
+
+class CannotProvideUntilContainerIsSealed(Exception):
+    pass
+
+
+class CannotRegisterAfterContainerIsSealed(Exception):
+    def __init__(self, registering: Union[ModuleType, ProviderType]):
         self.registering = registering

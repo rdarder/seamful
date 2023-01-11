@@ -1,6 +1,15 @@
-from typing import Any, Iterable
+from __future__ import annotations
+from typing import Any, Iterable, Optional, TYPE_CHECKING
 
+from wiring.module.errors import (
+    DefaultProviderIsNotAProvider,
+    CannotUseBaseProviderAsDefaultProvider,
+    DefaultProviderProvidesToAnotherModule,
+)
 from wiring.resource import Resource, ResourceType
+
+if TYPE_CHECKING:
+    from wiring.provider.provider_type import ProviderType
 
 
 class ModuleType(type):
@@ -10,6 +19,7 @@ class ModuleType(type):
         type.__init__(self, name, bases, dct)
         self._resources_by_name = {}
         self._collect_resources(dct)
+        self._default_provider = None
 
     def _collect_resources(self, dct: dict[str, Any]):
         for name, candidate in dct.items():
@@ -19,3 +29,20 @@ class ModuleType(type):
 
     def _list_resources(self) -> Iterable[Resource]:
         return self._resources_by_name.values()
+
+    @property
+    def default_provider(self) -> Optional[ProviderType]:
+        return self._default_provider
+
+    @default_provider.setter
+    def default_provider(self, provider: ProviderType) -> None:
+        from wiring.provider.provider_type import ProviderType
+        from wiring.provider import Provider
+
+        if not isinstance(provider, ProviderType):
+            raise DefaultProviderIsNotAProvider(self, provider)
+        if provider is Provider:
+            raise CannotUseBaseProviderAsDefaultProvider(self)
+        if provider.module is not self:
+            raise DefaultProviderProvidesToAnotherModule(self, provider)
+        self._default_provider = provider
