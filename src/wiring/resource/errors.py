@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from wiring.module import ModuleType
-    from .resource_type import ResourceType
+    from wiring.resource.resource_type import ResourceType
 
 
 class CannotRebindModule(Exception):

@@ -1,5 +1,6 @@
 from unittest import TestCase
 
+from wiring.container import Container
 from wiring.module import Module
 from wiring.provider.provider import Provider
 from wiring.provider.errors import (
@@ -10,11 +11,17 @@ from wiring.provider.errors import (
     CannotProvideBaseModule,
     ProviderMethodNotFound,
     UnrelatedResource,
+    ProviderMethodMissingReturnTypeAnnotation,
+    ProviderMethodReturnTypeMismatch,
+    ProviderMethodParameterMissingTypeAnnotation,
+    ProviderMethodParameterUnknownResource,
+    ProviderMethodParameterResourceTypeMismatch,
+    ProviderMethodParameterInvalidTypeAnnotation,
 )
 from wiring.resource import Resource
 
 
-class TestProvider(TestCase):
+class TestProviderCollectingProviderMethods(TestCase):
     def test_provider_collects_provider_methods(self):
         class SomeModule(Module):
             a = Resource(int)
@@ -52,6 +59,39 @@ class TestProvider(TestCase):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.resource, SomeModule.a)
 
+    def test_provider_method_not_found(self):
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            pass
+
+        fake_resource = Resource(int)
+        fake_resource._bind("fake", SomeModule)
+        with self.assertRaises(ProviderMethodNotFound) as ctx:
+            SomeProvider._get_provider_method(fake_resource)
+
+        self.assertEqual(ctx.exception.provider, SomeProvider)
+        self.assertEqual(ctx.exception.resource, fake_resource)
+
+    def test_provider_unrelated_resource(self):
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            pass
+
+        class AnotherModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(UnrelatedResource) as ctx:
+            SomeProvider._get_provider_method(AnotherModule.a)
+
+        self.assertEqual(ctx.exception.provider, SomeProvider)
+        self.assertEqual(ctx.exception.resource, AnotherModule.a)
+
+
+class TestProviderModuleAnnotation(TestCase):
     def test_missing_provider_module_generic_annotation(self):
         with self.assertRaises(MissingProviderModuleAnnotation) as ctx:
 
@@ -89,33 +129,172 @@ class TestProvider(TestCase):
 
         self.assertEqual(SomeProvider.module, SomeModule)
 
-    def test_provider_method_not_found(self):
+
+class TestProviderMethodFromSignature(TestCase):
+    def test_provider_method_must_have_return_type_annotation(self):
         class SomeModule(Module):
-            pass
-
-        class SomeProvider(Provider[SomeModule]):
-            pass
-
-        fake_resource = Resource(int)
-        fake_resource._bind("fake", SomeModule)
-        with self.assertRaises(ProviderMethodNotFound) as ctx:
-            SomeProvider._get_provider_method(fake_resource)
-
-        self.assertEqual(ctx.exception.provider, SomeProvider)
-        self.assertEqual(ctx.exception.resource, fake_resource)
-
-    def test_provider_unrelated_resource(self):
-        class SomeModule(Module):
-            pass
-
-        class SomeProvider(Provider[SomeModule]):
-            pass
-
-        class AnotherModule(Module):
             a = Resource(int)
 
-        with self.assertRaises(UnrelatedResource) as ctx:
-            SomeProvider._get_provider_method(AnotherModule.a)
+        with self.assertRaises(ProviderMethodMissingReturnTypeAnnotation) as ctx:
 
-        self.assertEqual(ctx.exception.provider, SomeProvider)
-        self.assertEqual(ctx.exception.resource, AnotherModule.a)
+            class SomeProvider(Provider[SomeModule]):
+                def provide_a(self):
+                    return 10
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.resource, SomeModule.a)
+        self.assertEqual(ctx.exception.method.__name__, "provide_a")
+
+    def test_provider_method_must_have_a_compatible_return_type_annotation(self):
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                def provide_a(self) -> str:
+                    return "test"
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.resource, SomeModule.a)
+        self.assertEqual(ctx.exception.method.__name__, "provide_a")
+        self.assertEqual(ctx.exception.mismatched_type, str)
+
+    def test_provider_method_return_type_can_be_more_specific_type(self):
+        class SomeBaseClass:
+            pass
+
+        class SpecificClass(SomeBaseClass):
+            pass
+
+        class SomeModule(Module):
+            a = Resource(SomeBaseClass)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self) -> SpecificClass:
+                return SpecificClass()
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.seal()
+        got = container.provide(SomeModule.a)
+        self.assertIsInstance(got, SomeBaseClass)
+        self.assertIsInstance(got, SpecificClass)
+
+    def test_provider_method_parameters_must_have_type_annotations(self):
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(ProviderMethodParameterMissingTypeAnnotation) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                def provide_a(self, b) -> int:
+                    return 10
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.provides, SomeModule.a)
+        self.assertEqual(ctx.exception.method.__name__, "provide_a")
+        self.assertEqual(ctx.exception.parameter_name, "b")
+
+    def test_provider_method_parameters_can_refer_to_module_resources(self):
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(int)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: SomeModule.b) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        provider_method = SomeProvider._get_provider_method(SomeModule.a)
+        self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
+
+    def test_provider_method_parameters_can_refer_to_own_module_resources_by_name(self):
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(int)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        provider_method = SomeProvider._get_provider_method(SomeModule.a)
+        self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
+
+    def test_provider_method_must_either_match_by_resource_or_by_name(self):
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(ProviderMethodParameterUnknownResource) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                def provide_a(self, b: int) -> int:
+                    return b + 1
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.provides, SomeModule.a)
+        self.assertEqual(ctx.exception.method.__name__, "provide_a")
+        self.assertEqual(ctx.exception.parameter_name, "b")
+
+    def test_provider_method_referring_to_module_resource_must_match_type(self):
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(int)
+
+        with self.assertRaises(ProviderMethodParameterResourceTypeMismatch) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                def provide_a(self, b: str) -> int:
+                    return 10
+
+                def provide_b(self) -> int:
+                    return 11
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.provides, SomeModule.a)
+        self.assertEqual(ctx.exception.method.__name__, "provide_a")
+        self.assertEqual(ctx.exception.parameter_name, "b")
+        self.assertEqual(ctx.exception.refers_to, SomeModule.b)
+        self.assertEqual(ctx.exception.mismatched_type, str)
+
+    def test_provider_method_referring_to_module_resource_can_be_a_superclass(self):
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            pass
+
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(SomeConcreteClass)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: SomeBaseClass) -> int:
+                return 10
+
+            def provide_b(self) -> SomeConcreteClass:
+                return SomeConcreteClass()
+
+        provide_a = SomeProvider._get_provider_method(SomeModule.a)
+        self.assertEqual(provide_a.dependencies, dict(b=SomeModule.b))
+
+    def test_provider_method_parameter_annotation_must_be_a_type(self):
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(ProviderMethodParameterInvalidTypeAnnotation) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                def provide_a(self, b: True) -> int:
+                    return 10
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.provides, SomeModule.a)
+        self.assertEqual(ctx.exception.method.__name__, "provide_a")
+        self.assertEqual(ctx.exception.parameter_name, "b")
+        self.assertEqual(ctx.exception.mismatched_type, True)

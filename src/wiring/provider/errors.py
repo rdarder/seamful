@@ -4,7 +4,7 @@ from typing import Any, TYPE_CHECKING
 from wiring.resource import ResourceType
 
 if TYPE_CHECKING:
-    from .provider_type import ProviderType
+    from wiring.provider.provider_type import ProviderType
 
 
 class MissingProviderMethod(Exception):
@@ -46,3 +46,88 @@ class UnrelatedResource(Exception):
     def __init__(self, provider: ProviderType, resource: ResourceType):
         self.provider = provider
         self.resource = resource
+
+
+class ProviderMethodMissingReturnTypeAnnotation(Exception):
+    def __init__(
+        self, provider: ProviderType, resource: ResourceType, method: callable
+    ):
+        self.provider = provider
+        self.resource = resource
+        self.method = method
+
+
+class ProviderMethodReturnTypeMismatch(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        resource: ResourceType,
+        method: callable,
+        mismatched_type: Any,
+    ):
+        self.provider = provider
+        self.resource = resource
+        self.method = method
+        self.mismatched_type = mismatched_type
+
+
+class ProviderMethodParameterMissingTypeAnnotation(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        provides: ResourceType,
+        method: callable,
+        parameter_name: str,
+    ):
+        self.provider = provider
+        self.provides = provides
+        self.method = method
+        self.parameter_name = parameter_name
+
+
+class ProviderMethodParameterUnknownResource(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        provides: ResourceType,
+        method: callable,
+        parameter_name: str,
+    ):
+        self.provider = provider
+        self.provides = provides
+        self.method = method
+        self.parameter_name = parameter_name
+
+
+class ProviderMethodParameterInvalidTypeAnnotation(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        provides: ResourceType,
+        method: callable,
+        parameter_name: str,
+        mismatched_type: Any,
+    ):
+        self.provider = provider
+        self.provides = provides
+        self.method = method
+        self.parameter_name = parameter_name
+        self.mismatched_type = mismatched_type
+
+
+class ProviderMethodParameterResourceTypeMismatch(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        provides: ResourceType,
+        method: callable,
+        parameter_name: str,
+        refers_to: ResourceType,
+        mismatched_type: type,
+    ):
+        self.provider = provider
+        self.provides = provides
+        self.method = method
+        self.parameter_name = parameter_name
+        self.refers_to = refers_to
+        self.mismatched_type = mismatched_type

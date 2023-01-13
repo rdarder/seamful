@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic
 
-from .provider_type import ProviderType
+from wiring.provider.provider_type import ProviderType
 
 M = TypeVar("M")
 

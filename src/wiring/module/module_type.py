@@ -6,14 +6,14 @@ from wiring.module.errors import (
     CannotUseBaseProviderAsDefaultProvider,
     DefaultProviderProvidesToAnotherModule,
 )
-from wiring.resource import Resource, ResourceType
+from wiring.resource import ResourceType
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
 
 
 class ModuleType(type):
-    _resources_by_name: dict[str, Resource]
+    _resources_by_name: dict[str, ResourceType]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
         type.__init__(self, name, bases, dct)
@@ -27,7 +27,7 @@ class ModuleType(type):
                 candidate._bind(name, self)
                 self._resources_by_name[name] = candidate
 
-    def _list_resources(self) -> Iterable[Resource]:
+    def _list_resources(self) -> Iterable[ResourceType]:
         return self._resources_by_name.values()
 
     @property

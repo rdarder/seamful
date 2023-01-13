@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TypeVar, Generic, Type, TYPE_CHECKING
 
-from .errors import CannotRebindModule, ResourceIsNotBound
+from wiring.resource.errors import CannotRebindModule, ResourceIsNotBound
 
 if TYPE_CHECKING:
     from wiring.module import ModuleType

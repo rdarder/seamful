@@ -3,10 +3,8 @@ from unittest import TestCase
 from wiring.module import Module
 from wiring.provider import Provider
 from wiring.resource import Resource
-
-from .container import Container
-
-from .errors import (
+from wiring.container import Container
+from wiring.container.errors import (
     UnknownResource,
     ModuleAlreadyRegistered,
     ProviderModuleMismatch,
@@ -64,6 +62,65 @@ class TestContainerProvision(TestCase):
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CannotProvideUntilContainerIsSealed):
             container.provide(SomeModule.a)
+
+
+class TestContainerProviderMethodDependencies(TestCase):
+    def test_provider_methods_can_depend_on_resources_from_another_module(self):
+        class SomeModule(Module):
+            a = Resource(int)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherModule(Module):
+            b = Resource(int)
+
+        class AnotherProvider(Provider[AnotherModule]):
+            def provide_b(self, a: SomeModule.a) -> int:
+                return a + 1
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.register(AnotherModule, AnotherProvider)
+        container.seal()
+        self.assertEqual(container.provide(AnotherModule.b), 11)
+
+    def test_provider_methods_can_depend_on_resources_from_the_same_module(self):
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(int)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.seal()
+        self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_methods_can_depend_on_resources_from_the_same_module_via_annotation(
+        self,
+    ):
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(int)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: SomeModule.b) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.seal()
+        self.assertEqual(container.provide(SomeModule.a), 11)
 
 
 class TestContainerRegistration(TestCase):
