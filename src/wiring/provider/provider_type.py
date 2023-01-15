@@ -11,7 +11,6 @@ from typing import (
     Callable,
     Tuple,
     TypeVar,
-    Type,
 )
 
 from wiring.module.module_type import ModuleType
@@ -148,7 +147,7 @@ class ProviderType(type):
                 )
         return method_dependencies
 
-    def _get_provider_method(self, resource: Type[T]) -> ProviderMethod[T]:
+    def _get_provider_method(self, resource: ResourceType[T]) -> ProviderMethod[T]:
         if not isinstance(resource, ResourceType):
             raise Exception("fixme")
         if resource.module is not self.module:

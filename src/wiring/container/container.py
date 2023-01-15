@@ -1,4 +1,4 @@
-from typing import TypeVar, Optional, Type
+from typing import TypeVar, Optional, Type, cast
 
 from wiring.resource import ResourceType
 from wiring.module.module_type import ModuleType
@@ -51,7 +51,8 @@ class Container:
     def provide(self, resource: Type[T]) -> T:
         if not self._is_sealed:
             raise CannotProvideUntilContainerIsSealed()
-        return self._provide(resource)
+        as_resource = cast(ResourceType[T], resource)
+        return self._provide(as_resource)
 
     def _provide(self, resource: ResourceType[T]) -> T:
         target_module = resource.module

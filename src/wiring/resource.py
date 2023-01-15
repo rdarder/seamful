@@ -5,7 +5,7 @@ from typing import TypeVar, Generic, Type
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from wiring.module import ModuleType
+    from wiring.module.module_type import ModuleType
 
 T = TypeVar("T")
 

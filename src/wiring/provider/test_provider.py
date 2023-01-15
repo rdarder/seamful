@@ -1,3 +1,4 @@
+from typing import TypeAlias
 from unittest import TestCase
 
 from wiring.container import Container
@@ -30,7 +31,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        provider_method = SomeProvider._get_provider_method(SomeModule.a)
+        provider_method = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
         self.assertIs(provider_method.provider, SomeProvider)
         self.assertIs(provider_method.method, SomeProvider.provide_a)
         self.assertIs(provider_method.resource, SomeModule.a)
@@ -66,7 +67,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeProvider(Provider[SomeModule]):
             pass
 
-        fake_resource = ResourceType("fake", int, SomeModule)
+        fake_resource = ResourceType(type=int, name="fake", module=SomeModule)
         with self.assertRaises(ProviderMethodNotFound) as ctx:
             SomeProvider._get_provider_method(fake_resource)
 
@@ -84,7 +85,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             a = int
 
         with self.assertRaises(UnrelatedResource) as ctx:
-            SomeProvider._get_provider_method(AnotherModule.a)
+            SomeProvider._get_provider_method(AnotherModule.a)  # type: ignore
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
@@ -197,10 +198,10 @@ class TestProviderMethodFromSignature(TestCase):
         self.assertEqual(ctx.exception.method.__name__, "provide_a")
         self.assertEqual(ctx.exception.parameter_name, "b")
 
-    def test_provider_method_parameters_can_refer_to_module_resources(self):
+    def test_provider_method_parameters_can_refer_to_module_resources(self) -> None:
         class SomeModule(Module):
-            a = int
-            b = int
+            a: TypeAlias = int
+            b: TypeAlias = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: SomeModule.b) -> int:
@@ -209,7 +210,7 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_b(self) -> int:
                 return 10
 
-        provider_method = SomeProvider._get_provider_method(SomeModule.a)
+        provider_method = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
         self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
 
     def test_provider_method_parameters_can_refer_to_own_module_resources_by_name(
@@ -226,7 +227,7 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_b(self) -> int:
                 return 10
 
-        provider_method = SomeProvider._get_provider_method(SomeModule.a)
+        provider_method = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
         self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
 
     def test_provider_method_must_either_match_by_resource_or_by_name(self) -> None:
@@ -285,7 +286,7 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_b(self) -> SomeConcreteClass:
                 return SomeConcreteClass()
 
-        provide_a = SomeProvider._get_provider_method(SomeModule.a)
+        provide_a = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
         self.assertEqual(provide_a.dependencies, dict(b=SomeModule.b))
 
     def test_provider_method_parameter_annotation_must_be_a_type(self) -> None:

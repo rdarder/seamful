@@ -25,7 +25,9 @@ class ModuleType(type):
     def _collect_resources(self, dct: dict[str, Any]) -> None:
         for name, candidate in dct.items():
             if not name.startswith("_") and isinstance(candidate, type):
-                resource = ResourceType(type=candidate, name=name, module=self)
+                resource: ResourceType[Any] = ResourceType(
+                    type=candidate, name=name, module=self
+                )
                 self._resources_by_name[name] = resource
                 setattr(self, name, resource)
 

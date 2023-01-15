@@ -1,3 +1,4 @@
+from typing import TypeAlias
 from unittest import TestCase
 
 from wiring.module import Module
@@ -66,14 +67,14 @@ class TestContainerProvision(TestCase):
 class TestContainerProviderMethodDependencies(TestCase):
     def test_provider_methods_can_depend_on_resources_from_another_module(self) -> None:
         class SomeModule(Module):
-            a = int
+            a: TypeAlias = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
                 return 10
 
         class AnotherModule(Module):
-            b = int
+            b: TypeAlias = int
 
         class AnotherProvider(Provider[AnotherModule]):
             def provide_b(self, a: SomeModule.a) -> int:
@@ -108,8 +109,8 @@ class TestContainerProviderMethodDependencies(TestCase):
         self,
     ) -> None:
         class SomeModule(Module):
-            a = int
-            b = int
+            a: TypeAlias = int
+            b: TypeAlias = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: SomeModule.b) -> int:
