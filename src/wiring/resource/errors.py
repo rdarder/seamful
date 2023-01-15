@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from wiring.module import ModuleType
+    from wiring.module.module_type import ModuleType
     from wiring.resource.resource_type import ResourceType
 
 
 class CannotRebindModule(Exception):
     def __init__(
-        self, resource: ResourceType, rebind_name: str, rebind_module: ModuleType
+        self, resource: ResourceType[Any], rebind_name: str, rebind_module: ModuleType
     ):
         self.resource = resource
         self.rebind_name = rebind_name
@@ -16,5 +16,5 @@ class CannotRebindModule(Exception):
 
 
 class ResourceIsNotBound(Exception):
-    def __init__(self, resource: ResourceType):
+    def __init__(self, resource: ResourceType[Any]):
         self.resource = resource

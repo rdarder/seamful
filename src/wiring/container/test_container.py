@@ -17,7 +17,7 @@ from wiring.container.errors import (
 
 
 class TestContainerProvision(TestCase):
-    def test_basic_provision(self):
+    def test_basic_provision(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -30,7 +30,7 @@ class TestContainerProvision(TestCase):
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
-    def test_container_cant_provide_unknown_resource(self):
+    def test_container_cant_provide_unknown_resource(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -50,7 +50,7 @@ class TestContainerProvision(TestCase):
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
         self.assertEqual(ctx.exception.known_modules, {SomeModule})
 
-    def test_container_refuses_to_provide_if_not_sealed(self):
+    def test_container_refuses_to_provide_if_not_sealed(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -65,7 +65,7 @@ class TestContainerProvision(TestCase):
 
 
 class TestContainerProviderMethodDependencies(TestCase):
-    def test_provider_methods_can_depend_on_resources_from_another_module(self):
+    def test_provider_methods_can_depend_on_resources_from_another_module(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -86,7 +86,9 @@ class TestContainerProviderMethodDependencies(TestCase):
         container.seal()
         self.assertEqual(container.provide(AnotherModule.b), 11)
 
-    def test_provider_methods_can_depend_on_resources_from_the_same_module(self):
+    def test_provider_methods_can_depend_on_resources_from_the_same_module(
+        self,
+    ) -> None:
         class SomeModule(Module):
             a = Resource(int)
             b = Resource(int)
@@ -105,7 +107,7 @@ class TestContainerProviderMethodDependencies(TestCase):
 
     def test_provider_methods_can_depend_on_resources_from_the_same_module_via_annotation(
         self,
-    ):
+    ) -> None:
         class SomeModule(Module):
             a = Resource(int)
             b = Resource(int)
@@ -124,7 +126,7 @@ class TestContainerProviderMethodDependencies(TestCase):
 
 
 class TestContainerRegistration(TestCase):
-    def test_container_disallows_registering_a_module_twice(self):
+    def test_container_disallows_registering_a_module_twice(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -139,7 +141,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.known_modules, {SomeModule})
 
-    def test_container_register_provider_must_provide_for_module(self):
+    def test_container_register_provider_must_provide_for_module(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -158,7 +160,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.module, AnotherModule)
         self.assertEqual(ctx.exception.provider.module, SomeModule)
 
-    def test_can_register_module_and_provider_independently(self):
+    def test_can_register_module_and_provider_independently(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
             pass
@@ -173,7 +175,7 @@ class TestContainerRegistration(TestCase):
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
-    def test_cannot_register_provider_to_unknown_module(self):
+    def test_cannot_register_provider_to_unknown_module(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -191,7 +193,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.provider, AnotherProvider)
         self.assertEqual(ctx.exception.known_modules, {SomeModule})
 
-    def test_cannot_register_two_providers_for_the_same_module(self):
+    def test_cannot_register_two_providers_for_the_same_module(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -209,7 +211,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registering, AnotherProvider)
 
-    def test_cannot_register_same_provider_twice(self):
+    def test_cannot_register_same_provider_twice(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -224,7 +226,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registering, SomeProvider)
 
-    def test_cant_register_module_after_container_is_sealed(self):
+    def test_cant_register_module_after_container_is_sealed(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -234,7 +236,7 @@ class TestContainerRegistration(TestCase):
             container.register(SomeModule)
         self.assertEqual(ctx.exception.registering, SomeModule)
 
-    def test_cant_register_provider_after_container_is_sealed(self):
+    def test_cant_register_provider_after_container_is_sealed(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -255,7 +257,7 @@ class TestContainerRegistration(TestCase):
 
 
 class TestDefaultProvider(TestCase):
-    def test_container_cant_seal_if_a_module_lacks_a_provider(self):
+    def test_container_cant_seal_if_a_module_lacks_a_provider(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -266,7 +268,7 @@ class TestDefaultProvider(TestCase):
 
         self.assertEqual(ctx.exception.module, SomeModule)
 
-    def test_container_uses_default_provider_if_none_registered(self):
+    def test_container_uses_default_provider_if_none_registered(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -280,7 +282,7 @@ class TestDefaultProvider(TestCase):
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
-    def test_container_uses_registered_provider_over_default_provider(self):
+    def test_container_uses_registered_provider_over_default_provider(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -299,7 +301,7 @@ class TestDefaultProvider(TestCase):
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
-    def test_setting_default_container_after_sealing_has_no_effect(self):
+    def test_setting_default_container_after_sealing_has_no_effect(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 

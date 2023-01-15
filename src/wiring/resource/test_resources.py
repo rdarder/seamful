@@ -6,14 +6,14 @@ from wiring.resource.errors import CannotRebindModule, ResourceIsNotBound
 
 
 class TestResource(TestCase):
-    def test_access_unbound_resource(self):
+    def test_access_unbound_resource(self) -> None:
         a = Resource(int)
         with self.assertRaises(ResourceIsNotBound) as ctx:
             a.name
 
         self.assertEqual(ctx.exception.resource, a)
 
-    def test_cannot_rebind_resource(self):
+    def test_cannot_rebind_resource(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 

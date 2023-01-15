@@ -1,12 +1,12 @@
-from typing import Union
+from typing import Union, Any
 
-from wiring.module import ModuleType
-from wiring.resource import Resource
+from wiring.module.module_type import ModuleType
+from wiring.resource.resource_type import ResourceType
 from wiring.provider.provider_type import ProviderType
 
 
 class UnknownResource(Exception):
-    def __init__(self, resource: Resource, known_modules: set[ModuleType]):
+    def __init__(self, resource: ResourceType[Any], known_modules: set[ModuleType]):
         self.resource = resource
         self.known_modules = known_modules
 

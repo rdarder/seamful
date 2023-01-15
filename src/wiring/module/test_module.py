@@ -11,7 +11,7 @@ from wiring.module.errors import (
 
 
 class TestModule(TestCase):
-    def test_module_collects_and_bind_resources(self):
+    def test_module_collects_and_bind_resources(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -24,7 +24,7 @@ class TestModule(TestCase):
 
 
 class TestModuleDefaultProvider(TestCase):
-    def test_cant_use_base_provider_as_default_provider(self):
+    def test_cant_use_base_provider_as_default_provider(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -33,7 +33,9 @@ class TestModuleDefaultProvider(TestCase):
 
         self.assertEqual(ctx.exception.module, SomeModule)
 
-    def test_cant_set_a_default_provider_to_one_that_provides_to_another_module(self):
+    def test_cant_set_a_default_provider_to_one_that_provides_to_another_module(
+        self,
+    ) -> None:
         class SomeModule(Module):
             pass
 
@@ -50,7 +52,7 @@ class TestModuleDefaultProvider(TestCase):
         self.assertEqual(ctx.exception.provider, AnotherProvider)
         self.assertEqual(ctx.exception.provider.module, AnotherModule)
 
-    def test_cant_set_a_default_provider_to_something_not_a_provider(self):
+    def test_cant_set_a_default_provider_to_something_not_a_provider(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -58,7 +60,7 @@ class TestModuleDefaultProvider(TestCase):
             pass
 
         with self.assertRaises(DefaultProviderIsNotAProvider) as ctx:
-            SomeModule.default_provider = NotAProvider
+            SomeModule.default_provider = NotAProvider  # type: ignore
 
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.not_provider, NotAProvider)
