@@ -1,7 +1,7 @@
 from typing import Union, Any
 
 from wiring.module.module_type import ModuleType
-from wiring.resource.resource_type import ResourceType
+from wiring.resource import ResourceType
 from wiring.provider.provider_type import ProviderType
 
 

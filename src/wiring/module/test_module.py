@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-from wiring.resource import Resource
 from wiring.provider import Provider
 from wiring.module import Module
 from wiring.module.errors import (
@@ -13,7 +12,7 @@ from wiring.module.errors import (
 class TestModule(TestCase):
     def test_module_collects_and_bind_resources(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         resources = list(SomeModule._list_resources())
         self.assertEqual(len(resources), 1)

@@ -18,13 +18,13 @@ from wiring.provider.errors import (
     ProviderMethodParameterResourceTypeMismatch,
     ProviderMethodParameterInvalidTypeAnnotation,
 )
-from wiring.resource import Resource
+from wiring.resource import ResourceType
 
 
 class TestProviderCollectingProviderMethods(TestCase):
     def test_provider_collects_provider_methods(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
@@ -37,7 +37,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
     def test_missing_provider_method(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(MissingProviderMethod) as ctx:
 
@@ -49,7 +49,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
     def test_provider_method_not_callable(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(ProviderMethodNotCallable) as ctx:
 
@@ -66,8 +66,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeProvider(Provider[SomeModule]):
             pass
 
-        fake_resource = Resource(int)
-        fake_resource._bind("fake", SomeModule)
+        fake_resource = ResourceType("fake", int, SomeModule)
         with self.assertRaises(ProviderMethodNotFound) as ctx:
             SomeProvider._get_provider_method(fake_resource)
 
@@ -82,7 +81,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             pass
 
         class AnotherModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(UnrelatedResource) as ctx:
             SomeProvider._get_provider_method(AnotherModule.a)
@@ -133,7 +132,7 @@ class TestProviderModuleAnnotation(TestCase):
 class TestProviderMethodFromSignature(TestCase):
     def test_provider_method_must_have_return_type_annotation(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(ProviderMethodMissingReturnTypeAnnotation) as ctx:
 
@@ -149,7 +148,7 @@ class TestProviderMethodFromSignature(TestCase):
         self,
     ) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
 
@@ -170,7 +169,7 @@ class TestProviderMethodFromSignature(TestCase):
             pass
 
         class SomeModule(Module):
-            a = Resource(SomeBaseClass)
+            a = SomeBaseClass
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> SpecificClass:
@@ -185,7 +184,7 @@ class TestProviderMethodFromSignature(TestCase):
 
     def test_provider_method_parameters_must_have_type_annotations(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(ProviderMethodParameterMissingTypeAnnotation) as ctx:
 
@@ -200,8 +199,8 @@ class TestProviderMethodFromSignature(TestCase):
 
     def test_provider_method_parameters_can_refer_to_module_resources(self):
         class SomeModule(Module):
-            a = Resource(int)
-            b = Resource(int)
+            a = int
+            b = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: SomeModule.b) -> int:
@@ -217,8 +216,8 @@ class TestProviderMethodFromSignature(TestCase):
         self,
     ) -> None:
         class SomeModule(Module):
-            a = Resource(int)
-            b = Resource(int)
+            a = int
+            b = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: int) -> int:
@@ -232,7 +231,7 @@ class TestProviderMethodFromSignature(TestCase):
 
     def test_provider_method_must_either_match_by_resource_or_by_name(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(ProviderMethodParameterUnknownResource) as ctx:
 
@@ -247,8 +246,8 @@ class TestProviderMethodFromSignature(TestCase):
 
     def test_provider_method_referring_to_module_resource_must_match_type(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
-            b = Resource(int)
+            a = int
+            b = int
 
         with self.assertRaises(ProviderMethodParameterResourceTypeMismatch) as ctx:
 
@@ -276,8 +275,8 @@ class TestProviderMethodFromSignature(TestCase):
             pass
 
         class SomeModule(Module):
-            a = Resource(int)
-            b = Resource(SomeConcreteClass)
+            a = int
+            b = SomeConcreteClass
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: SomeBaseClass) -> int:
@@ -291,7 +290,7 @@ class TestProviderMethodFromSignature(TestCase):
 
     def test_provider_method_parameter_annotation_must_be_a_type(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         with self.assertRaises(ProviderMethodParameterInvalidTypeAnnotation) as ctx:
 

@@ -3,10 +3,19 @@ from __future__ import annotations
 import inspect
 from dataclasses import dataclass
 from itertools import islice
-from typing import Any, Generic, get_args, Iterable, Callable, Tuple, TypeVar
+from typing import (
+    Any,
+    Generic,
+    get_args,
+    Iterable,
+    Callable,
+    Tuple,
+    TypeVar,
+    Type,
+)
 
 from wiring.module.module_type import ModuleType
-from wiring.resource.resource_type import ResourceType
+from wiring.resource import ResourceType
 from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
@@ -139,7 +148,9 @@ class ProviderType(type):
                 )
         return method_dependencies
 
-    def _get_provider_method(self, resource: ResourceType[T]) -> ProviderMethod[T]:
+    def _get_provider_method(self, resource: Type[T]) -> ProviderMethod[T]:
+        if not isinstance(resource, ResourceType):
+            raise Exception("fixme")
         if resource.module is not self.module:
             raise UnrelatedResource(self, resource)
         provider_method = self._provider_methods_by_resource.get(resource)

@@ -1,6 +1,6 @@
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, Type
 
-from wiring.resource.resource_type import ResourceType
+from wiring.resource import ResourceType
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
 from wiring.container.errors import (
@@ -48,7 +48,7 @@ class Container:
         self._solve_rest_of_graph()
         self._is_sealed = True
 
-    def provide(self, resource: ResourceType[T]) -> T:
+    def provide(self, resource: Type[T]) -> T:
         if not self._is_sealed:
             raise CannotProvideUntilContainerIsSealed()
         return self._provide(resource)

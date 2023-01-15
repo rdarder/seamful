@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
-from wiring.resource.resource_type import ResourceType
+from wiring.resource import ResourceType
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType

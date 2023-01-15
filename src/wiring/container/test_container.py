@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from wiring.module import Module
 from wiring.provider import Provider
-from wiring.resource import Resource
 from wiring.container import Container
 from wiring.container.errors import (
     UnknownResource,
@@ -19,7 +18,7 @@ from wiring.container.errors import (
 class TestContainerProvision(TestCase):
     def test_basic_provision(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
@@ -32,14 +31,14 @@ class TestContainerProvision(TestCase):
 
     def test_container_cant_provide_unknown_resource(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
                 return 10
 
         class AnotherModule(Module):
-            a = Resource(int)
+            a = int
 
         container = Container()
         container.register(SomeModule, SomeProvider)
@@ -52,7 +51,7 @@ class TestContainerProvision(TestCase):
 
     def test_container_refuses_to_provide_if_not_sealed(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
@@ -67,14 +66,14 @@ class TestContainerProvision(TestCase):
 class TestContainerProviderMethodDependencies(TestCase):
     def test_provider_methods_can_depend_on_resources_from_another_module(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
                 return 10
 
         class AnotherModule(Module):
-            b = Resource(int)
+            b = int
 
         class AnotherProvider(Provider[AnotherModule]):
             def provide_b(self, a: SomeModule.a) -> int:
@@ -90,8 +89,8 @@ class TestContainerProviderMethodDependencies(TestCase):
         self,
     ) -> None:
         class SomeModule(Module):
-            a = Resource(int)
-            b = Resource(int)
+            a = int
+            b = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: int) -> int:
@@ -109,8 +108,8 @@ class TestContainerProviderMethodDependencies(TestCase):
         self,
     ) -> None:
         class SomeModule(Module):
-            a = Resource(int)
-            b = Resource(int)
+            a = int
+            b = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: SomeModule.b) -> int:
@@ -128,7 +127,7 @@ class TestContainerProviderMethodDependencies(TestCase):
 class TestContainerRegistration(TestCase):
     def test_container_disallows_registering_a_module_twice(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
@@ -143,14 +142,14 @@ class TestContainerRegistration(TestCase):
 
     def test_container_register_provider_must_provide_for_module(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
                 return 10
 
         class AnotherModule(Module):
-            a = Resource(int)
+            a = int
 
         container = Container()
         with self.assertRaises(ProviderModuleMismatch) as ctx:
@@ -162,7 +161,7 @@ class TestContainerRegistration(TestCase):
 
     def test_can_register_module_and_provider_independently(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
             pass
 
         class SomeProvider(Provider[SomeModule]):
@@ -270,7 +269,7 @@ class TestDefaultProvider(TestCase):
 
     def test_container_uses_default_provider_if_none_registered(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
@@ -284,7 +283,7 @@ class TestDefaultProvider(TestCase):
 
     def test_container_uses_registered_provider_over_default_provider(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
@@ -303,7 +302,7 @@ class TestDefaultProvider(TestCase):
 
     def test_setting_default_container_after_sealing_has_no_effect(self) -> None:
         class SomeModule(Module):
-            a = Resource(int)
+            a = int
 
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self) -> int:
