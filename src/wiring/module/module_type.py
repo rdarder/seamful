@@ -1,10 +1,15 @@
 from __future__ import annotations
+
+import inspect
 from typing import Any, Iterable, Optional, TYPE_CHECKING
 
 from wiring.module.errors import (
     DefaultProviderIsNotAProvider,
     CannotUseBaseProviderAsDefaultProvider,
     DefaultProviderProvidesToAnotherModule,
+    InvalidResourceAnnotation,
+    InvalidAttributeAnnotation,
+    CannotUseExistingResource,
 )
 from wiring.resource import ResourceType
 
@@ -19,14 +24,18 @@ class ModuleType(type):
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
         type.__init__(self, name, bases, dct)
         self._resources_by_name = {}
-        self._collect_resources(dct)
+        self._collect_resources(dct, inspect.get_annotations(self))
         self._default_provider = None
 
-    def _collect_resources(self, dct: dict[str, Any]) -> None:
+    def _collect_resources(
+        self, dct: dict[str, Any], annotations: dict[str, Any]
+    ) -> None:
         for name, candidate in dct.items():
             if name.startswith("_"):
                 continue
-            if isinstance(candidate, ResourceType) and not candidate.is_bound:
+            if isinstance(candidate, ResourceType):
+                if candidate.is_bound:
+                    raise CannotUseExistingResource(self, name, candidate)
                 candidate.bind(name=name, module=self)
                 self._resources_by_name[name] = candidate
             elif isinstance(candidate, type):
@@ -35,6 +44,14 @@ class ModuleType(type):
                 )
                 self._resources_by_name[name] = resource
                 setattr(self, name, resource)
+
+        for name, annotation in annotations.items():
+            if name.startswith("_") or name in self._resources_by_name:
+                continue
+            if isinstance(annotation, ResourceType):
+                raise InvalidResourceAnnotation(self, name, annotation)
+            if isinstance(annotation, type):
+                raise InvalidAttributeAnnotation(self, name, annotation)
 
     def _list_resources(self) -> Iterable[ResourceType[Any]]:
         return self._resources_by_name.values()

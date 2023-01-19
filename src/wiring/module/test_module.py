@@ -7,6 +7,9 @@ from wiring.module.errors import (
     CannotUseBaseProviderAsDefaultProvider,
     DefaultProviderProvidesToAnotherModule,
     DefaultProviderIsNotAProvider,
+    InvalidResourceAnnotation,
+    InvalidAttributeAnnotation,
+    CannotUseExistingResource,
 )
 from wiring.resource import Resource
 
@@ -47,6 +50,65 @@ class TestModule(TestCase):
         self.assertEqual(resource.name, "a")
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.module, SomeModule)
+
+    def test_module_fails_on_class_attribute_with_only_type_annotation(self) -> None:
+        with self.assertRaises(InvalidAttributeAnnotation) as ctx:
+
+            class SomeModule(Module):
+                a: int
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.annotation, int)
+
+    def test_module_fails_on_class_attribute_annotated_with_resource_instance(
+        self,
+    ) -> None:
+        with self.assertRaises(InvalidResourceAnnotation) as ctx:
+
+            class SomeModule(Module):
+                a: Resource(int)  # type: ignore
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, False)
+
+    def test_module_fails_on_a_resource_annotated_with_an_external_module_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(InvalidResourceAnnotation) as ctx:
+
+            class AnotherModule(Module):
+                b: SomeModule.a  # type: ignore
+
+        self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
+        self.assertEqual(ctx.exception.name, "b")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, True)
+        self.assertEqual(ctx.exception.resource.module, SomeModule)
+        self.assertEqual(ctx.exception.resource.name, "a")
+
+    def test_module_fails_on_a_resource_defined_as_another_modules_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(CannotUseExistingResource) as ctx:
+
+            class AnotherModule(Module):
+                b = SomeModule.a
+
+        self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
+        self.assertEqual(ctx.exception.name, "b")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, True)
+        self.assertEqual(ctx.exception.resource.module, SomeModule)
+        self.assertEqual(ctx.exception.resource.name, "a")
 
 
 class TestModuleDefaultProvider(TestCase):

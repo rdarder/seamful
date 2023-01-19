@@ -68,8 +68,8 @@ class TestProviderCollectingProviderMethods(TestCase):
             pass
 
         fake_resource = ResourceType.make_bound(
-            t=int, name="fake", module=SomeModule
-        )  # pyright: ignore
+            t=int, name="fake", module=SomeModule  # pyright: ignore
+        )
         with self.assertRaises(ProviderMethodNotFound) as ctx:
             SomeProvider._get_provider_method(fake_resource)
 
