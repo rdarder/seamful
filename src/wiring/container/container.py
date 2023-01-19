@@ -48,7 +48,7 @@ class Container:
         self._solve_rest_of_graph()
         self._is_sealed = True
 
-    def provide(self, resource: Type[T]) -> T:
+    def provide(self, resource: ResourceType[T] | Type[T]) -> T:
         if not self._is_sealed:
             raise CannotProvideUntilContainerIsSealed()
         as_resource = cast(ResourceType[T], resource)

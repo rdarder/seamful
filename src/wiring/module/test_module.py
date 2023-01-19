@@ -1,3 +1,4 @@
+from typing import TypeAlias
 from unittest import TestCase
 
 from wiring.provider import Provider
@@ -7,16 +8,42 @@ from wiring.module.errors import (
     DefaultProviderProvidesToAnotherModule,
     DefaultProviderIsNotAProvider,
 )
+from wiring.resource import Resource
 
 
 class TestModule(TestCase):
-    def test_module_collects_and_bind_resources(self) -> None:
+    def test_module_collects_resources_from_implicit_type_aliases(self) -> None:
         class SomeModule(Module):
             a = int
 
         resources = list(SomeModule._list_resources())
         self.assertEqual(len(resources), 1)
         resource = resources[0]
+        self.assertIs(resource, SomeModule.a)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.type, int)
+        self.assertEqual(resource.module, SomeModule)
+
+    def test_module_collects_resources_from_explicit_type_aliases(self) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+
+        resources = list(SomeModule._list_resources())
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertIs(resource, SomeModule.a)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.type, int)
+        self.assertEqual(resource.module, SomeModule)
+
+    def test_module_collect_resource_instances_and_binds_them(self) -> None:
+        class SomeModule(Module):
+            a = Resource(int)
+
+        resources = list(SomeModule._list_resources())
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertIs(resource, SomeModule.a)
         self.assertEqual(resource.name, "a")
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.module, SomeModule)

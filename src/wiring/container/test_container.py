@@ -14,6 +14,7 @@ from wiring.container.errors import (
     CannotProvideUntilContainerIsSealed,
     CannotRegisterAfterContainerIsSealed,
 )
+from wiring.resource import Resource
 
 
 class TestContainerProvision(TestCase):
@@ -123,6 +124,26 @@ class TestContainerProviderMethodDependencies(TestCase):
         container.register(SomeModule, SomeProvider)
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_methods_can_depend_on_resources_declared_as_resource_instances(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a = Resource(int)
+            b = Resource(int)
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: SomeModule.b) -> int:  # type: ignore
+                # mypy doesn´t like implicit aliases, pyright types just fine.
+                return b + 1  # type: ignore
+
+            def provide_b(self) -> int:
+                return 10
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.seal()
+        self.assertEqual(container.provide(SomeModule.a), 11)  # type: ignore
 
 
 class TestContainerRegistration(TestCase):
