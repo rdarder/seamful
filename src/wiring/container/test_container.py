@@ -13,6 +13,7 @@ from wiring.container.errors import (
     ModuleWithoutProvider,
     CannotProvideUntilContainerIsSealed,
     CannotRegisterAfterContainerIsSealed,
+    CannotProvideRawType,
 )
 from wiring.resource import Resource
 
@@ -63,6 +64,17 @@ class TestContainerProvision(TestCase):
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CannotProvideUntilContainerIsSealed):
             container.provide(SomeModule.a)
+
+    def test_cannot_provide_raw_type_even_if_signature_says_so(self) -> None:
+        container = Container()
+        container.seal()
+
+        class SomeClass:
+            pass
+
+        with self.assertRaises(CannotProvideRawType) as ctx:
+            container.provide(SomeClass)
+        self.assertEqual(ctx.exception.type, SomeClass)
 
 
 class TestContainerProviderMethodDependencies(TestCase):
@@ -135,7 +147,7 @@ class TestContainerProviderMethodDependencies(TestCase):
         class SomeProvider(Provider[SomeModule]):
             def provide_a(self, b: SomeModule.b) -> int:  # type: ignore
                 # mypy doesn´t like implicit aliases, pyright types just fine.
-                return b + 1  # type: ignore
+                return b + 1  # pyright: ignore
 
             def provide_b(self) -> int:
                 return 10
@@ -143,7 +155,7 @@ class TestContainerProviderMethodDependencies(TestCase):
         container = Container()
         container.register(SomeModule, SomeProvider)
         container.seal()
-        self.assertEqual(container.provide(SomeModule.a), 11)  # type: ignore
+        self.assertEqual(container.provide(SomeModule.a), 11)
 
 
 class TestContainerRegistration(TestCase):

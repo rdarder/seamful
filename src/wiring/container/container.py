@@ -12,6 +12,7 @@ from wiring.container.errors import (
     ModuleWithoutProvider,
     CannotProvideUntilContainerIsSealed,
     CannotRegisterAfterContainerIsSealed,
+    CannotProvideRawType,
 )
 
 T = TypeVar("T")
@@ -48,9 +49,11 @@ class Container:
         self._solve_rest_of_graph()
         self._is_sealed = True
 
-    def provide(self, resource: ResourceType[T] | Type[T]) -> T:
+    def provide(self, resource: Type[T]) -> T:
         if not self._is_sealed:
             raise CannotProvideUntilContainerIsSealed()
+        if not isinstance(resource, ResourceType):
+            raise CannotProvideRawType(resource)
         as_resource = cast(ResourceType[T], resource)
         return self._provide(as_resource)
 

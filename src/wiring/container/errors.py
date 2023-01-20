@@ -47,3 +47,8 @@ class CannotProvideUntilContainerIsSealed(Exception):
 class CannotRegisterAfterContainerIsSealed(Exception):
     def __init__(self, registering: Union[ModuleType, ProviderType]):
         self.registering = registering
+
+
+class CannotProvideRawType(Exception):
+    def __init__(self, t: type):
+        self.type = t

@@ -38,5 +38,5 @@ class ResourceType(Generic[T], type):
 R = TypeVar("R")
 
 
-def Resource(t: Type[T]) -> ResourceType[T]:
-    return ResourceType.make_unbound(t)  # pyright: ignore
+def Resource(t: Type[T]) -> Type[T]:
+    return ResourceType.make_unbound(t)  # type: ignore
