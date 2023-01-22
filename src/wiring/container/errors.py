@@ -1,8 +1,10 @@
-from typing import Union, Any
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Union, Any, Type, cast
 
 from wiring.module.module_type import ModuleType
 from wiring.resource import ResourceType
-from wiring.provider.provider_type import ProviderType
+from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 
 class UnknownResource(Exception):
@@ -52,3 +54,31 @@ class CannotRegisterAfterContainerIsSealed(Exception):
 class CannotProvideRawType(Exception):
     def __init__(self, t: type):
         self.type = t
+
+
+@dataclass(frozen=True)
+class ResolutionStep:
+    target: ResourceType[Any]
+    provider_method: ProviderMethod[Any]
+    parameter_name: str
+    depends_on: ResourceType[Any]
+
+    @classmethod
+    def from_types(
+        cls,
+        target: Type[Any],
+        provider_method: ProviderMethod[Any],
+        parameter_name: str,
+        depends_on: Type[Any],
+    ) -> ResolutionStep:
+        return ResolutionStep(
+            target=cast(ResourceType[Any], target),
+            provider_method=provider_method,
+            parameter_name=parameter_name,
+            depends_on=cast(ResourceType[Any], depends_on),
+        )
+
+
+class CircularDependency(Exception):
+    def __init__(self, loop: list[ResolutionStep]):
+        self.loop = loop

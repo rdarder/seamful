@@ -1,4 +1,4 @@
-from typing import TypeAlias
+from typing import TypeAlias, Sequence, Type, cast, TypeVar
 from unittest import TestCase
 
 from wiring.module import Module
@@ -14,8 +14,11 @@ from wiring.container.errors import (
     CannotProvideUntilContainerIsSealed,
     CannotRegisterAfterContainerIsSealed,
     CannotProvideRawType,
+    CircularDependency,
+    ResolutionStep,
 )
-from wiring.resource import Resource
+from wiring.provider.provider_type import ProviderType, ProviderMethod
+from wiring.resource import Resource, ResourceType
 
 
 class TestContainerProvision(TestCase):
@@ -354,3 +357,223 @@ class TestDefaultProvider(TestCase):
 
         SomeModule.default_provider = AnotherProvider
         self.assertEqual(container.provide(SomeModule.a), 10)
+
+
+class TestCircularDependencies(TestCase):
+    def test_simplest_circular_dependency_breaks_on_seal(self) -> Exception:
+        class SomeModule(Module):
+            a: TypeAlias = int
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, a: SomeModule.a) -> int:
+                return a + 1
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        with self.assertRaises(CircularDependency) as ctx:
+            container.seal()
+        self._assert_contains_loop(
+            ctx.exception.loop,
+            [
+                ResolutionStep.from_types(
+                    SomeModule.a,
+                    get_provider_method(SomeProvider, SomeModule.a),
+                    "a",
+                    SomeModule.a,
+                )
+            ],
+        )
+        return ctx.exception
+
+    def test_single_provider_circular_dependency_breaks_on_seal(self) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+            b: TypeAlias = int
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: SomeModule.b) -> int:
+                return b + 1
+
+            def provide_b(self, a: SomeModule.a) -> int:
+                return a + 1
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        with self.assertRaises(CircularDependency) as ctx:
+            container.seal()
+
+        self._assert_contains_loop(
+            ctx.exception.loop,
+            [
+                ResolutionStep.from_types(
+                    SomeModule.a,
+                    get_provider_method(SomeProvider, SomeModule.a),
+                    "b",
+                    SomeModule.b,
+                ),
+                ResolutionStep.from_types(
+                    SomeModule.b,
+                    get_provider_method(SomeProvider, SomeModule.b),
+                    "a",
+                    SomeModule.a,
+                ),
+            ],
+        )
+        # Circular dependencies are not returned in a deterministic order, so we are not validating
+        # the error explanation with a fixture.
+
+    def test_many_providers_circular_dependency_breaks_on_seal(self) -> None:
+        class ModuleA(Module):
+            a: TypeAlias = int
+
+        class ModuleB(Module):
+            b: TypeAlias = int
+
+        class ModuleC(Module):
+            c: TypeAlias = int
+
+        class ProviderA(Provider[ModuleA]):
+            def provide_a(self, param1: ModuleB.b) -> int:
+                return param1 + 1
+
+        class ProviderB(Provider[ModuleB]):
+            def provide_b(self, param2: ModuleC.c) -> int:
+                return param2 + 1
+
+        class ProviderC(Provider[ModuleC]):
+            def provide_c(self, param3: ModuleA.a) -> int:
+                return param3 + 1
+
+        container = Container()
+        container.register(ModuleA, ProviderA)
+        container.register(ModuleB, ProviderB)
+        container.register(ModuleC, ProviderC)
+
+        with self.assertRaises(CircularDependency) as ctx:
+            container.seal()
+
+        self._assert_contains_loop(
+            ctx.exception.loop,
+            [
+                ResolutionStep.from_types(
+                    ModuleC.c,
+                    get_provider_method(ProviderC, ModuleC.c),
+                    "param3",
+                    ModuleA.a,
+                ),
+                ResolutionStep.from_types(
+                    ModuleA.a,
+                    get_provider_method(ProviderA, ModuleA.a),
+                    "param1",
+                    ModuleB.b,
+                ),
+                ResolutionStep.from_types(
+                    ModuleB.b,
+                    get_provider_method(ProviderB, ModuleB.b),
+                    "param2",
+                    ModuleC.c,
+                ),
+            ],
+        )
+
+    def test_catches_inner_circular_dependency(self) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+            b: TypeAlias = int
+            c: TypeAlias = int
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self, b: int) -> int:
+                return b
+
+            def provide_b(self, c: int) -> int:
+                return c
+
+            def provide_c(self, b: int) -> int:
+                return b
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        with self.assertRaises(CircularDependency) as ctx:
+            container.seal()
+
+        self._assert_contains_loop(
+            ctx.exception.loop,
+            [
+                ResolutionStep.from_types(
+                    SomeModule.a,
+                    get_provider_method(SomeProvider, SomeModule.a),
+                    "b",
+                    SomeModule.b,
+                ),
+                ResolutionStep.from_types(
+                    SomeModule.b,
+                    get_provider_method(SomeProvider, SomeModule.b),
+                    "c",
+                    SomeModule.c,
+                ),
+                ResolutionStep.from_types(
+                    SomeModule.c,
+                    get_provider_method(SomeProvider, SomeModule.c),
+                    "b",
+                    SomeModule.b,
+                ),
+            ],
+        )
+
+    def test_providers_can_have_a_circular_module_dependency_without_a_circular_resource_dependency(
+        self,
+    ) -> None:
+        class Module1(Module):
+            a: TypeAlias = int
+            c: TypeAlias = int
+
+        class Module2(Module):
+            b: TypeAlias = int
+            d: TypeAlias = int
+
+        class Provider1(Provider[Module1]):
+            def provide_a(self) -> int:
+                return 2
+
+            def provide_c(self, b: Module2.b) -> int:
+                return b * 5
+
+        class Provider2(Provider[Module2]):
+            def provide_b(self, a: Module1.a) -> int:
+                return a * 3
+
+            def provide_d(self, c: Module1.c) -> int:
+                return c * 7
+
+        container = Container()
+        container.register(Module1, Provider1)
+        container.register(Module2, Provider2)
+        container.seal()
+        self.assertEqual(container.provide(Module2.d), 2 * 3 * 5 * 7)
+
+    def _assert_contains_loop(
+        self, container: list[ResolutionStep], expected: Sequence[ResolutionStep]
+    ) -> None:
+        target_length = len(expected)
+        self.assertGreater(target_length, 0)
+        self.assertGreaterEqual(len(container), target_length)
+        try:
+            container_tip = container.index(expected[0])
+        except ValueError:
+            self.assertEqual(
+                container, expected
+            )  # this will fail regardless, but assertEqual produces a diff.
+            return
+        first_segment = container[container_tip : container_tip + target_length]
+        remaining_elements = target_length - len(first_segment)
+        second_segment = container[:remaining_elements]
+        container_segment = first_segment + second_segment
+        self.assertEqual(container_segment, expected)
+
+
+T = TypeVar("T")
+
+
+def get_provider_method(provider: ProviderType, resource: Type[T]) -> ProviderMethod[T]:
+    return provider._get_provider_method(cast(ResourceType[T], resource))

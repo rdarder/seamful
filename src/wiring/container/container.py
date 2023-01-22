@@ -1,8 +1,8 @@
-from typing import TypeVar, Optional, Type, cast
+from typing import TypeVar, Optional, Type, cast, Any
 
 from wiring.resource import ResourceType
 from wiring.module.module_type import ModuleType
-from wiring.provider.provider_type import ProviderType
+from wiring.provider.provider_type import ProviderType, ProviderMethod
 from wiring.container.errors import (
     UnknownResource,
     ModuleAlreadyRegistered,
@@ -13,6 +13,8 @@ from wiring.container.errors import (
     CannotProvideUntilContainerIsSealed,
     CannotRegisterAfterContainerIsSealed,
     CannotProvideRawType,
+    CircularDependency,
+    ResolutionStep,
 )
 
 T = TypeVar("T")
@@ -62,7 +64,7 @@ class Container:
         if target_module not in self._providers_by_module:
             raise UnknownResource(resource, self._public_modules)
         provider = self._providers_by_module[target_module]
-        provider_method = provider._get_provider_method(resource)
+        provider_method: ProviderMethod[T] = provider._get_provider_method(resource)
         method_parameters = {
             name: self._provide(resource)
             for name, resource in provider_method.dependencies.items()
@@ -98,6 +100,12 @@ class Container:
             self._register_default_providers()
             self._solve_providers()
 
+        for module in self._providers_by_module.keys():
+            for resource in module._list_resources():
+                loop = self._find_circular_dependency(resource, set())
+                if loop is not None:
+                    raise CircularDependency(loop)
+
     def _solve_providers(self) -> None:
         for provider in self._providers_yet_to_solve.copy():
             self._solve_provider(provider)
@@ -109,3 +117,24 @@ class Container:
                 module = dependency.module
                 if module not in self._providers_by_module:
                     self._register_private_module(module)
+
+    def _find_circular_dependency(
+        self, target: ResourceType[Any], visited: set[ResourceType[Any]]
+    ) -> Optional[list[ResolutionStep]]:
+        provider = self._providers_by_module[target.module]
+        provider_method = provider._get_provider_method(target)
+        visited.add(target)
+        for parameter_name, depends_on in provider_method.dependencies.items():
+            if depends_on in visited:
+                return [
+                    ResolutionStep(target, provider_method, parameter_name, depends_on)
+                ]
+            loop = self._find_circular_dependency(depends_on, visited)
+            if loop is not None:
+                loop.insert(
+                    0,
+                    ResolutionStep(target, provider_method, parameter_name, depends_on),
+                )
+                return loop
+        visited.remove(target)
+        return None
