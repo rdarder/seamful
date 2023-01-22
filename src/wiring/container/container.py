@@ -100,11 +100,7 @@ class Container:
             self._register_default_providers()
             self._solve_providers()
 
-        for module in self._providers_by_module.keys():
-            for resource in module._list_resources():
-                loop = self._find_circular_dependency(resource, set())
-                if loop is not None:
-                    raise CircularDependency(loop)
+        self._find_circular_dependencies()
 
     def _solve_providers(self) -> None:
         for provider in self._providers_yet_to_solve.copy():
@@ -118,23 +114,39 @@ class Container:
                 if module not in self._providers_by_module:
                     self._register_private_module(module)
 
+    def _find_circular_dependencies(self) -> None:
+        solved: set[ResourceType[Any]] = set()
+        for module in self._providers_by_module.keys():
+            for resource in module._list_resources():
+                loop = self._find_circular_dependency(
+                    resource, in_stack=set(), solved=solved
+                )
+                if loop is not None:
+                    raise CircularDependency(loop)
+
     def _find_circular_dependency(
-        self, target: ResourceType[Any], visited: set[ResourceType[Any]]
+        self,
+        target: ResourceType[Any],
+        in_stack: set[ResourceType[Any]],
+        solved: set[ResourceType[Any]],
     ) -> Optional[list[ResolutionStep]]:
+        if target in solved:
+            return None
         provider = self._providers_by_module[target.module]
         provider_method = provider._get_provider_method(target)
-        visited.add(target)
+        in_stack.add(target)
         for parameter_name, depends_on in provider_method.dependencies.items():
-            if depends_on in visited:
+            if depends_on in in_stack:
                 return [
                     ResolutionStep(target, provider_method, parameter_name, depends_on)
                 ]
-            loop = self._find_circular_dependency(depends_on, visited)
+            loop = self._find_circular_dependency(depends_on, in_stack, solved)
             if loop is not None:
                 loop.insert(
                     0,
                     ResolutionStep(target, provider_method, parameter_name, depends_on),
                 )
                 return loop
-        visited.remove(target)
+        in_stack.remove(target)
+        solved.add(target)
         return None

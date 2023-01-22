@@ -34,6 +34,12 @@ class ResourceType(Generic[T], type):
             raise Exception("Unhashable unbound resource.")
         return hash((self.__class__, self.type, self.name, self.module))
 
+    def __repr__(self) -> str:
+        if self.is_bound:
+            return f"ResourceType('{self.name}', {self.type.__name__}, {self.module.__name__})"
+        else:
+            return f"Unbound ResourceType({self.type})"
+
 
 R = TypeVar("R")
 
