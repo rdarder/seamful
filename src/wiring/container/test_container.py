@@ -35,6 +35,54 @@ class TestContainerProvision(TestCase):
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
+    def test_container_provides_singletons_per_resource(self) -> None:
+        class SomeClass:
+            pass
+
+        class SomeModule(Module):
+            a: TypeAlias = SomeClass
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_a(self) -> SomeClass:
+                return SomeClass()
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.seal()
+        first = container.provide(SomeModule.a)
+        second = container.provide(SomeModule.a)
+        self.assertIs(first, second)
+        self.assertIsInstance(first, SomeClass)
+
+    def test_container_provides_singletons_per_resource_even_when_indirectly_generated(
+        self,
+    ) -> None:
+        class Storage:
+            pass
+
+        class SomeService:
+            def __init__(self, storage: Storage):
+                self.storage = storage
+
+        class SomeModule(Module):
+            storage: TypeAlias = Storage
+            service: TypeAlias = SomeService
+
+        class SomeProvider(Provider[SomeModule]):
+            def provide_storage(self) -> Storage:
+                return Storage()
+
+            def provide_service(self, storage: Storage) -> SomeService:
+                return SomeService(storage)
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.seal()
+        service = container.provide(SomeModule.service)
+        storage = container.provide(SomeModule.storage)
+        self.assertIs(service.storage, storage)
+        self.assertIsInstance(storage, Storage)
+
     def test_container_cant_provide_unknown_resource(self) -> None:
         class SomeModule(Module):
             a = int

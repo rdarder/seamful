@@ -28,6 +28,7 @@ class Container:
         self._modules_without_providers: set[ModuleType] = set()
         self._providers_yet_to_solve: set[ProviderType] = set()
         self._is_sealed = False
+        self._instances_by_resource: dict[ResourceType[Any], Any] = {}
 
     def register(
         self, module: ModuleType, provider: Optional[ProviderType] = None
@@ -60,6 +61,8 @@ class Container:
         return self._provide(as_resource)
 
     def _provide(self, resource: ResourceType[T]) -> T:
+        if resource in self._instances_by_resource:
+            return cast(T, self._instances_by_resource[resource])
         target_module = resource.module
         if target_module not in self._providers_by_module:
             raise UnknownResource(resource, self._public_modules)
@@ -69,7 +72,9 @@ class Container:
             name: self._provide(resource)
             for name, resource in provider_method.dependencies.items()
         }
-        return provider_method.method(None, **method_parameters)
+        instance = provider_method.method(None, **method_parameters)
+        self._instances_by_resource[resource] = instance
+        return instance
 
     def _register_provider(self, provider: ProviderType, target: ModuleType) -> None:
         if target in self._providers_by_module:
