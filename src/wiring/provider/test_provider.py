@@ -35,6 +35,20 @@ class TestProvider(TestCase):
             SomeProvider()
         self.assertEqual(ctx.exception.provider, SomeProvider)
 
+    def test_providers_cannot_be_instantiated_event_if_defining_constructor(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            def __init__(self) -> None:
+                pass
+
+        with self.assertRaises(ProvidersCannotBeInstantiated) as ctx:
+            SomeProvider()
+        self.assertEqual(ctx.exception.provider, SomeProvider)
+
 
 class TestProviderCollectingProviderMethods(TestCase):
     def test_provider_collects_provider_methods(self) -> None:

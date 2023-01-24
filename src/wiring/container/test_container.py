@@ -16,6 +16,7 @@ from wiring.container.errors import (
     CannotProvideRawType,
     CircularDependency,
     ResolutionStep,
+    ProviderMethodsCantAccessProviderInstance,
 )
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 from wiring.resource import Resource, ResourceType
@@ -128,7 +129,7 @@ class TestContainerProvision(TestCase):
         self.assertEqual(ctx.exception.type, SomeClass)
 
 
-class TestContainerProviderMethodDependencies(TestCase):
+class TestContainerCallingProviderMethods(TestCase):
     def test_provider_methods_can_depend_on_resources_from_another_module(self) -> None:
         class SomeModule(Module):
             a: TypeAlias = int
@@ -207,6 +208,29 @@ class TestContainerProviderMethodDependencies(TestCase):
         container.register(SomeModule, SomeProvider)
         container.seal()
         self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_method_cannot_access_the_provider_instance(self) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+
+        class ProviderAssumingInstanceIsAvailable(Provider[SomeModule]):
+            def provide_a(self) -> int:
+                if getattr(self, "cache", None) is None:
+                    setattr(self, "cache", 10)
+                return self.cache  # type: ignore
+
+        container = Container()
+        container.register(SomeModule, ProviderAssumingInstanceIsAvailable)
+        container.seal()
+        with self.assertRaises(ProviderMethodsCantAccessProviderInstance) as ctx:
+            container.provide(SomeModule.a)
+
+        self.assertEqual(ctx.exception.provider, ProviderAssumingInstanceIsAvailable)
+        self.assertEqual(ctx.exception.resource, SomeModule.a)
+        self.assertEqual(
+            ctx.exception.provider_method,
+            get_provider_method(ProviderAssumingInstanceIsAvailable, SomeModule.a),
+        )
 
 
 class TestContainerRegistration(TestCase):

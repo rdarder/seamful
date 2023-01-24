@@ -15,6 +15,8 @@ from wiring.container.errors import (
     CannotProvideRawType,
     CircularDependency,
     ResolutionStep,
+    InvalidProviderInstanceAccess,
+    ProviderMethodsCantAccessProviderInstance,
 )
 
 T = TypeVar("T")
@@ -29,6 +31,7 @@ class Container:
         self._providers_yet_to_solve: set[ProviderType] = set()
         self._is_sealed = False
         self._instances_by_resource: dict[ResourceType[Any], Any] = {}
+        self._fake_provider_instance = UnusableProviderInstance()
 
     def register(
         self, module: ModuleType, provider: Optional[ProviderType] = None
@@ -72,7 +75,14 @@ class Container:
             name: self._provide(resource)
             for name, resource in provider_method.dependencies.items()
         }
-        instance = provider_method.method(None, **method_parameters)
+        try:
+            instance = provider_method.method(
+                self._fake_provider_instance, **method_parameters
+            )
+        except InvalidProviderInstanceAccess:
+            raise ProviderMethodsCantAccessProviderInstance(
+                provider, resource, provider_method
+            )
         self._instances_by_resource[resource] = instance
         return instance
 
@@ -155,3 +165,8 @@ class Container:
         in_stack.remove(target)
         solved.add(target)
         return None
+
+
+class UnusableProviderInstance:
+    def __getattr__(self, item: str) -> Any:
+        raise InvalidProviderInstanceAccess()

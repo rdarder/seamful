@@ -111,9 +111,20 @@ class TestModule(TestCase):
         self.assertEqual(ctx.exception.resource.module, SomeModule)
         self.assertEqual(ctx.exception.resource.name, "a")
 
+
+class TestModuleInstances(TestCase):
     def test_modules_cannot_be_instantiated(self) -> None:
         class SomeModule(Module):
             pass
+
+        with self.assertRaises(ModulesCannotBeInstantiated) as ctx:
+            SomeModule()
+        self.assertEqual(ctx.exception.module, SomeModule)
+
+    def test_modules_cannot_be_instantiated_even_if_defining_constructor(self) -> None:
+        class SomeModule(Module):
+            def __init__(self) -> None:
+                pass
 
         with self.assertRaises(ModulesCannotBeInstantiated) as ctx:
             SomeModule()

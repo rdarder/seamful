@@ -82,3 +82,19 @@ class ResolutionStep:
 class CircularDependency(Exception):
     def __init__(self, loop: list[ResolutionStep]):
         self.loop = loop
+
+
+class InvalidProviderInstanceAccess(Exception):
+    pass
+
+
+class ProviderMethodsCantAccessProviderInstance(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        resource: ResourceType[Any],
+        provider_method: ProviderMethod[Any],
+    ):
+        self.provider = provider
+        self.resource = resource
+        self.provider_method = provider_method
