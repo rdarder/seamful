@@ -133,3 +133,8 @@ class ProviderMethodParameterResourceTypeMismatch(Exception):
         self.parameter_name = parameter_name
         self.refers_to = refers_to
         self.mismatched_type = mismatched_type
+
+
+class ProvidersCannotBeInstantiated(Exception):
+    def __init__(self, provider: ProviderType):
+        self.provider = provider

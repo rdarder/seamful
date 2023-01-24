@@ -10,6 +10,7 @@ from wiring.module.errors import (
     InvalidResourceAnnotation,
     InvalidAttributeAnnotation,
     CannotUseExistingResource,
+    ModulesCannotBeInstantiated,
 )
 from wiring.resource import ResourceType
 
@@ -26,6 +27,9 @@ class ModuleType(type):
         self._resources_by_name = {}
         self._collect_resources(dct, inspect.get_annotations(self))
         self._default_provider = None
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        raise ModulesCannotBeInstantiated(self)
 
     def _collect_resources(
         self, dct: dict[str, Any], annotations: dict[str, Any]

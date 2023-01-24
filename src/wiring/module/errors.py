@@ -45,3 +45,8 @@ class CannotUseExistingResource(Exception):
         self.module = module
         self.name = name
         self.resource = resource
+
+
+class ModulesCannotBeInstantiated(Exception):
+    def __init__(self, module: ModuleType):
+        self.module = module

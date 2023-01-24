@@ -10,6 +10,7 @@ from wiring.module.errors import (
     InvalidResourceAnnotation,
     InvalidAttributeAnnotation,
     CannotUseExistingResource,
+    ModulesCannotBeInstantiated,
 )
 from wiring.resource import Resource
 
@@ -109,6 +110,14 @@ class TestModule(TestCase):
         self.assertEqual(ctx.exception.resource.is_bound, True)
         self.assertEqual(ctx.exception.resource.module, SomeModule)
         self.assertEqual(ctx.exception.resource.name, "a")
+
+    def test_modules_cannot_be_instantiated(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(ModulesCannotBeInstantiated) as ctx:
+            SomeModule()
+        self.assertEqual(ctx.exception.module, SomeModule)
 
 
 class TestModuleDefaultProvider(TestCase):

@@ -18,8 +18,22 @@ from wiring.provider.errors import (
     ProviderMethodParameterUnknownResource,
     ProviderMethodParameterResourceTypeMismatch,
     ProviderMethodParameterInvalidTypeAnnotation,
+    ProvidersCannotBeInstantiated,
 )
 from wiring.resource import ResourceType
+
+
+class TestProvider(TestCase):
+    def test_providers_cannot_be_instantiated(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            pass
+
+        with self.assertRaises(ProvidersCannotBeInstantiated) as ctx:
+            SomeProvider()
+        self.assertEqual(ctx.exception.provider, SomeProvider)
 
 
 class TestProviderCollectingProviderMethods(TestCase):

@@ -29,6 +29,7 @@ from wiring.provider.errors import (
     ProviderMethodParameterUnknownResource,
     ProviderMethodParameterInvalidTypeAnnotation,
     ProviderMethodParameterResourceTypeMismatch,
+    ProvidersCannotBeInstantiated,
 )
 
 T = TypeVar("T")
@@ -44,6 +45,9 @@ class ProviderType(type):
             ResourceType[Any], ProviderMethod[Any]
         ] = {}
         self._collect_provider_methods()
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        raise ProvidersCannotBeInstantiated(self)
 
     def _is_base_provider_class(self, bases: Tuple[type, ...]) -> bool:
         return len(bases) == 1 and bases[0] == Generic  # type: ignore
