@@ -152,8 +152,6 @@ class ProviderType(type):
         return method_dependencies
 
     def _get_provider_method(self, resource: ResourceType[T]) -> ProviderMethod[T]:
-        if not isinstance(resource, ResourceType):
-            raise Exception("fixme")
         if resource.module is not self.module:
             raise UnrelatedResource(self, resource)
         provider_method = self._provider_methods_by_resource.get(resource)
