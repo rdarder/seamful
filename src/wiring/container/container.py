@@ -1,7 +1,8 @@
 from __future__ import annotations
 from typing import TypeVar, Optional, Type, cast
 
-from wiring.container.core_container import Registry, ModuleGraphProvider
+from wiring.container.registry import Registry
+from wiring.container.graph_provider import ModuleGraphProvider
 from wiring.resource import ResourceType
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType

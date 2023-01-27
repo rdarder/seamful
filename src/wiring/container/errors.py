@@ -8,7 +8,7 @@ from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 if TYPE_CHECKING:
     from wiring.container import Container
-    from wiring.container.core_container import Registry
+    from wiring.container.registry import Registry
 
 
 class ResourceModuleNotRegistered(Exception):
@@ -136,3 +136,8 @@ class ContainerAlreadyReadyForProvisioning(Exception):
 
 class CannotReopenRegistrationsAfterHavingProvidedResources(Exception):
     pass
+
+
+class RegisteredProvidersNotUsed(Exception):
+    def __init__(self, providers: set[ProviderType]):
+        self.providers = providers

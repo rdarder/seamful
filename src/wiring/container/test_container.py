@@ -1,7 +1,6 @@
 from typing import TypeAlias, Sequence, Type, cast, TypeVar
 from unittest import TestCase
 
-from wiring.container.core_container import RegisteredProvidersNotUsed
 from wiring.module import Module
 from wiring.provider import Provider
 from wiring.container import Container
@@ -19,6 +18,7 @@ from wiring.container.errors import (
     ResolutionStep,
     ProviderMethodsCantAccessProviderInstance,
     CannotReopenRegistrationsAfterHavingProvidedResources,
+    RegisteredProvidersNotUsed,
 )
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 from wiring.resource import Resource, ResourceType
