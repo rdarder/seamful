@@ -206,9 +206,9 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_a(self) -> SpecificClass:
                 return SpecificClass()
 
-        container = Container()
+        container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.seal()
+        container.close_registrations()
         got = container.provide(SomeModule.a)
         self.assertIsInstance(got, SomeBaseClass)
         self.assertIsInstance(got, SpecificClass)

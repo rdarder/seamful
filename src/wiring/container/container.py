@@ -1,14 +1,18 @@
+from __future__ import annotations
 from typing import TypeVar, Optional, Type, cast
 
-from wiring.container.raw_container import RawContainer
+from wiring.container.core_container import Registry, ModuleGraphProvider
 from wiring.resource import ResourceType
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
 from wiring.container.errors import (
     ProviderModuleMismatch,
-    CannotProvideUntilContainerIsSealed,
-    CannotRegisterAfterContainerIsSealed,
+    RegistrationsAreClosed,
     CannotProvideRawType,
+    CannotProvideUntilRegistrationsAreClosed,
+    RegistrationMustBeClosedBeforeReopeningThem,
+    ContainerAlreadyReadyForProvisioning,
+    CannotReopenRegistrationsAfterHavingProvidedResources,
 )
 
 T = TypeVar("T")
@@ -16,33 +20,67 @@ T = TypeVar("T")
 
 class Container:
     def __init__(self) -> None:
-        self._raw = RawContainer()
-        self._is_sealed = False
+        self._is_registering = True
+        self._is_providing = False
+
+        self._registry: Registry = Registry()
+        self._provider: Optional[ModuleGraphProvider] = None
+
+        self._allow_overrides = False
+        self._allow_implicit_modules = False
 
     def register(
         self, module: ModuleType, provider: Optional[ProviderType] = None
     ) -> None:
-        if self._is_sealed:
-            raise CannotRegisterAfterContainerIsSealed(module)
-        self._raw.register_public_module(module)
+        if not self._is_registering:
+            raise RegistrationsAreClosed(module)
+        self._registry.register_module(module)
         if provider is not None:
             if provider.module is not module:
                 raise ProviderModuleMismatch(provider, module)
-            self._raw.register_provider(provider)
+            self._registry.register_provider(
+                provider,
+                allow_override=self._allow_overrides,
+                allow_implicit_module=False,
+            )
 
     def register_provider(self, provider: ProviderType) -> None:
-        if self._is_sealed:
-            raise CannotRegisterAfterContainerIsSealed(provider)
-        self._raw.register_provider(provider)
+        if not self._is_registering:
+            raise RegistrationsAreClosed(provider)
+        self._registry.register_provider(
+            provider,
+            allow_override=self._allow_overrides,
+            allow_implicit_module=self._allow_implicit_modules,
+        )
 
-    def seal(self) -> None:
-        self._raw.solve_rest_of_graph()
-        self._is_sealed = True
+    def close_registrations(self) -> None:
+        if not self._is_registering:
+            raise ContainerAlreadyReadyForProvisioning()
+        self._provider = self._registry.close_registration()
+        self._is_registering = False
 
     def provide(self, resource: Type[T]) -> T:
-        if not self._is_sealed:
-            raise CannotProvideUntilContainerIsSealed()
+        if self._is_registering:
+            raise CannotProvideUntilRegistrationsAreClosed()
+        if not self._is_providing:
+            self._is_providing = True
+            self._registry = None  # type: ignore
         if not isinstance(resource, ResourceType):
             raise CannotProvideRawType(resource)
         as_resource = cast(ResourceType[T], resource)
-        return self._raw.provide(as_resource)
+        return self._provider.provide(as_resource)  # pyright: ignore
+
+    def reopen_registrations(
+        self, allow_overrides: bool = False, allow_implicit_modules: bool = False
+    ) -> None:
+        if self._is_providing:
+            raise CannotReopenRegistrationsAfterHavingProvidedResources()
+        if self._is_registering:
+            raise RegistrationMustBeClosedBeforeReopeningThem(self)
+        self._is_registering = True
+        self._allow_overrides = allow_overrides
+        self._allow_implicit_modules = allow_implicit_modules
+
+    @classmethod
+    def empty(cls) -> Container:
+        return Container()

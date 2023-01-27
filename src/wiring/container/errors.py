@@ -1,22 +1,38 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Union, Any, Type, cast
+from typing import Union, Any, Type, cast, TYPE_CHECKING
 
 from wiring.module.module_type import ModuleType
 from wiring.resource import ResourceType
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 
+if TYPE_CHECKING:
+    from wiring.container import Container
+    from wiring.container.core_container import Registry
 
-class UnknownResource(Exception):
+
+class ResourceModuleNotRegistered(Exception):
+    def __init__(
+        self,
+        resource: ResourceType[Any],
+        registered_modules: set[ModuleType],
+        known_modules: set[ModuleType],
+    ):
+        self.resource = resource
+        self.registered_modules = registered_modules
+        self.known_modules = known_modules
+
+
+class InternalResourceModuleNotKnown(Exception):
     def __init__(self, resource: ResourceType[Any], known_modules: set[ModuleType]):
         self.resource = resource
         self.known_modules = known_modules
 
 
 class ModuleAlreadyRegistered(Exception):
-    def __init__(self, module: ModuleType, known_modules: set[ModuleType]):
+    def __init__(self, module: ModuleType, registered_modules: set[ModuleType]):
         self.module = module
-        self.known_modules = known_modules
+        self.registered_modules = registered_modules
 
 
 class ProviderModuleMismatch(Exception):
@@ -25,28 +41,31 @@ class ProviderModuleMismatch(Exception):
         self.module = module
 
 
-class CannotRegisterProviderToUnknownModule(Exception):
-    def __init__(self, provider: ProviderType, known_modules: set[ModuleType]):
+class CannotRegisterProviderToNotRegisteredModule(Exception):
+    def __init__(self, provider: ProviderType, registered_modules: set[ModuleType]):
         self.provider = provider
-        self.known_modules = known_modules
+        self.registered_modules = registered_modules
 
 
-class ModuleProviderAlreadyRegistered(Exception):
-    def __init__(self, module: ModuleType, registering: ProviderType):
+class CannotOverrideRegisteredProvider(Exception):
+    def __init__(
+        self, module: ModuleType, *, registered: ProviderType, registering: ProviderType
+    ):
         self.module = module
+        self.registered = registered
         self.registering = registering
 
 
-class ModuleWithoutProvider(Exception):
+class ModuleWithoutRegisteredOrDefaultProvider(Exception):
     def __init__(self, module: ModuleType):
         self.module = module
 
 
-class CannotProvideUntilContainerIsSealed(Exception):
+class CannotProvideUntilRegistrationsAreClosed(Exception):
     pass
 
 
-class CannotRegisterAfterContainerIsSealed(Exception):
+class RegistrationsAreClosed(Exception):
     def __init__(self, registering: Union[ModuleType, ProviderType]):
         self.registering = registering
 
@@ -98,3 +117,22 @@ class ProviderMethodsCantAccessProviderInstance(Exception):
         self.provider = provider
         self.resource = resource
         self.provider_method = provider_method
+
+
+class UnexpectedCoreContainerNotReady(Exception):
+    def __init__(self, container: Container, core: Registry):
+        self.container = container
+        self.core = core
+
+
+class RegistrationMustBeClosedBeforeReopeningThem(Exception):
+    def __init__(self, container: Container) -> None:
+        self.container = container
+
+
+class ContainerAlreadyReadyForProvisioning(Exception):
+    pass
+
+
+class CannotReopenRegistrationsAfterHavingProvidedResources(Exception):
+    pass
