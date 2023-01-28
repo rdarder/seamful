@@ -9,7 +9,7 @@ from wiring.container.errors import (
 from wiring.container.graph_provider import ModuleGraphProvider
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
-from wiring.resource import ResourceType
+from wiring.resource import ModuleResource, ResourceTypes
 
 
 class ModuleGraphSolver:
@@ -53,10 +53,10 @@ class ModuleGraphSolver:
                     self._needed_modules_without_providers.add(dependency.module)
 
     def _fail_on_circular_dependencies(self) -> None:
-        solved: set[ResourceType[Any]] = set()
+        solved: set[ResourceTypes[Any]] = set()
         for module in self._registered_modules:
             for resource in module._list_resources():
-                stack: set[ResourceType[Any]] = set()
+                stack: set[ResourceTypes[Any]] = set()
                 loop = self._find_circular_dependency(
                     resource, in_stack=stack, solved=solved
                 )
@@ -65,10 +65,12 @@ class ModuleGraphSolver:
 
     def _find_circular_dependency(
         self,
-        target: ResourceType[Any],
-        in_stack: set[ResourceType[Any]],
-        solved: set[ResourceType[Any]],
+        target: ResourceTypes[Any],
+        in_stack: set[ResourceTypes[Any]],
+        solved: set[ResourceTypes[Any]],
     ) -> Optional[list[ResolutionStep]]:
+        if not isinstance(target, ModuleResource):
+            raise NotImplementedError()
         if target in solved:
             return None
         provider = self._providers_by_module[target.module]

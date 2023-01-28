@@ -7,19 +7,27 @@ from wiring.module.errors import (
     DefaultProviderIsNotAProvider,
     CannotUseBaseProviderAsDefaultProvider,
     DefaultProviderProvidesToAnotherModule,
-    InvalidResourceAnnotation,
-    InvalidAttributeAnnotation,
-    CannotUseExistingResource,
+    InvalidModuleResourceAnnotationInModule,
+    InvalidAttributeAnnotationInModule,
+    CannotUseExistingModuleResource,
     ModulesCannotBeInstantiated,
+    InvalidProviderResourceAnnotationInModule,
 )
-from wiring.resource import ResourceType
+from wiring.resource import ModuleResource, ProviderResource
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
 
 
+class CannotDefinePrivateResourceInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, t: type):
+        self.module = module
+        self.name = name
+        self.type = t
+
+
 class ModuleType(type):
-    _resources_by_name: dict[str, ResourceType[Any]]
+    _resources_by_name: dict[str, ModuleResource[Any]]
     _default_provider: Optional[ProviderType]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
@@ -37,13 +45,15 @@ class ModuleType(type):
         for name, candidate in dct.items():
             if name.startswith("_"):
                 continue
-            if isinstance(candidate, ResourceType):
+            if isinstance(candidate, ModuleResource):
                 if candidate.is_bound:
-                    raise CannotUseExistingResource(self, name, candidate)
+                    raise CannotUseExistingModuleResource(self, name, candidate)
                 candidate.bind(name=name, module=self)
                 self._resources_by_name[name] = candidate
+            elif isinstance(candidate, ProviderResource):
+                raise CannotDefinePrivateResourceInModule(self, name, candidate.type)
             elif isinstance(candidate, type):
-                resource: ResourceType[Any] = ResourceType.make_bound(
+                resource: ModuleResource[Any] = ModuleResource.make_bound(
                     t=candidate, name=name, module=self  # pyright: ignore
                 )
                 self._resources_by_name[name] = resource
@@ -52,12 +62,14 @@ class ModuleType(type):
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:
                 continue
-            if isinstance(annotation, ResourceType):
-                raise InvalidResourceAnnotation(self, name, annotation)
+            if isinstance(annotation, ModuleResource):
+                raise InvalidModuleResourceAnnotationInModule(self, name, annotation)
+            if isinstance(annotation, ProviderResource):
+                raise InvalidProviderResourceAnnotationInModule(self, name, annotation)
             if isinstance(annotation, type):
-                raise InvalidAttributeAnnotation(self, name, annotation)
+                raise InvalidAttributeAnnotationInModule(self, name, annotation)
 
-    def _list_resources(self) -> Iterable[ResourceType[Any]]:
+    def _list_resources(self) -> Iterable[ModuleResource[Any]]:
         return self._resources_by_name.values()
 
     @property

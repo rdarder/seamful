@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from wiring.resource import ResourceType
+from wiring.resource import ModuleResource, ProviderResource
 
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
@@ -26,22 +26,29 @@ class DefaultProviderProvidesToAnotherModule(Exception):
         self.provider = provider
 
 
-class InvalidResourceAnnotation(Exception):
-    def __init__(self, module: ModuleType, name: str, resource: ResourceType[Any]):
+class InvalidModuleResourceAnnotationInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, resource: ModuleResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource
 
 
-class InvalidAttributeAnnotation(Exception):
+class InvalidProviderResourceAnnotationInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, resource: ProviderResource[Any]):
+        self.module = module
+        self.name = name
+        self.resource = resource
+
+
+class InvalidAttributeAnnotationInModule(Exception):
     def __init__(self, module: ModuleType, name: str, annotation: type):
         self.module = module
         self.name = name
         self.annotation = annotation
 
 
-class CannotUseExistingResource(Exception):
-    def __init__(self, module: ModuleType, name: str, resource: ResourceType[Any]):
+class CannotUseExistingModuleResource(Exception):
+    def __init__(self, module: ModuleType, name: str, resource: ModuleResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource

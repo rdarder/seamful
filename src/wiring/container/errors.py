@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Union, Any, Type, cast, TYPE_CHECKING
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ResourceType
+from wiring.resource import ModuleResource, ResourceTypes
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 if TYPE_CHECKING:
@@ -11,10 +11,10 @@ if TYPE_CHECKING:
     from wiring.container.registry import Registry
 
 
-class ResourceModuleNotRegistered(Exception):
+class ModuleNotRegisteredForResource(Exception):
     def __init__(
         self,
-        resource: ResourceType[Any],
+        resource: ModuleResource[Any],
         registered_modules: set[ModuleType],
         known_modules: set[ModuleType],
     ):
@@ -23,8 +23,8 @@ class ResourceModuleNotRegistered(Exception):
         self.known_modules = known_modules
 
 
-class InternalResourceModuleNotKnown(Exception):
-    def __init__(self, resource: ResourceType[Any], known_modules: set[ModuleType]):
+class ModuleNotKnownForResourceInternalError(Exception):
+    def __init__(self, resource: ResourceTypes[Any], known_modules: set[ModuleType]):
         self.resource = resource
         self.known_modules = known_modules
 
@@ -77,10 +77,10 @@ class CannotProvideRawType(Exception):
 
 @dataclass(frozen=True)
 class ResolutionStep:
-    target: ResourceType[Any]
+    target: ResourceTypes[Any]
     provider_method: ProviderMethod[Any]
     parameter_name: str
-    depends_on: ResourceType[Any]
+    depends_on: ResourceTypes[Any]
 
     @classmethod
     def from_types(
@@ -91,10 +91,10 @@ class ResolutionStep:
         depends_on: Type[Any],
     ) -> ResolutionStep:
         return ResolutionStep(
-            target=cast(ResourceType[Any], target),
+            target=cast(ModuleResource[Any], target),
             provider_method=provider_method,
             parameter_name=parameter_name,
-            depends_on=cast(ResourceType[Any], depends_on),
+            depends_on=cast(ModuleResource[Any], depends_on),
         )
 
 
@@ -111,7 +111,7 @@ class ProviderMethodsCantAccessProviderInstance(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        resource: ResourceType[Any],
+        resource: ResourceTypes[Any],
         provider_method: ProviderMethod[Any],
     ):
         self.provider = provider

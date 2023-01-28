@@ -5,7 +5,7 @@ from wiring.module import Module
 from wiring.provider import Provider
 from wiring.container import Container
 from wiring.container.errors import (
-    ResourceModuleNotRegistered,
+    ModuleNotRegisteredForResource,
     ModuleAlreadyRegistered,
     ProviderModuleMismatch,
     CannotRegisterProviderToNotRegisteredModule,
@@ -21,7 +21,7 @@ from wiring.container.errors import (
     RegisteredProvidersNotUsed,
 )
 from wiring.provider.provider_type import ProviderType, ProviderMethod
-from wiring.resource import Resource, ResourceType
+from wiring.resource import Resource, ModuleResource
 
 
 class TestContainerProvision(TestCase):
@@ -100,7 +100,7 @@ class TestContainerProvision(TestCase):
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
         container.close_registrations()
-        with self.assertRaises(ResourceModuleNotRegistered) as ctx:
+        with self.assertRaises(ModuleNotRegisteredForResource) as ctx:
             container.provide(AnotherModule.a)
 
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
@@ -822,4 +822,4 @@ T = TypeVar("T")
 
 
 def get_provider_method(provider: ProviderType, resource: Type[T]) -> ProviderMethod[T]:
-    return provider._get_provider_method(cast(ResourceType[T], resource))
+    return provider._get_provider_method(cast(ModuleResource[T], resource))

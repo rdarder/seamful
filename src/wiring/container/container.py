@@ -3,7 +3,7 @@ from typing import TypeVar, Optional, Type, cast
 
 from wiring.container.registry import Registry
 from wiring.container.graph_provider import ModuleGraphProvider
-from wiring.resource import ResourceType
+from wiring.resource import ModuleResource
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
 from wiring.container.errors import (
@@ -66,9 +66,9 @@ class Container:
         if not self._is_providing:
             self._is_providing = True
             self._registry = None  # type: ignore
-        if not isinstance(resource, ResourceType):
+        if not isinstance(resource, ModuleResource):
             raise CannotProvideRawType(resource)
-        as_resource = cast(ResourceType[T], resource)
+        as_resource = cast(ModuleResource[T], resource)
         return self._provider.provide(as_resource)  # pyright: ignore
 
     def reopen_registrations(

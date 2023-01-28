@@ -1,14 +1,14 @@
 from typing import Any, cast, TypeVar
 
 from wiring.container.errors import (
-    ResourceModuleNotRegistered,
-    InternalResourceModuleNotKnown,
+    ModuleNotRegisteredForResource,
+    ModuleNotKnownForResourceInternalError,
     InvalidProviderInstanceAccess,
     ProviderMethodsCantAccessProviderInstance,
 )
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType, ProviderMethod
-from wiring.resource import ResourceType
+from wiring.resource import ModuleResource, ResourceTypes
 
 T = TypeVar("T")
 
@@ -21,12 +21,14 @@ class ModuleGraphProvider:
     ):
         self._registered_modules = registered_modules
         self._providers_by_module = providers_by_module
-        self._instances_by_resource: dict[ResourceType[Any], Any] = {}
+        self._instances_by_resource: dict[ModuleResource[Any], Any] = {}
         self._fake_provider_instance = UnusableProviderInstance()
 
-    def provide(self, resource: ResourceType[T]) -> T:
+    def provide(self, resource: ResourceTypes[T]) -> T:
+        if not isinstance(resource, ModuleResource):
+            raise NotImplementedError()
         if resource.module not in self._registered_modules:
-            raise ResourceModuleNotRegistered(
+            raise ModuleNotRegisteredForResource(
                 resource,
                 self._registered_modules,
                 set(self._providers_by_module.keys()),
@@ -34,12 +36,14 @@ class ModuleGraphProvider:
 
         return self._provide(resource)
 
-    def _provide(self, resource: ResourceType[T]) -> T:
+    def _provide(self, resource: ResourceTypes[T]) -> T:
+        if not isinstance(resource, ModuleResource):
+            raise NotImplementedError()
         if resource in self._instances_by_resource:
             return cast(T, self._instances_by_resource[resource])
         target_module = resource.module
         if target_module not in self._providers_by_module:
-            raise InternalResourceModuleNotKnown(
+            raise ModuleNotKnownForResourceInternalError(
                 resource, set(self._providers_by_module.keys())
             )
         provider = self._providers_by_module[target_module]
