@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Union, Any, Type, cast, TYPE_CHECKING
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, ResourceTypes
+from wiring.resource import ModuleResource, ResourceTypes, ProviderResource
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 if TYPE_CHECKING:
@@ -14,18 +14,12 @@ if TYPE_CHECKING:
 class ModuleNotRegisteredForResource(Exception):
     def __init__(
         self,
-        resource: ModuleResource[Any],
+        resource: ResourceTypes[Any],
         registered_modules: set[ModuleType],
         known_modules: set[ModuleType],
     ):
         self.resource = resource
         self.registered_modules = registered_modules
-        self.known_modules = known_modules
-
-
-class ModuleNotKnownForResourceInternalError(Exception):
-    def __init__(self, resource: ResourceTypes[Any], known_modules: set[ModuleType]):
-        self.resource = resource
         self.known_modules = known_modules
 
 
@@ -110,11 +104,9 @@ class InvalidProviderInstanceAccess(Exception):
 class ProviderMethodsCantAccessProviderInstance(Exception):
     def __init__(
         self,
-        provider: ProviderType,
         resource: ResourceTypes[Any],
         provider_method: ProviderMethod[Any],
     ):
-        self.provider = provider
         self.resource = resource
         self.provider_method = provider_method
 
@@ -141,3 +133,9 @@ class CannotReopenRegistrationsAfterHavingProvidedResources(Exception):
 class RegisteredProvidersNotUsed(Exception):
     def __init__(self, providers: set[ProviderType]):
         self.providers = providers
+
+
+class ProviderNotProvidingForModule(Exception):
+    def __init__(self, resource: ProviderResource[Any], provider_in_use: ProviderType):
+        self.resource = resource
+        self.provider_in_use = provider_in_use

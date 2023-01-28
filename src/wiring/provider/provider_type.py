@@ -14,14 +14,13 @@ from typing import (
 )
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, ProviderResource
+from wiring.resource import ModuleResource, ProviderResource, ResourceTypes
 from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
     MissingProviderModuleAnnotation,
-    InvalidProviderModuleAnnotation,
+    ProvidersModuleIsNotAModule,
     CannotProvideBaseModule,
-    ProviderMethodNotFound,
     UnrelatedResource,
     ProviderMethodMissingReturnTypeAnnotation,
     ProviderMethodReturnTypeMismatch,
@@ -48,22 +47,19 @@ class ProviderResourceCannotOccludeModuleResource(Exception):
 
 class ProviderType(type):
     _resources_by_name: dict[str, ProviderResource[Any]]
+    _resources: set[ProviderResource[Any]]
+    _provider_methods_by_resource: dict[ResourceTypes[Any], ProviderMethod[Any]]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
         type.__init__(self, name, bases, dct)
         if self._is_base_provider_class(bases):
             return
         self.module = self._determine_module_from_generic_argument(dct)
-        self._provider_methods_by_resource: dict[
-            ModuleResource[Any], ProviderMethod[Any]
-        ] = {}
+        self._provider_methods_by_resource = {}
         self._resources_by_name = {}
-        module_resources = {
-            resource.name: resource for resource in self.module._list_resources()
-        }
-
-        self._collect_provider_methods(module_resources)
-        self._collect_resources(dct, inspect.get_annotations(self), module_resources)
+        self._resources = set()
+        self._collect_resources(dct, inspect.get_annotations(self))
+        self._collect_provider_methods()
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         raise ProvidersCannotBeInstantiated(self)
@@ -84,22 +80,22 @@ class ProviderType(type):
         generic_provider = bases[0]
         module = get_args(generic_provider)[0]
         if not isinstance(module, ModuleType):
-            raise InvalidProviderModuleAnnotation(self, module)
+            raise ProvidersModuleIsNotAModule(self, module)
         if module is Module:
             raise CannotProvideBaseModule(self)
         return module
 
-    def _collect_provider_methods(
-        self, module_resources: dict[str, ModuleResource[Any]]
-    ) -> None:
-        for resource in module_resources.values():
-            provider_method = self._build_provider_method(resource, module_resources)
-            self._provider_methods_by_resource[resource] = provider_method
+    def _collect_provider_methods(self) -> None:
+        for module_resource in self.module:
+            provider_method = self._build_provider_method(module_resource)
+            self._add_provider_method(provider_method)
+        for provider_resource in self._resources:
+            provider_method = self._build_provider_method(provider_resource)
+            self._add_provider_method(provider_method)
 
     def _build_provider_method(
         self,
-        resource: ModuleResource[T],
-        local_resources: dict[str, ModuleResource[Any]],
+        resource: ResourceTypes[T],
     ) -> ProviderMethod[T]:
         method = getattr(self, f"provide_{resource.name}", None)
         if method is None:
@@ -113,9 +109,7 @@ class ProviderType(type):
             raise ProviderMethodReturnTypeMismatch(
                 self, resource, method, mismatched_type=signature.return_annotation
             )
-        method_dependencies = self._get_parameter_resources(
-            signature, local_resources, resource, method
-        )
+        method_dependencies = self._get_parameter_resources(signature, resource, method)
 
         return ProviderMethod(
             provider=self,
@@ -127,8 +121,7 @@ class ProviderType(type):
     def _get_parameter_resources(
         self,
         signature: inspect.Signature,
-        local_resources: dict[str, ModuleResource[Any]],
-        resource: ModuleResource[Any],
+        resource: ResourceTypes[Any],
         method: Any,
     ) -> dict[str, ModuleResource[Any]]:
         method_dependencies: dict[str, ModuleResource[Any]] = {}
@@ -152,32 +145,27 @@ class ProviderType(type):
             # the parameter type is not a resource. We match the parameter's name with
             # the module's resource names.
 
-            local_resource = local_resources.get(name)
-            if local_resource is None:
+            if name not in self.module:
                 raise ProviderMethodParameterUnknownResource(
                     self, resource, method, parameter_name=name
                 )
-
-            if issubclass(local_resource.type, parameter_type):
-                method_dependencies[name] = local_resource
+            module_resource = self.module[name]
+            if issubclass(module_resource.type, parameter_type):
+                method_dependencies[name] = module_resource
             else:
                 raise ProviderMethodParameterResourceTypeMismatch(
                     self,
                     resource,
                     method,
                     parameter_name=name,
-                    refers_to=local_resource,
+                    refers_to=module_resource,
                     mismatched_type=parameter_type,
                 )
         return method_dependencies
 
-    def _get_provider_method(self, resource: ModuleResource[T]) -> ProviderMethod[T]:
-        if resource.module is not self.module:
-            raise UnrelatedResource(self, resource)
-        provider_method = self._provider_methods_by_resource.get(resource)
-        if provider_method is None:
-            # This should always be present. this would be an invalid state.
-            raise ProviderMethodNotFound(self, resource)
+    def _get_provider_method(self, resource: ResourceTypes[T]) -> ProviderMethod[T]:
+        self._ensure_related_resource(resource)
+        provider_method = self._provider_methods_by_resource[resource]
         return provider_method
 
     def _list_provider_methods(self) -> Iterable[ProviderMethod[Any]]:
@@ -187,7 +175,6 @@ class ProviderType(type):
         self,
         dct: dict[str, Any],
         annotations: dict[str, Any],
-        module_resources: dict[str, ModuleResource[Any]],
     ) -> None:
         for name, candidate in dct.items():
             if name.startswith("_"):
@@ -196,19 +183,18 @@ class ProviderType(type):
                 if candidate.is_bound:
                     raise CannotUseExistingProviderResource(self, name, candidate)
                 candidate.bind(name=name, provider=self)
-                if name in module_resources:
+                if name in self.module:
                     raise ProviderResourceCannotOccludeModuleResource(self, candidate)
-                self._resources_by_name[name] = candidate
+                self._add_resource(candidate)
             elif isinstance(candidate, ModuleResource):
                 raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
             elif isinstance(candidate, type):
                 resource: ProviderResource[Any] = ProviderResource.make_bound(
                     t=candidate, name=name, provider=self  # pyright: ignore
                 )
-                if name in module_resources:
+                if name in self.module:
                     raise ProviderResourceCannotOccludeModuleResource(self, resource)
-                self._resources_by_name[name] = resource
-                setattr(self, name, resource)
+                self._add_resource(resource)
 
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:
@@ -222,13 +208,31 @@ class ProviderType(type):
             if isinstance(annotation, type):
                 raise InvalidAttributeAnnotationInProvider(self, name, annotation)
 
+    def _add_resource(self, resource: ProviderResource[Any]) -> None:
+        self._resources_by_name[resource.name] = resource
+        self._resources.add(resource)
+        setattr(self, resource.name, resource)
+
     def _list_resources(self) -> Iterable[ProviderResource[Any]]:
-        return self._resources_by_name.values()
+        return self._resources
+
+    def _add_provider_method(self, provider_method: ProviderMethod[Any]) -> None:
+        self._provider_methods_by_resource[provider_method.resource] = provider_method
+
+    def _ensure_related_resource(self, resource: ResourceTypes[Any]) -> None:
+        if type(resource) is ModuleResource:
+            if resource not in self.module:
+                raise UnrelatedResource(self, resource)
+        elif type(resource) is ProviderResource:
+            if resource not in self._resources:
+                raise UnrelatedResource(self, resource)
+        else:
+            raise TypeError()
 
 
 @dataclass
 class ProviderMethod(Generic[T]):
     method: Callable[..., T]
     provider: ProviderType
-    resource: ModuleResource[Any]
+    resource: ResourceTypes[Any]
     dependencies: dict[str, ModuleResource[Any]]

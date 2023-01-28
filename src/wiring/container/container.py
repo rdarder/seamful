@@ -3,7 +3,7 @@ from typing import TypeVar, Optional, Type, cast
 
 from wiring.container.registry import Registry
 from wiring.container.graph_provider import ModuleGraphProvider
-from wiring.resource import ModuleResource
+from wiring.resource import RESOURCE_TYPES, ResourceTypes
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
 from wiring.container.errors import (
@@ -29,6 +29,7 @@ class Container:
 
         self._allow_overrides = False
         self._allow_implicit_modules = False
+        self._allow_provider_resources = False
 
     def register(
         self, module: ModuleType, provider: Optional[ProviderType] = None
@@ -66,13 +67,20 @@ class Container:
         if not self._is_providing:
             self._is_providing = True
             self._registry = None  # type: ignore
-        if not isinstance(resource, ModuleResource):
+        if isinstance(resource, RESOURCE_TYPES):
+            as_resource = cast(ResourceTypes[T], resource)
+            return self._provider.provide(as_resource)  # pyright: ignore
+        elif isinstance(resource, type):
             raise CannotProvideRawType(resource)
-        as_resource = cast(ModuleResource[T], resource)
-        return self._provider.provide(as_resource)  # pyright: ignore
+        else:
+            raise NotImplementedError()
 
     def reopen_registrations(
-        self, allow_overrides: bool = False, allow_implicit_modules: bool = False
+        self,
+        *,
+        allow_overrides: bool = False,
+        allow_implicit_modules: bool = False,
+        allow_provider_resources: bool = False,
     ) -> None:
         if self._is_providing:
             raise CannotReopenRegistrationsAfterHavingProvidedResources()
@@ -81,6 +89,7 @@ class Container:
         self._is_registering = True
         self._allow_overrides = allow_overrides
         self._allow_implicit_modules = allow_implicit_modules
+        self._allow_provider_resources = allow_provider_resources
 
     @classmethod
     def empty(cls) -> Container:

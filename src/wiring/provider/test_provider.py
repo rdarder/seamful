@@ -8,9 +8,8 @@ from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
     MissingProviderModuleAnnotation,
-    InvalidProviderModuleAnnotation,
+    ProvidersModuleIsNotAModule,
     CannotProvideBaseModule,
-    ProviderMethodNotFound,
     UnrelatedResource,
     ProviderMethodMissingReturnTypeAnnotation,
     ProviderMethodReturnTypeMismatch,
@@ -25,7 +24,7 @@ from wiring.provider.errors import (
     CannotDefinePublicResourceInProvider,
 )
 from wiring.provider.provider_type import ProviderResourceCannotOccludeModuleResource
-from wiring.resource import ModuleResource, Resource
+from wiring.resource import ModuleResource, Resource, ProviderResource
 
 
 class TestProvider(TestCase):
@@ -103,7 +102,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         fake_resource = ModuleResource.make_bound(
             t=int, name="fake", module=SomeModule  # pyright: ignore
         )
-        with self.assertRaises(ProviderMethodNotFound) as ctx:
+        with self.assertRaises(UnrelatedResource) as ctx:
             SomeProvider._get_provider_method(fake_resource)
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
@@ -114,7 +113,10 @@ class TestProviderCollectingProviderMethods(TestCase):
             pass
 
         class SomeProvider(Provider[SomeModule]):
-            pass
+            a = int
+
+            def provide_a(self) -> int:
+                return 10
 
         class AnotherModule(Module):
             a = int
@@ -124,6 +126,40 @@ class TestProviderCollectingProviderMethods(TestCase):
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
+
+    def test_provider_collects_methods_for_private_provider_resources(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        self.assertIsInstance(SomeProvider.a, ProviderResource)
+        methods = list(SomeProvider._list_provider_methods())
+        self.assertEqual(len(methods), 1)
+        method = methods[0]
+        self.assertEqual(method.provider, SomeProvider)
+        self.assertEqual(method.method, SomeProvider.provide_a)
+        self.assertEqual(method.resource, SomeProvider.a)
+        self.assertEqual(method.dependencies, {})
+
+    def test_missing_provider_method_for_private_provider_resource(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(MissingProviderMethod) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                a: TypeAlias = int
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        resource = ctx.exception.resource
+        self.assertIsInstance(resource, ProviderResource)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.type, int)
 
 
 class TestProviderModuleAnnotation(TestCase):
@@ -139,7 +175,7 @@ class TestProviderModuleAnnotation(TestCase):
         class SomeClass:
             pass
 
-        with self.assertRaises(InvalidProviderModuleAnnotation) as ctx:
+        with self.assertRaises(ProvidersModuleIsNotAModule) as ctx:
 
             class SomeProvider(Provider[SomeClass]):
                 pass
@@ -349,6 +385,9 @@ class TestProviderResources(TestCase):
         class SomeProvider(Provider[SomeModule]):
             a = int
 
+            def provide_a(self) -> int:
+                return 10
+
         resources = list(SomeProvider._list_resources())
         self.assertEqual(len(resources), 1)
         resource = resources[0]
@@ -364,6 +403,9 @@ class TestProviderResources(TestCase):
         class SomeProvider(Provider[SomeModule]):
             a: TypeAlias = int
 
+            def provide_a(self) -> int:
+                return 10
+
         resources = list(SomeProvider._list_resources())
         self.assertEqual(len(resources), 1)
         resource = resources[0]
@@ -378,6 +420,9 @@ class TestProviderResources(TestCase):
 
         class SomeProvider(Provider[SomeModule]):
             a = Resource(int, private=True)
+
+            def provide_a(self) -> int:
+                return 10
 
         resources = list(SomeProvider._list_resources())
         self.assertEqual(len(resources), 1)
@@ -440,6 +485,9 @@ class TestProviderResources(TestCase):
 
         class SomeProvider(Provider[SomeModule]):
             b = Resource(int, private=True)
+
+            def provide_b(self) -> int:
+                return 10
 
         with self.assertRaises(InvalidProviderResourceAnnotationInProvider) as ctx:
 

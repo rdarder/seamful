@@ -22,7 +22,7 @@ class TestModule(TestCase):
         class SomeModule(Module):
             a = int
 
-        resources = list(SomeModule._list_resources())
+        resources = list(SomeModule)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertIs(resource, SomeModule.a)
@@ -34,7 +34,7 @@ class TestModule(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        resources = list(SomeModule._list_resources())
+        resources = list(SomeModule)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertIs(resource, SomeModule.a)
@@ -46,7 +46,7 @@ class TestModule(TestCase):
         class SomeModule(Module):
             a = Resource(int)
 
-        resources = list(SomeModule._list_resources())
+        resources = list(SomeModule)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertIs(resource, SomeModule.a)

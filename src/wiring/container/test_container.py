@@ -132,6 +132,23 @@ class TestContainerProvision(TestCase):
         self.assertEqual(ctx.exception.type, SomeClass)
 
 
+class TestContainerProvidesProviderResources(TestCase):
+    def test_can_provide_provider_resource(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        container = Container.empty()
+        container.register(SomeModule, SomeProvider)
+        container.close_registrations()
+        self.assertEqual(container.provide(SomeProvider.a), 10)
+
+
 class TestContainerCallingProviderMethods(TestCase):
     def test_provider_methods_can_depend_on_resources_from_another_module(self) -> None:
         class SomeModule(Module):
@@ -228,7 +245,6 @@ class TestContainerCallingProviderMethods(TestCase):
         with self.assertRaises(ProviderMethodsCantAccessProviderInstance) as ctx:
             container.provide(SomeModule.a)
 
-        self.assertEqual(ctx.exception.provider, ProviderAssumingInstanceIsAvailable)
         self.assertEqual(ctx.exception.resource, SomeModule.a)
         self.assertEqual(
             ctx.exception.provider_method,
@@ -746,12 +762,6 @@ class TestCircularDependencies(TestCase):
         self._assert_contains_loop(
             ctx.exception.loop,
             [
-                ResolutionStep.from_types(
-                    SomeModule.a,
-                    get_provider_method(SomeProvider, SomeModule.a),
-                    "b",
-                    SomeModule.b,
-                ),
                 ResolutionStep.from_types(
                     SomeModule.b,
                     get_provider_method(SomeProvider, SomeModule.b),

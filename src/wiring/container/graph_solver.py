@@ -55,7 +55,7 @@ class ModuleGraphSolver:
     def _fail_on_circular_dependencies(self) -> None:
         solved: set[ResourceTypes[Any]] = set()
         for module in self._registered_modules:
-            for resource in module._list_resources():
+            for resource in module:
                 stack: set[ResourceTypes[Any]] = set()
                 loop = self._find_circular_dependency(
                     resource, in_stack=stack, solved=solved

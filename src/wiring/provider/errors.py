@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
-from wiring.resource import ModuleResource, ProviderResource
+from wiring.resource import ModuleResource, ProviderResource, ResourceTypes
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
@@ -12,13 +12,13 @@ fn = Callable[..., Any]
 
 
 class MissingProviderMethod(Exception):
-    def __init__(self, resource: ModuleResource[Any], provider: ProviderType):
+    def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
         self.resource = resource
         self.provider = provider
 
 
 class ProviderMethodNotCallable(Exception):
-    def __init__(self, resource: ModuleResource[Any], provider: ProviderType):
+    def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
         self.resource = resource
         self.provider = provider
 
@@ -28,7 +28,7 @@ class MissingProviderModuleAnnotation(Exception):
         self.provider = provider
 
 
-class InvalidProviderModuleAnnotation(Exception):
+class ProvidersModuleIsNotAModule(Exception):
     def __init__(self, provider: ProviderType, invalid_module: Any):
         self.provider = provider
         self.invalid_module = invalid_module
@@ -39,22 +39,15 @@ class CannotProvideBaseModule(Exception):
         self.provider = provider
 
 
-class ProviderMethodNotFound(Exception):
-    # This means there's a problem with the implementation than a user error.
-    def __init__(self, provider: ProviderType, resource: ModuleResource[Any]):
-        self.provider = provider
-        self.resource = resource
-
-
 class UnrelatedResource(Exception):
-    def __init__(self, provider: ProviderType, resource: ModuleResource[Any]):
+    def __init__(self, provider: ProviderType, resource: ResourceTypes[Any]):
         self.provider = provider
         self.resource = resource
 
 
 class ProviderMethodMissingReturnTypeAnnotation(Exception):
     def __init__(
-        self, provider: ProviderType, resource: ModuleResource[Any], method: fn
+        self, provider: ProviderType, resource: ResourceTypes[Any], method: fn
     ):
         self.provider = provider
         self.resource = resource
@@ -65,7 +58,7 @@ class ProviderMethodReturnTypeMismatch(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        resource: ModuleResource[Any],
+        resource: ResourceTypes[Any],
         method: fn,
         mismatched_type: Any,
     ):
@@ -79,7 +72,7 @@ class ProviderMethodParameterMissingTypeAnnotation(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ModuleResource[Any],
+        provides: ResourceTypes[Any],
         method: fn,
         parameter_name: str,
     ):
@@ -93,7 +86,7 @@ class ProviderMethodParameterUnknownResource(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ModuleResource[Any],
+        provides: ResourceTypes[Any],
         method: fn,
         parameter_name: str,
     ):
@@ -107,7 +100,7 @@ class ProviderMethodParameterInvalidTypeAnnotation(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ModuleResource[Any],
+        provides: ResourceTypes[Any],
         method: fn,
         parameter_name: str,
         mismatched_type: Any,
@@ -123,7 +116,7 @@ class ProviderMethodParameterResourceTypeMismatch(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ModuleResource[Any],
+        provides: ResourceTypes[Any],
         method: fn,
         parameter_name: str,
         refers_to: ModuleResource[Any],

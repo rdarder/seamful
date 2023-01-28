@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Iterable, Optional, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING, Iterator
 
 from wiring.module.errors import (
     DefaultProviderIsNotAProvider,
@@ -28,10 +28,12 @@ class CannotDefinePrivateResourceInModule(Exception):
 
 class ModuleType(type):
     _resources_by_name: dict[str, ModuleResource[Any]]
+    _resources: set[ModuleResource[Any]]
     _default_provider: Optional[ProviderType]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
         type.__init__(self, name, bases, dct)
+        self._resources = set()
         self._resources_by_name = {}
         self._collect_resources(dct, inspect.get_annotations(self))
         self._default_provider = None
@@ -49,15 +51,14 @@ class ModuleType(type):
                 if candidate.is_bound:
                     raise CannotUseExistingModuleResource(self, name, candidate)
                 candidate.bind(name=name, module=self)
-                self._resources_by_name[name] = candidate
+                self._add_resource(candidate)
             elif isinstance(candidate, ProviderResource):
                 raise CannotDefinePrivateResourceInModule(self, name, candidate.type)
             elif isinstance(candidate, type):
                 resource: ModuleResource[Any] = ModuleResource.make_bound(
                     t=candidate, name=name, module=self  # pyright: ignore
                 )
-                self._resources_by_name[name] = resource
-                setattr(self, name, resource)
+                self._add_resource(resource)
 
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:
@@ -69,8 +70,24 @@ class ModuleType(type):
             if isinstance(annotation, type):
                 raise InvalidAttributeAnnotationInModule(self, name, annotation)
 
-    def _list_resources(self) -> Iterable[ModuleResource[Any]]:
-        return self._resources_by_name.values()
+    def _add_resource(self, resource: ModuleResource[Any]) -> None:
+        self._resources.add(resource)
+        self._resources_by_name[resource.name] = resource
+        setattr(self, resource.name, resource)
+
+    def __contains__(self, item: str | ModuleResource[Any]) -> bool:
+        if type(item) is ModuleResource:
+            return item in self._resources
+        elif type(item) is str:
+            return item in self._resources_by_name
+        else:
+            raise TypeError()
+
+    def __iter__(self) -> Iterator[ModuleResource[Any]]:
+        return iter(self._resources)
+
+    def __getitem__(self, name: str) -> ModuleResource[Any]:
+        return self._resources_by_name[name]
 
     @property
     def default_provider(self) -> Optional[ProviderType]:
