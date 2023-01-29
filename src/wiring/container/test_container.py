@@ -134,7 +134,7 @@ class TestContainerProvision(TestCase):
 
 
 class TestContainerProvidesProviderResources(TestCase):
-    def test_can_provide_provider_resource(self) -> None:
+    def test_can_provide_private_resource(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -149,7 +149,7 @@ class TestContainerProvidesProviderResources(TestCase):
         container.close_registrations()
         self.assertEqual(container.provide(SomeProvider.a), 10)
 
-    def test_provider_method_can_depend_on_provider_resource(self) -> None:
+    def test_provider_method_can_depend_on_private_resource(self) -> None:
         class SomeModule(Module):
             a = int
 
@@ -822,7 +822,7 @@ class TestCircularDependencies(TestCase):
             ],
         )
 
-    def test_catches_circular_dependencies_involving_provider_resources(self) -> None:
+    def test_catches_circular_dependencies_involving_private_resources(self) -> None:
         class SomeModule(Module):
             a = int
 

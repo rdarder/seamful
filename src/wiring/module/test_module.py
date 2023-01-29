@@ -1,7 +1,10 @@
 from typing import TypeAlias
 from unittest import TestCase
 
-from wiring.module.module_type import CannotDefinePrivateResourceInModule
+from wiring.module.module_type import (
+    CannotDefinePrivateResourceInModule,
+    CannotDefineOverridingResourceInModule,
+)
 from wiring.provider import Provider
 from wiring.module import Module
 from wiring.module.errors import (
@@ -12,12 +15,13 @@ from wiring.module.errors import (
     InvalidAttributeAnnotationInModule,
     CannotUseExistingModuleResource,
     ModulesCannotBeInstantiated,
-    InvalidProviderResourceAnnotationInModule,
+    InvalidPrivateResourceAnnotationInModule,
+    InvalidOverridingResourceAnnotationInModule,
 )
 from wiring.resource import Resource
 
 
-class TestModule(TestCase):
+class TestModuleResourcesFromTypeAlias(TestCase):
     def test_module_collects_resources_from_implicit_type_aliases(self) -> None:
         class SomeModule(Module):
             a = int
@@ -42,6 +46,8 @@ class TestModule(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.module, SomeModule)
 
+
+class TestModuleResourcesFromResourceIntances(TestCase):
     def test_module_collect_resource_instances_and_binds_them(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
@@ -54,6 +60,46 @@ class TestModule(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.module, SomeModule)
 
+    def test_module_fails_on_a_resource_defined_as_another_modules_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a = Resource(int)
+
+        with self.assertRaises(CannotUseExistingModuleResource) as ctx:
+
+            class AnotherModule(Module):
+                b = SomeModule.a
+
+        self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
+        self.assertEqual(ctx.exception.name, "b")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, True)
+        self.assertEqual(ctx.exception.resource.module, SomeModule)
+        self.assertEqual(ctx.exception.resource.name, "a")
+
+    def test_module_refuses_definition_of_private_resource_in_it(self) -> None:
+        with self.assertRaises(CannotDefinePrivateResourceInModule) as ctx:
+
+            class SomeModule(Module):
+                a = Resource(int, private=True)
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.type, int)
+
+    def test_module_refuses_definition_of_overriding_resource_in_it(self) -> None:
+        with self.assertRaises(CannotDefineOverridingResourceInModule) as ctx:
+
+            class SomeModule(Module):
+                a = Resource(int, override=True)
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.type, int)
+
+
+class TestModuleResourcesFromAnnotations(TestCase):
     def test_module_fails_on_class_attribute_with_only_type_annotation(self) -> None:
         with self.assertRaises(InvalidAttributeAnnotationInModule) as ctx:
 
@@ -80,7 +126,7 @@ class TestModule(TestCase):
     def test_module_fails_on_class_attribute_annotated_with_provider_resource_instance(
         self,
     ) -> None:
-        with self.assertRaises(InvalidProviderResourceAnnotationInModule) as ctx:
+        with self.assertRaises(InvalidPrivateResourceAnnotationInModule) as ctx:
 
             class SomeModule(Module):
                 a: Resource(int, private=True)  # type: ignore
@@ -108,33 +154,18 @@ class TestModule(TestCase):
         self.assertEqual(ctx.exception.resource.module, SomeModule)
         self.assertEqual(ctx.exception.resource.name, "a")
 
-    def test_module_fails_on_a_resource_defined_as_another_modules_resource(
+    def test_module_fails_on_class_attribute_annotated_with_overriding_resource_instance(
         self,
     ) -> None:
-        class SomeModule(Module):
-            a = Resource(int)
-
-        with self.assertRaises(CannotUseExistingModuleResource) as ctx:
-
-            class AnotherModule(Module):
-                b = SomeModule.a
-
-        self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
-        self.assertEqual(ctx.exception.name, "b")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, True)
-        self.assertEqual(ctx.exception.resource.module, SomeModule)
-        self.assertEqual(ctx.exception.resource.name, "a")
-
-    def test_module_refuses_definition_of_provider_resource_in_it(self) -> None:
-        with self.assertRaises(CannotDefinePrivateResourceInModule) as ctx:
+        with self.assertRaises(InvalidOverridingResourceAnnotationInModule) as ctx:
 
             class SomeModule(Module):
-                a = Resource(int, private=True)
+                a: Resource(int, override=True)  # type: ignore
 
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.type, int)
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, False)
 
 
 class TestModuleInstances(TestCase):

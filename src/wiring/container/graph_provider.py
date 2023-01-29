@@ -8,7 +8,7 @@ from wiring.container.errors import (
 )
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType, ProviderMethod
-from wiring.resource import ModuleResource, ResourceTypes, ProviderResource
+from wiring.resource import ModuleResource, ResourceTypes, PrivateResource
 
 T = TypeVar("T")
 
@@ -32,7 +32,7 @@ class ModuleGraphProvider:
                     self._registered_modules,
                     set(self._providers_by_module.keys()),
                 )
-        elif type(resource) is ProviderResource:
+        elif type(resource) is PrivateResource:
             if resource.provider.module not in self._registered_modules:
                 raise ModuleNotRegisteredForResource(
                     resource,
@@ -71,7 +71,7 @@ class ModuleGraphProvider:
     ) -> ProviderMethod[T]:
         if type(resource) is ModuleResource:
             module = resource.module
-        elif type(resource) is ProviderResource:
+        elif type(resource) is PrivateResource:
             module = resource.provider.module
         else:
             raise TypeError()

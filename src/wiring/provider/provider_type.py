@@ -14,7 +14,7 @@ from typing import (
 )
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, ProviderResource, ResourceTypes
+from wiring.resource import ModuleResource, PrivateResource, ResourceTypes
 from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
@@ -42,8 +42,8 @@ T = TypeVar("T")
 
 
 class ProviderType(type):
-    _resources_by_name: dict[str, ProviderResource[Any]]
-    _resources: set[ProviderResource[Any]]
+    _resources_by_name: dict[str, PrivateResource[Any]]
+    _resources: set[PrivateResource[Any]]
     _provider_methods_by_resource: dict[ResourceTypes[Any], ProviderMethod[Any]]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
@@ -145,7 +145,7 @@ class ProviderType(type):
         if type(parameter_type) is ModuleResource:
             return parameter_type
 
-        if type(parameter_type) is ProviderResource:
+        if type(parameter_type) is PrivateResource:
             # when providers can be subclassed, part of this is a valid use case.
             raise CannotDependOnResourceFromAnotherProvider(
                 target, parameter_type, name
@@ -208,7 +208,7 @@ class ProviderType(type):
         for name, candidate in dct.items():
             if name.startswith("_"):
                 continue
-            if isinstance(candidate, ProviderResource):
+            if isinstance(candidate, PrivateResource):
                 if candidate.is_bound:
                     raise CannotUseExistingProviderResource(self, name, candidate)
                 candidate.bind(name=name, provider=self)
@@ -218,7 +218,7 @@ class ProviderType(type):
             elif isinstance(candidate, ModuleResource):
                 raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
             elif isinstance(candidate, type):
-                resource: ProviderResource[Any] = ProviderResource.make_bound(
+                resource: PrivateResource[Any] = PrivateResource.make_bound(
                     t=candidate, name=name, provider=self  # pyright: ignore
                 )
                 if name in self.module:
@@ -230,19 +230,19 @@ class ProviderType(type):
                 continue
             if isinstance(annotation, ModuleResource):
                 raise InvalidModuleResourceAnnotationInProvider(self, name, annotation)
-            if isinstance(annotation, ProviderResource):
+            if isinstance(annotation, PrivateResource):
                 raise InvalidProviderResourceAnnotationInProvider(
                     self, name, annotation
                 )
             if isinstance(annotation, type):
                 raise InvalidAttributeAnnotationInProvider(self, name, annotation)
 
-    def _add_resource(self, resource: ProviderResource[Any]) -> None:
+    def _add_resource(self, resource: PrivateResource[Any]) -> None:
         self._resources_by_name[resource.name] = resource
         self._resources.add(resource)
         setattr(self, resource.name, resource)
 
-    def _list_resources(self) -> Iterable[ProviderResource[Any]]:
+    def _list_resources(self) -> Iterable[PrivateResource[Any]]:
         return self._resources
 
     def _add_provider_method(self, provider_method: ProviderMethod[Any]) -> None:
@@ -252,7 +252,7 @@ class ProviderType(type):
         if type(resource) is ModuleResource:
             if resource not in self.module:
                 raise UnrelatedResource(self, resource)
-        elif type(resource) is ProviderResource:
+        elif type(resource) is PrivateResource:
             if resource not in self._resources:
                 raise UnrelatedResource(self, resource)
         else:

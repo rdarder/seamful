@@ -24,7 +24,7 @@ from wiring.provider.errors import (
     CannotDefinePublicResourceInProvider,
     ProviderResourceCannotOccludeModuleResource,
 )
-from wiring.resource import ModuleResource, Resource, ProviderResource
+from wiring.resource import ModuleResource, Resource, PrivateResource
 
 
 class TestProvider(TestCase):
@@ -137,7 +137,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        self.assertIsInstance(SomeProvider.a, ProviderResource)
+        self.assertIsInstance(SomeProvider.a, PrivateResource)
         methods = list(SomeProvider._list_provider_methods())
         self.assertEqual(len(methods), 1)
         method = methods[0]
@@ -157,7 +157,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         resource = ctx.exception.resource
-        self.assertIsInstance(resource, ProviderResource)
+        self.assertIsInstance(resource, PrivateResource)
         self.assertEqual(resource.name, "a")
         self.assertEqual(resource.type, int)
 

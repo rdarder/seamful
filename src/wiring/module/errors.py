@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from wiring.resource import ModuleResource, ProviderResource
+from wiring.resource import ModuleResource, PrivateResource
 
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
@@ -33,8 +33,15 @@ class InvalidModuleResourceAnnotationInModule(Exception):
         self.resource = resource
 
 
-class InvalidProviderResourceAnnotationInModule(Exception):
-    def __init__(self, module: ModuleType, name: str, resource: ProviderResource[Any]):
+class InvalidPrivateResourceAnnotationInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, resource: PrivateResource[Any]):
+        self.module = module
+        self.name = name
+        self.resource = resource
+
+
+class InvalidOverridingResourceAnnotationInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, resource: PrivateResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource

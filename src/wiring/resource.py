@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TypeVar, Generic, Type, TYPE_CHECKING, Union
 
+from wiring.errors import CannotMakePrivateOverridingResource
+
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
     from wiring.provider.provider_type import ProviderType
@@ -42,7 +44,7 @@ class ModuleResource(Generic[T], type):
             return f"Unbound ModuleResource({self.type})"
 
 
-class ProviderResource(Generic[T], type):
+class PrivateResource(Generic[T], type):
     type: Type[T]
     name: str
     provider: ProviderType
@@ -56,15 +58,13 @@ class ProviderResource(Generic[T], type):
         self.is_bound = True
 
     @staticmethod
-    def make_unbound(t: Type[T]) -> ProviderResource[T]:
-        return ProviderResource("ProviderResource", (), dict(type=t, is_bound=False))
+    def make_unbound(t: Type[T]) -> PrivateResource[T]:
+        return PrivateResource("PrivateResource", (), dict(type=t, is_bound=False))
 
     @staticmethod
-    def make_bound(
-        t: Type[T], name: str, provider: ProviderType
-    ) -> ProviderResource[T]:
-        return ProviderResource(
-            "ProviderResource",
+    def make_bound(t: Type[T], name: str, provider: ProviderType) -> PrivateResource[T]:
+        return PrivateResource(
+            "PrivateResource",
             (),
             dict(
                 type=t,
@@ -83,19 +83,80 @@ class ProviderResource(Generic[T], type):
     def __repr__(self) -> str:
         if self.is_bound:
             return (
-                f"ProviderResource('{self.name}', {self.type.__name__}, "
+                f"PrivateResource('{self.name}', {self.type.__name__}, "
                 f"{self.provider.__name__})"
             )
         else:
-            return f"Unbound ProviderResource({self.type})"
+            return f"Unbound PrivateResource({self.type})"
 
 
-ResourceTypes = Union[ModuleResource[T], ProviderResource[T]]
-RESOURCE_TYPES = (ModuleResource, ProviderResource)
+class OverridingResource(Generic[T], type):
+    type: Type[T]
+    name: str
+    provider: ProviderType
+    module: ModuleType
+    overrides: ModuleResource[T]
+    is_bound: bool
+
+    def bind(
+        self, name: str, provider: ProviderType, overrides: ModuleResource[T]
+    ) -> None:
+        self.name = name
+        self.provider = provider
+        self.module = provider.module
+        self.overrides = overrides
+        self.is_bound = True
+
+    @staticmethod
+    def make_unbound(t: Type[T]) -> OverridingResource[T]:
+        return OverridingResource(
+            "OverridingResource", (), dict(type=t, is_bound=False)
+        )
+
+    @staticmethod
+    def make_bound(
+        t: Type[T], name: str, provider: ProviderType, overrides: ModuleResource[T]
+    ) -> OverridingResource[T]:
+        return OverridingResource(
+            "OverridingResource",
+            (),
+            dict(
+                type=t,
+                name=name,
+                provider=provider,
+                module=provider.module,
+                overrides=overrides,
+                is_bound=True,
+            ),
+        )
+
+    def __hash__(self) -> int:
+        if not self.is_bound:
+            raise Exception("Unhashable unbound provider resource.")
+        return hash(
+            (self.__class__, self.type, self.name, self.provider, self.overrides)
+        )
+
+    def __repr__(self) -> str:
+        if self.is_bound:
+            return (
+                f"OverridingResource('{self.name}', {self.type.__name__}, "
+                f"{self.provider.__name__}, {self.module.__name__})"
+            )
+        else:
+            return f"Unbound OverridingResource({self.type})"
 
 
-def Resource(t: Type[T], private: bool = False) -> Type[T]:
-    if private:
-        return ProviderResource.make_unbound(t)  # type: ignore
+ResourceTypes = Union[ModuleResource[T], PrivateResource[T], OverridingResource]
+RESOURCE_TYPES = (ModuleResource, PrivateResource, OverridingResource)
+
+
+def Resource(t: Type[T], private: bool = False, override: bool = False) -> Type[T]:
+    if private and override:
+        raise CannotMakePrivateOverridingResource()
+    elif private:
+        return PrivateResource.make_unbound(t)  # type: ignore
+    elif override:
+        return OverridingResource.make_unbound(t)  # type: ignore
     else:
         return ModuleResource.make_unbound(t)  # type: ignore

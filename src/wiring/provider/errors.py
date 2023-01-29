@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
-from wiring.resource import ModuleResource, ProviderResource, ResourceTypes
+from wiring.resource import ModuleResource, PrivateResource, ResourceTypes
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
@@ -135,7 +135,7 @@ class ProvidersCannotBeInstantiated(Exception):
 
 class CannotUseExistingProviderResource(Exception):
     def __init__(
-        self, provider: ProviderType, name: str, resource: ProviderResource[Any]
+        self, provider: ProviderType, name: str, resource: PrivateResource[Any]
     ):
         self.provider = provider
         self.name = name
@@ -160,7 +160,7 @@ class InvalidModuleResourceAnnotationInProvider(Exception):
 
 class InvalidProviderResourceAnnotationInProvider(Exception):
     def __init__(
-        self, provider: ProviderType, name: str, resource: ProviderResource[Any]
+        self, provider: ProviderType, name: str, resource: PrivateResource[Any]
     ):
         self.provider = provider
         self.name = name
@@ -175,7 +175,7 @@ class InvalidAttributeAnnotationInProvider(Exception):
 
 
 class ProviderResourceCannotOccludeModuleResource(Exception):
-    def __init__(self, provider: ProviderType, resource: ProviderResource[Any]):
+    def __init__(self, provider: ProviderType, resource: PrivateResource[Any]):
         self.provider = provider
         self.resource = resource
 
@@ -184,7 +184,7 @@ class CannotDependOnResourceFromAnotherProvider(Exception):
     def __init__(
         self,
         target: ResourceTypes[Any],
-        parameter_resource: ProviderResource[Any],
+        parameter_resource: PrivateResource[Any],
         parameter_name: str,
     ):
         self.target = target

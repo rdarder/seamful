@@ -11,15 +11,23 @@ from wiring.module.errors import (
     InvalidAttributeAnnotationInModule,
     CannotUseExistingModuleResource,
     ModulesCannotBeInstantiated,
-    InvalidProviderResourceAnnotationInModule,
+    InvalidPrivateResourceAnnotationInModule,
+    InvalidOverridingResourceAnnotationInModule,
 )
-from wiring.resource import ModuleResource, ProviderResource
+from wiring.resource import ModuleResource, PrivateResource, OverridingResource
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
 
 
 class CannotDefinePrivateResourceInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, t: type):
+        self.module = module
+        self.name = name
+        self.type = t
+
+
+class CannotDefineOverridingResourceInModule(Exception):
     def __init__(self, module: ModuleType, name: str, t: type):
         self.module = module
         self.name = name
@@ -47,13 +55,16 @@ class ModuleType(type):
         for name, candidate in dct.items():
             if name.startswith("_"):
                 continue
-            if isinstance(candidate, ModuleResource):
+            candidate_type = type(candidate)
+            if candidate_type is ModuleResource:
                 if candidate.is_bound:
                     raise CannotUseExistingModuleResource(self, name, candidate)
                 candidate.bind(name=name, module=self)
                 self._add_resource(candidate)
-            elif isinstance(candidate, ProviderResource):
+            elif candidate_type is PrivateResource:
                 raise CannotDefinePrivateResourceInModule(self, name, candidate.type)
+            elif candidate_type is OverridingResource:
+                raise CannotDefineOverridingResourceInModule(self, name, candidate.type)
             elif isinstance(candidate, type):
                 resource: ModuleResource[Any] = ModuleResource.make_bound(
                     t=candidate, name=name, module=self  # pyright: ignore
@@ -63,11 +74,16 @@ class ModuleType(type):
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:
                 continue
-            if isinstance(annotation, ModuleResource):
+            t = type(annotation)
+            if t is ModuleResource:
                 raise InvalidModuleResourceAnnotationInModule(self, name, annotation)
-            if isinstance(annotation, ProviderResource):
-                raise InvalidProviderResourceAnnotationInModule(self, name, annotation)
-            if isinstance(annotation, type):
+            elif t is PrivateResource:
+                raise InvalidPrivateResourceAnnotationInModule(self, name, annotation)
+            elif t is OverridingResource:
+                raise InvalidOverridingResourceAnnotationInModule(
+                    self, name, annotation
+                )
+            elif isinstance(annotation, type):
                 raise InvalidAttributeAnnotationInModule(self, name, annotation)
 
     def _add_resource(self, resource: ModuleResource[Any]) -> None:

@@ -9,7 +9,7 @@ from wiring.container.errors import (
 from wiring.container.graph_provider import ModuleGraphProvider
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
-from wiring.resource import ModuleResource, ResourceTypes, ProviderResource
+from wiring.resource import ModuleResource, ResourceTypes, PrivateResource
 
 
 class ModuleGraphSolver:
@@ -71,7 +71,7 @@ class ModuleGraphSolver:
     ) -> Optional[list[ResolutionStep]]:
         if target in solved:
             return None
-        if type(target) is ProviderResource:
+        if type(target) is PrivateResource:
             provider = target.provider
         elif type(target) is ModuleResource:
             provider = self._providers_by_module[target.module]
