@@ -47,10 +47,12 @@ class ProviderResource(Generic[T], type):
     name: str
     provider: ProviderType
     is_bound: bool
+    module: ModuleType
 
     def bind(self, name: str, provider: ProviderType) -> None:
         self.name = name
         self.provider = provider
+        self.module = provider.module
         self.is_bound = True
 
     @staticmethod
@@ -64,7 +66,13 @@ class ProviderResource(Generic[T], type):
         return ProviderResource(
             "ProviderResource",
             (),
-            dict(type=t, name=name, provider=provider, is_bound=True),
+            dict(
+                type=t,
+                name=name,
+                provider=provider,
+                module=provider.module,
+                is_bound=True,
+            ),
         )
 
     def __hash__(self) -> int:

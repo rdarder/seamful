@@ -9,7 +9,7 @@ from wiring.container.errors import (
 from wiring.container.graph_provider import ModuleGraphProvider
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
-from wiring.resource import ModuleResource, ResourceTypes
+from wiring.resource import ModuleResource, ResourceTypes, ProviderResource
 
 
 class ModuleGraphSolver:
@@ -69,11 +69,14 @@ class ModuleGraphSolver:
         in_stack: set[ResourceTypes[Any]],
         solved: set[ResourceTypes[Any]],
     ) -> Optional[list[ResolutionStep]]:
-        if not isinstance(target, ModuleResource):
-            raise NotImplementedError()
         if target in solved:
             return None
-        provider = self._providers_by_module[target.module]
+        if type(target) is ProviderResource:
+            provider = target.provider
+        elif type(target) is ModuleResource:
+            provider = self._providers_by_module[target.module]
+        else:
+            raise NotImplementedError()
         provider_method = provider._get_provider_method(target)
         in_stack.add(target)
         for parameter_name, depends_on in provider_method.dependencies.items():

@@ -21,6 +21,7 @@ from wiring.container.errors import (
     RegisteredProvidersNotUsed,
 )
 from wiring.provider.provider_type import ProviderType, ProviderMethod
+from wiring.provider.errors import CannotDependOnResourceFromAnotherProvider
 from wiring.resource import Resource, ModuleResource
 
 
@@ -147,6 +148,50 @@ class TestContainerProvidesProviderResources(TestCase):
         container.register(SomeModule, SomeProvider)
         container.close_registrations()
         self.assertEqual(container.provide(SomeProvider.a), 10)
+
+    def test_provider_method_can_depend_on_provider_resource(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider[SomeModule]):
+            b = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.close_registrations()
+        self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider[SomeModule]):
+            b: TypeAlias = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        class AnotherModule(Module):
+            c = int
+
+        with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
+
+            class AnotherProvider(Provider[AnotherModule]):
+                def provide_c(self, b: SomeProvider.b) -> int:
+                    return b + 1
+
+        self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
+        self.assertEqual(ctx.exception.parameter_name, "b")
+        self.assertEqual(ctx.exception.target, AnotherModule.c)
 
 
 class TestContainerCallingProviderMethods(TestCase):
@@ -773,6 +818,42 @@ class TestCircularDependencies(TestCase):
                     get_provider_method(SomeProvider, SomeModule.c),
                     "b",
                     SomeModule.b,
+                ),
+            ],
+        )
+
+    def test_catches_circular_dependencies_involving_provider_resources(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider[SomeModule]):
+            b = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self, a: int) -> int:
+                return a + 1
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        with self.assertRaises(CircularDependency) as ctx:
+            container.close_registrations()
+
+        self._assert_contains_loop(
+            ctx.exception.loop,
+            [
+                ResolutionStep.from_types(
+                    SomeModule.a,
+                    get_provider_method(SomeProvider, SomeModule.a),
+                    "b",
+                    SomeProvider.b,
+                ),
+                ResolutionStep.from_types(
+                    SomeProvider.b,
+                    get_provider_method(SomeProvider, SomeProvider.b),
+                    "a",
+                    SomeModule.a,
                 ),
             ],
         )

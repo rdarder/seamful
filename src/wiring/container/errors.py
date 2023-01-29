@@ -85,7 +85,7 @@ class ResolutionStep:
         depends_on: Type[Any],
     ) -> ResolutionStep:
         return ResolutionStep(
-            target=cast(ModuleResource[Any], target),
+            target=cast(ResourceTypes[Any], target),
             provider_method=provider_method,
             parameter_name=parameter_name,
             depends_on=cast(ModuleResource[Any], depends_on),

@@ -14,7 +14,7 @@ from wiring.provider.errors import (
     ProviderMethodMissingReturnTypeAnnotation,
     ProviderMethodReturnTypeMismatch,
     ProviderMethodParameterMissingTypeAnnotation,
-    ProviderMethodParameterUnknownResource,
+    ProviderMethodParameterUnrelatedName,
     ProviderMethodParameterResourceTypeMismatch,
     ProviderMethodParameterInvalidTypeAnnotation,
     ProvidersCannotBeInstantiated,
@@ -22,8 +22,8 @@ from wiring.provider.errors import (
     InvalidModuleResourceAnnotationInProvider,
     InvalidProviderResourceAnnotationInProvider,
     CannotDefinePublicResourceInProvider,
+    ProviderResourceCannotOccludeModuleResource,
 )
-from wiring.provider.provider_type import ProviderResourceCannotOccludeModuleResource
 from wiring.resource import ModuleResource, Resource, ProviderResource
 
 
@@ -305,7 +305,7 @@ class TestProviderMethodFromSignature(TestCase):
         class SomeModule(Module):
             a = int
 
-        with self.assertRaises(ProviderMethodParameterUnknownResource) as ctx:
+        with self.assertRaises(ProviderMethodParameterUnrelatedName) as ctx:
 
             class SomeProvider(Provider[SomeModule]):
                 def provide_a(self, b: int) -> int:
@@ -332,7 +332,6 @@ class TestProviderMethodFromSignature(TestCase):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.provides, SomeModule.a)
-        self.assertEqual(ctx.exception.method.__name__, "provide_a")
         self.assertEqual(ctx.exception.parameter_name, "b")
         self.assertEqual(ctx.exception.refers_to, SomeModule.b)
         self.assertEqual(ctx.exception.mismatched_type, str)

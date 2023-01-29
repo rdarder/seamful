@@ -25,7 +25,7 @@ from wiring.provider.errors import (
     ProviderMethodMissingReturnTypeAnnotation,
     ProviderMethodReturnTypeMismatch,
     ProviderMethodParameterMissingTypeAnnotation,
-    ProviderMethodParameterUnknownResource,
+    ProviderMethodParameterUnrelatedName,
     ProviderMethodParameterInvalidTypeAnnotation,
     ProviderMethodParameterResourceTypeMismatch,
     ProvidersCannotBeInstantiated,
@@ -34,15 +34,11 @@ from wiring.provider.errors import (
     InvalidAttributeAnnotationInProvider,
     InvalidProviderResourceAnnotationInProvider,
     InvalidModuleResourceAnnotationInProvider,
+    ProviderResourceCannotOccludeModuleResource,
+    CannotDependOnResourceFromAnotherProvider,
 )
 
 T = TypeVar("T")
-
-
-class ProviderResourceCannotOccludeModuleResource(Exception):
-    def __init__(self, provider: ProviderType, resource: ProviderResource[Any]):
-        self.provider = provider
-        self.resource = resource
 
 
 class ProviderType(type):
@@ -121,47 +117,80 @@ class ProviderType(type):
     def _get_parameter_resources(
         self,
         signature: inspect.Signature,
-        resource: ResourceTypes[Any],
+        target: ResourceTypes[Any],
         method: Any,
-    ) -> dict[str, ModuleResource[Any]]:
-        method_dependencies: dict[str, ModuleResource[Any]] = {}
-        for name, parameter in islice(
-            signature.parameters.items(), 1, None
-        ):  # exclude self.
-            parameter_type = parameter.annotation
-            if parameter_type is signature.empty:
-                raise ProviderMethodParameterMissingTypeAnnotation(
-                    self, resource, method, parameter_name=name
-                )
-            if isinstance(parameter_type, ModuleResource):
-                method_dependencies[name] = parameter_type
-                continue
+    ) -> dict[str, ResourceTypes[Any]]:
+        method_dependencies: dict[str, ResourceTypes[Any]] = {}
 
-            if not isinstance(parameter_type, type):
-                raise ProviderMethodParameterInvalidTypeAnnotation(
-                    self, resource, method, name, parameter_type
-                )
+        # exclude first parameter (self)
+        for name, parameter in islice(signature.parameters.items(), 1, None):
+            method_dependencies[name] = self._get_parameter_resource(
+                name, parameter, target, method
+            )
 
-            # the parameter type is not a resource. We match the parameter's name with
-            # the module's resource names.
-
-            if name not in self.module:
-                raise ProviderMethodParameterUnknownResource(
-                    self, resource, method, parameter_name=name
-                )
-            module_resource = self.module[name]
-            if issubclass(module_resource.type, parameter_type):
-                method_dependencies[name] = module_resource
-            else:
-                raise ProviderMethodParameterResourceTypeMismatch(
-                    self,
-                    resource,
-                    method,
-                    parameter_name=name,
-                    refers_to=module_resource,
-                    mismatched_type=parameter_type,
-                )
         return method_dependencies
+
+    def _get_parameter_resource(
+        self,
+        name: str,
+        parameter: inspect.Parameter,
+        target: ResourceTypes[Any],
+        method: Any,
+    ) -> ResourceTypes[Any]:
+        parameter_type = parameter.annotation
+        if parameter_type is inspect.Signature.empty:
+            raise ProviderMethodParameterMissingTypeAnnotation(
+                self, target, method, parameter_name=name
+            )
+        if type(parameter_type) is ModuleResource:
+            return parameter_type
+
+        if type(parameter_type) is ProviderResource:
+            # when providers can be subclassed, part of this is a valid use case.
+            raise CannotDependOnResourceFromAnotherProvider(
+                target, parameter_type, name
+            )
+
+        if not isinstance(parameter_type, type):
+            raise ProviderMethodParameterInvalidTypeAnnotation(
+                self, target, method, name, parameter_type
+            )
+
+        # the parameter type is not a resource. We match the parameter's name with
+        # the module's resource names.
+
+        if name in self._resources_by_name:
+            provider_resource = self._resources_by_name[name]
+            self._ensure_parameter_type_satisfies_resource_type(
+                parameter_type, provider_resource, target, name
+            )
+            return provider_resource
+        elif name in self.module:
+            module_resource = self.module[name]
+            self._ensure_parameter_type_satisfies_resource_type(
+                parameter_type, module_resource, target, name
+            )
+            return module_resource
+        else:
+            raise ProviderMethodParameterUnrelatedName(
+                self, target, method, parameter_name=name
+            )
+
+    def _ensure_parameter_type_satisfies_resource_type(
+        self,
+        parameter_type: type,
+        resource: ResourceTypes[Any],
+        target: ResourceTypes[Any],
+        parameter_name: str,
+    ) -> None:
+        if not issubclass(resource.type, parameter_type):
+            raise ProviderMethodParameterResourceTypeMismatch(
+                self,
+                target,
+                parameter_name=parameter_name,
+                refers_to=resource,
+                mismatched_type=parameter_type,
+            )
 
     def _get_provider_method(self, resource: ResourceTypes[T]) -> ProviderMethod[T]:
         self._ensure_related_resource(resource)
@@ -235,4 +264,4 @@ class ProviderMethod(Generic[T]):
     method: Callable[..., T]
     provider: ProviderType
     resource: ResourceTypes[Any]
-    dependencies: dict[str, ModuleResource[Any]]
+    dependencies: dict[str, ResourceTypes[Any]]

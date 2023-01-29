@@ -82,7 +82,7 @@ class ProviderMethodParameterMissingTypeAnnotation(Exception):
         self.parameter_name = parameter_name
 
 
-class ProviderMethodParameterUnknownResource(Exception):
+class ProviderMethodParameterUnrelatedName(Exception):
     def __init__(
         self,
         provider: ProviderType,
@@ -117,14 +117,12 @@ class ProviderMethodParameterResourceTypeMismatch(Exception):
         self,
         provider: ProviderType,
         provides: ResourceTypes[Any],
-        method: fn,
         parameter_name: str,
-        refers_to: ModuleResource[Any],
+        refers_to: ResourceTypes[Any],
         mismatched_type: type,
     ):
         self.provider = provider
         self.provides = provides
-        self.method = method
         self.parameter_name = parameter_name
         self.refers_to = refers_to
         self.mismatched_type = mismatched_type
@@ -174,3 +172,21 @@ class InvalidAttributeAnnotationInProvider(Exception):
         self.provider = provider
         self.name = name
         self.annotation = annotation
+
+
+class ProviderResourceCannotOccludeModuleResource(Exception):
+    def __init__(self, provider: ProviderType, resource: ProviderResource[Any]):
+        self.provider = provider
+        self.resource = resource
+
+
+class CannotDependOnResourceFromAnotherProvider(Exception):
+    def __init__(
+        self,
+        target: ResourceTypes[Any],
+        parameter_resource: ProviderResource[Any],
+        parameter_name: str,
+    ):
+        self.target = target
+        self.parameter_resource = parameter_resource
+        self.parameter_name = parameter_name
