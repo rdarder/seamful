@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TypeVar, Generic, Type, TYPE_CHECKING, Union
 
-from wiring.errors import CannotMakePrivateOverridingResource
+from wiring.resources.errors import CannotMakePrivateOverridingResource
 
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
