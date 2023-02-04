@@ -3,7 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
-from wiring.resource import ModuleResource, PrivateResource, ResourceTypes
+from wiring.resource import (
+    ModuleResource,
+    PrivateResource,
+    ResourceTypes,
+    OverridingResource,
+)
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
@@ -158,9 +163,18 @@ class InvalidModuleResourceAnnotationInProvider(Exception):
         self.resource = resource
 
 
-class InvalidProviderResourceAnnotationInProvider(Exception):
+class InvalidPrivateResourceAnnotationInProvider(Exception):
     def __init__(
         self, provider: ProviderType, name: str, resource: PrivateResource[Any]
+    ):
+        self.provider = provider
+        self.name = name
+        self.resource = resource
+
+
+class InvalidOverridingResourceAnnotationInProvider(Exception):
+    def __init__(
+        self, provider: ProviderType, name: str, resource: OverridingResource[Any]
     ):
         self.provider = provider
         self.name = name

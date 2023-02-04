@@ -37,10 +37,11 @@ from wiring.provider.errors import (
     CannotUseExistingProviderResource,
     CannotDefinePublicResourceInProvider,
     InvalidAttributeAnnotationInProvider,
-    InvalidProviderResourceAnnotationInProvider,
+    InvalidPrivateResourceAnnotationInProvider,
     InvalidModuleResourceAnnotationInProvider,
     PrivateResourceCannotOccludeModuleResource,
     CannotDependOnResourceFromAnotherProvider,
+    InvalidOverridingResourceAnnotationInProvider,
 )
 
 T = TypeVar("T")
@@ -100,11 +101,13 @@ class ProviderType(type):
         return module
 
     def _collect_provider_methods(self) -> None:
-        for module_resource in self.module:
-            provider_method = self._build_provider_method(module_resource)
-            self._add_provider_method(provider_method)
         for provider_resource in self._resources:
             provider_method = self._build_provider_method(provider_resource)
+            self._add_provider_method(provider_method)
+        for module_resource in self.module:
+            if module_resource.name in self._resources_by_name:
+                continue
+            provider_method = self._build_provider_method(module_resource)
             self._add_provider_method(provider_method)
 
     def _build_provider_method(
@@ -125,10 +128,13 @@ class ProviderType(type):
             )
         method_dependencies = self._get_parameter_resources(signature, resource, method)
 
+        bound_resource = (
+            resource.overrides if type(resource) is OverridingResource else resource
+        )
         return ProviderMethod(
             provider=self,
             method=method,
-            resource=resource,
+            resource=bound_resource,
             dependencies=method_dependencies,
         )
 
@@ -266,10 +272,13 @@ class ProviderType(type):
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:
                 continue
-            if isinstance(annotation, ModuleResource):
+            t = type(annotation)
+            if t is ModuleResource:
                 raise InvalidModuleResourceAnnotationInProvider(self, name, annotation)
-            if isinstance(annotation, PrivateResource):
-                raise InvalidProviderResourceAnnotationInProvider(
+            elif t is PrivateResource:
+                raise InvalidPrivateResourceAnnotationInProvider(self, name, annotation)
+            elif t is OverridingResource:
+                raise InvalidOverridingResourceAnnotationInProvider(
                     self, name, annotation
                 )
             if isinstance(annotation, type):
