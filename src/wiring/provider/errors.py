@@ -174,7 +174,7 @@ class InvalidAttributeAnnotationInProvider(Exception):
         self.annotation = annotation
 
 
-class ProviderResourceCannotOccludeModuleResource(Exception):
+class PrivateResourceCannotOccludeModuleResource(Exception):
     def __init__(self, provider: ProviderType, resource: PrivateResource[Any]):
         self.provider = provider
         self.resource = resource

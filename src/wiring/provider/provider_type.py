@@ -39,7 +39,7 @@ from wiring.provider.errors import (
     InvalidAttributeAnnotationInProvider,
     InvalidProviderResourceAnnotationInProvider,
     InvalidModuleResourceAnnotationInProvider,
-    ProviderResourceCannotOccludeModuleResource,
+    PrivateResourceCannotOccludeModuleResource,
     CannotDependOnResourceFromAnotherProvider,
 )
 
@@ -49,6 +49,14 @@ T = TypeVar("T")
 class OverridingResourceTypeMismatch(Exception):
     def __init__(self, resource: OverridingResource[Any]):
         self.resource = resource
+
+
+class OverridingResourceNameDoesntMatchModuleResource(Exception):
+    def __init__(self, t: type, name: str, provider: ProviderType, module: ModuleType):
+        self.type = t
+        self.name = name
+        self.provider = provider
+        self.module = module
 
 
 class ProviderType(type):
@@ -218,14 +226,22 @@ class ProviderType(type):
         for name, candidate in dct.items():
             if name.startswith("_"):
                 continue
-            if isinstance(candidate, PrivateResource):
+            candidate_type = type(candidate)
+            if candidate_type is PrivateResource:
                 if candidate.is_bound:
                     raise CannotUseExistingProviderResource(self, name, candidate)
                 candidate.bind(name=name, provider=self)
                 if name in self.module:
-                    raise ProviderResourceCannotOccludeModuleResource(self, candidate)
+                    raise PrivateResourceCannotOccludeModuleResource(self, candidate)
                 self._add_resource(candidate)
-            elif isinstance(candidate, ModuleResource):
+            elif candidate_type is OverridingResource:
+                if name not in self.module:
+                    raise OverridingResourceNameDoesntMatchModuleResource(
+                        candidate.type, name, self, self.module
+                    )
+                candidate.bind(name=name, provider=self, overrides=self.module[name])
+                self._add_resource(candidate)
+            elif candidate_type is ModuleResource:
                 raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
             elif isinstance(candidate, type):
                 if name in self.module:

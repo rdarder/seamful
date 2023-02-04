@@ -21,9 +21,12 @@ from wiring.provider.errors import (
     InvalidAttributeAnnotationInProvider,
     InvalidProviderResourceAnnotationInProvider,
     CannotDefinePublicResourceInProvider,
-    ProviderResourceCannotOccludeModuleResource,
+    PrivateResourceCannotOccludeModuleResource,
 )
-from wiring.provider.provider_type import OverridingResourceTypeMismatch
+from wiring.provider.provider_type import (
+    OverridingResourceTypeMismatch,
+    OverridingResourceNameDoesntMatchModuleResource,
+)
 from wiring.resource import (
     ModuleResource,
     Resource,
@@ -480,7 +483,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        with self.assertRaises(ProviderResourceCannotOccludeModuleResource) as ctx:
+        with self.assertRaises(PrivateResourceCannotOccludeModuleResource) as ctx:
 
             class SomeProvider(Provider[SomeModule]):
                 a = Resource(int, private=True)
@@ -494,7 +497,7 @@ class TestProviderResourcesTypeAliases(TestCase):
 
 
 class TestProviderResourcesFromResourceInstances(TestCase):
-    def test_provider_collect_resource_instances_and_binds_them(self) -> None:
+    def test_provider_collect_private_resource_instances_and_binds_them(self) -> None:
         class SomeModule(Module):
             pass
 
@@ -512,7 +515,34 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.provider, SomeProvider)
 
-    def test_provider_fails_on_a_resource_defined_as_another_modules_resource(
+    def test_provider_collect_overriding_resource_instances_and_binds_them(
+        self,
+    ) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            pass
+
+        class SomeModule(Module):
+            a = Resource(SomeBaseClass)
+
+        class SomeProvider(Provider[SomeModule]):
+            a = Resource(SomeConcreteClass, override=True)
+
+            def provide_a(self) -> SomeConcreteClass:
+                return SomeConcreteClass()
+
+        resources = list(SomeProvider._list_resources())
+        self.assertEqual(len(resources), 1)
+        resource = cast(OverridingResource[Any], resources[0])
+        self.assertIs(resource, SomeProvider.a)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.type, SomeConcreteClass)
+        self.assertEqual(resource.provider, SomeProvider)
+        self.assertEqual(resource.overrides, SomeModule.a)
+
+    def test_provider_fails_on_private_resource_defined_as_another_modules_resource(
         self,
     ) -> None:
         class SomeModule(Module):
@@ -537,17 +567,19 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
 
             class SomeProvider(Provider[SomeModule]):
-                a = Resource(int, private=False)
+                a = Resource(int, private=False, override=False)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.type, int)
 
-    def test_provider_refuses_resource_if_occludes_module_resource(self) -> None:
+    def test_provider_refuses_private_resource_if_occludes_module_resource(
+        self,
+    ) -> None:
         class SomeModule(Module):
             a = Resource(int)
 
-        with self.assertRaises(ProviderResourceCannotOccludeModuleResource) as ctx:
+        with self.assertRaises(PrivateResourceCannotOccludeModuleResource) as ctx:
 
             class SomeProvider(Provider[SomeModule]):
                 a = Resource(int, private=True)
@@ -558,6 +590,22 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.resource.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
+
+    def test_provider_refuses_overriding_resource_if_name_doesnt_match_module_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(OverridingResourceNameDoesntMatchModuleResource) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                a = Resource(int, override=True)
+
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.type, int)
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.module, SomeModule)
 
 
 class TestProviderResourcesFromAnnotations(TestCase):
