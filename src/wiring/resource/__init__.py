@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar, Generic, Type, TYPE_CHECKING, Union
+from typing import TypeVar, Generic, Type, TYPE_CHECKING, Union, Any
 
 from wiring.resources.errors import CannotMakePrivateOverridingResource
 
@@ -115,7 +115,7 @@ class OverridingResource(Generic[T], type):
 
     @staticmethod
     def make_bound(
-        t: Type[T], name: str, provider: ProviderType, overrides: ModuleResource[T]
+        t: Type[T], name: str, provider: ProviderType, overrides: ModuleResource[Any]
     ) -> OverridingResource[T]:
         return OverridingResource(
             "OverridingResource",

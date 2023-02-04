@@ -14,7 +14,12 @@ from typing import (
 )
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, PrivateResource, ResourceTypes
+from wiring.resource import (
+    ModuleResource,
+    PrivateResource,
+    ResourceTypes,
+    OverridingResource,
+)
 from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
@@ -41,9 +46,14 @@ from wiring.provider.errors import (
 T = TypeVar("T")
 
 
+class OverridingResourceTypeMismatch(Exception):
+    def __init__(self, resource: OverridingResource[Any]):
+        self.resource = resource
+
+
 class ProviderType(type):
-    _resources_by_name: dict[str, PrivateResource[Any]]
-    _resources: set[PrivateResource[Any]]
+    _resources_by_name: dict[str, OverridingResource[Any] | PrivateResource[Any]]
+    _resources: set[OverridingResource[Any] | PrivateResource[Any]]
     _provider_methods_by_resource: dict[ResourceTypes[Any], ProviderMethod[Any]]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
@@ -218,12 +228,24 @@ class ProviderType(type):
             elif isinstance(candidate, ModuleResource):
                 raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
             elif isinstance(candidate, type):
-                resource: PrivateResource[Any] = PrivateResource.make_bound(
-                    t=candidate, name=name, provider=self  # pyright: ignore
-                )
                 if name in self.module:
-                    raise ProviderResourceCannotOccludeModuleResource(self, resource)
-                self._add_resource(resource)
+                    overrides = self.module[name]
+                    overriding_resource: OverridingResource[
+                        Any
+                    ] = OverridingResource.make_bound(
+                        t=candidate,  # pyright: ignore
+                        name=name,
+                        provider=self,
+                        overrides=overrides,
+                    )
+                    if not issubclass(candidate, overrides.type):
+                        raise OverridingResourceTypeMismatch(overriding_resource)
+                    self._add_resource(overriding_resource)
+                else:
+                    private_resource: PrivateResource[Any] = PrivateResource.make_bound(
+                        t=candidate, name=name, provider=self  # pyright: ignore
+                    )
+                    self._add_resource(private_resource)
 
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:
@@ -237,12 +259,16 @@ class ProviderType(type):
             if isinstance(annotation, type):
                 raise InvalidAttributeAnnotationInProvider(self, name, annotation)
 
-    def _add_resource(self, resource: PrivateResource[Any]) -> None:
+    def _add_resource(
+        self, resource: OverridingResource[Any] | PrivateResource[Any]
+    ) -> None:
         self._resources_by_name[resource.name] = resource
         self._resources.add(resource)
         setattr(self, resource.name, resource)
 
-    def _list_resources(self) -> Iterable[PrivateResource[Any]]:
+    def _list_resources(
+        self,
+    ) -> Iterable[OverridingResource[Any] | PrivateResource[Any]]:
         return self._resources
 
     def _add_provider_method(self, provider_method: ProviderMethod[Any]) -> None:

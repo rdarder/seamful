@@ -1,4 +1,4 @@
-from typing import TypeAlias
+from typing import TypeAlias, cast, Any
 from unittest import TestCase
 
 from wiring.container import Container
@@ -19,15 +19,20 @@ from wiring.provider.errors import (
     ProviderMethodParameterInvalidTypeAnnotation,
     ProvidersCannotBeInstantiated,
     InvalidAttributeAnnotationInProvider,
-    InvalidModuleResourceAnnotationInProvider,
     InvalidProviderResourceAnnotationInProvider,
     CannotDefinePublicResourceInProvider,
     ProviderResourceCannotOccludeModuleResource,
 )
-from wiring.resource import ModuleResource, Resource, PrivateResource
+from wiring.provider.provider_type import OverridingResourceTypeMismatch
+from wiring.resource import (
+    ModuleResource,
+    Resource,
+    PrivateResource,
+    OverridingResource,
+)
 
 
-class TestProvider(TestCase):
+class TestProviderInstances(TestCase):
     def test_providers_cannot_be_instantiated(self) -> None:
         class SomeModule(Module):
             pass
@@ -376,8 +381,10 @@ class TestProviderMethodFromSignature(TestCase):
         self.assertEqual(ctx.exception.mismatched_type, True)
 
 
-class TestProviderResources(TestCase):
-    def test_provider_collects_resources_from_implicit_type_aliases(self) -> None:
+class TestProviderResourcesTypeAliases(TestCase):
+    def test_provider_collects_private_resources_from_implicit_type_aliases(
+        self,
+    ) -> None:
         class SomeModule(Module):
             pass
 
@@ -389,11 +396,65 @@ class TestProviderResources(TestCase):
 
         resources = list(SomeProvider._list_resources())
         self.assertEqual(len(resources), 1)
-        resource = resources[0]
+        resource = cast(PrivateResource[Any], resources[0])
+        self.assertIsInstance(resource, PrivateResource)
         self.assertIs(resource, SomeProvider.a)
         self.assertEqual(resource.name, "a")
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.provider, SomeProvider)
+
+    def test_provider_collects_overriding_resources_from_implicit_type_aliases(
+        self,
+    ) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            pass
+
+        class SomeModule(Module):
+            a = SomeBaseClass
+
+        class SomeProvider(Provider[SomeModule]):
+            a = SomeConcreteClass
+
+            def provide_a(self) -> SomeConcreteClass:
+                return SomeConcreteClass()
+
+        resources = list(SomeProvider._list_resources())
+        self.assertEqual(len(resources), 1)
+        resource = cast(OverridingResource[Any], resources[0])
+        self.assertIsInstance(resource, OverridingResource)
+        self.assertIs(resource, SomeProvider.a)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.type, SomeConcreteClass)
+        self.assertEqual(resource.provider, SomeProvider)
+        self.assertEqual(resource.overrides, SomeModule.a)
+
+    def test_provider_refuses_overriding_resources_from_type_alias_if_type_not_satisfied(
+        self,
+    ) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            pass
+
+        class SomeModule(Module):
+            a = SomeBaseClass
+
+        with self.assertRaises(OverridingResourceTypeMismatch) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                a = int
+
+                def provide_a(self) -> SomeConcreteClass:
+                    return SomeConcreteClass()
+
+        resource = ctx.exception.resource
+        self.assertEqual(resource.type, int)
+        self.assertEqual(resource.overrides, SomeModule.a)
+        self.assertEqual(resource.name, "a")
 
     def test_provider_collects_resources_from_explicit_type_aliases(self) -> None:
         class SomeModule(Module):
@@ -413,6 +474,26 @@ class TestProviderResources(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.provider, SomeProvider)
 
+    def test_provider_refuses_resource_from_type_alias_if_occludes_module_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+
+        with self.assertRaises(ProviderResourceCannotOccludeModuleResource) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                a = Resource(int, private=True)
+
+                def provide_a(self) -> int:
+                    return 10
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.resource.name, "a")
+        self.assertEqual(ctx.exception.resource.type, int)
+
+
+class TestProviderResourcesFromResourceInstances(TestCase):
     def test_provider_collect_resource_instances_and_binds_them(self) -> None:
         class SomeModule(Module):
             pass
@@ -430,75 +511,6 @@ class TestProviderResources(TestCase):
         self.assertEqual(resource.name, "a")
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.provider, SomeProvider)
-
-    def test_provider_fails_on_class_attribute_with_only_type_annotation(self) -> None:
-        class SomeModule(Module):
-            pass
-
-        with self.assertRaises(InvalidAttributeAnnotationInProvider) as ctx:
-
-            class SomeProvider(Provider[SomeModule]):
-                a: int
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.annotation, int)
-
-    def test_provider_fails_on_class_attribute_annotated_with_module_resource_instance(
-        self,
-    ) -> None:
-        class SomeModule(Module):
-            pass
-
-        with self.assertRaises(InvalidModuleResourceAnnotationInProvider) as ctx:
-
-            class SomeProvider(Provider[SomeModule]):
-                a: Resource(int)  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, False)
-
-    def test_provider_fails_on_class_attribute_annotated_with_provider_resource_instance(
-        self,
-    ) -> None:
-        class SomeModule(Module):
-            pass
-
-        with self.assertRaises(InvalidProviderResourceAnnotationInProvider) as ctx:
-
-            class SomeProvider(Provider[SomeModule]):
-                a: Resource(int, private=True)  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, False)
-
-    def test_provider_fails_on_a_resource_annotated_with_an_external_provider_resource(
-        self,
-    ) -> None:
-        class SomeModule(Module):
-            pass
-
-        class SomeProvider(Provider[SomeModule]):
-            b = Resource(int, private=True)
-
-            def provide_b(self) -> int:
-                return 10
-
-        with self.assertRaises(InvalidProviderResourceAnnotationInProvider) as ctx:
-
-            class AnotherProvider(Provider[SomeModule]):
-                c: SomeProvider.b  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.name, "c")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, True)
-        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
-        self.assertEqual(ctx.exception.resource.name, "b")
 
     def test_provider_fails_on_a_resource_defined_as_another_modules_resource(
         self,
@@ -547,20 +559,57 @@ class TestProviderResources(TestCase):
         self.assertEqual(ctx.exception.resource.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
 
-    def test_provider_refuses_resource_from_type_annotation_if_occludes_module_resource(
+
+class TestProviderResourcesFromAnnotations(TestCase):
+    def test_provider_fails_on_class_attribute_with_only_type_annotation(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(InvalidAttributeAnnotationInProvider) as ctx:
+
+            class SomeProvider(Provider[SomeModule]):
+                a: int
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.annotation, int)
+
+    def test_provider_fails_on_class_attribute_annotated_with_provider_resource_instance(
         self,
     ) -> None:
         class SomeModule(Module):
-            a: TypeAlias = int
+            pass
 
-        with self.assertRaises(ProviderResourceCannotOccludeModuleResource) as ctx:
+        with self.assertRaises(InvalidProviderResourceAnnotationInProvider) as ctx:
 
             class SomeProvider(Provider[SomeModule]):
-                a = Resource(int, private=True)
-
-                def provide_a(self) -> int:
-                    return 10
+                a: Resource(int, private=True)  # type: ignore
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.resource.name, "a")
+        self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, False)
+
+    def test_provider_fails_on_a_resource_annotated_with_an_external_provider_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider[SomeModule]):
+            b = Resource(int, private=True)
+
+            def provide_b(self) -> int:
+                return 10
+
+        with self.assertRaises(InvalidProviderResourceAnnotationInProvider) as ctx:
+
+            class AnotherProvider(Provider[SomeModule]):
+                c: SomeProvider.b  # type: ignore
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.name, "c")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, True)
+        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
+        self.assertEqual(ctx.exception.resource.name, "b")
