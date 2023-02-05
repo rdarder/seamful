@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Union, Any, Type, cast, TYPE_CHECKING
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, ResourceTypes, PrivateResource
+from wiring.resource import ModuleResource, ResourceTypes
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 if TYPE_CHECKING:
@@ -136,6 +136,6 @@ class RegisteredProvidersNotUsed(Exception):
 
 
 class ProviderNotProvidingForModule(Exception):
-    def __init__(self, resource: PrivateResource[Any], provider_in_use: ProviderType):
+    def __init__(self, resource: ResourceTypes[Any], provider_in_use: ProviderType):
         self.resource = resource
         self.provider_in_use = provider_in_use

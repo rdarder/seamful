@@ -147,7 +147,7 @@ class OverridingResource(Generic[T], type):
             return f"Unbound OverridingResource({self.type})"
 
 
-ResourceTypes = Union[ModuleResource[T], PrivateResource[T], OverridingResource]
+ResourceTypes = Union[ModuleResource[T], PrivateResource[T], OverridingResource[T]]
 RESOURCE_TYPES = (ModuleResource, PrivateResource, OverridingResource)
 
 

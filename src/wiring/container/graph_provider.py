@@ -7,10 +7,20 @@ from wiring.container.errors import (
     ProviderNotProvidingForModule,
 )
 from wiring.module.module_type import ModuleType
-from wiring.provider.provider_type import ProviderType, ProviderMethod
-from wiring.resource import ModuleResource, ResourceTypes, PrivateResource
+from wiring.provider.provider_type import ProviderType
+from wiring.resource import (
+    ModuleResource,
+    ResourceTypes,
+    PrivateResource,
+    OverridingResource,
+)
 
 T = TypeVar("T")
+
+
+class ProviderResourcesNotAllowed(Exception):
+    def __init__(self, resource: PrivateResource[Any] | OverridingResource[Any]):
+        self.resource = resource
 
 
 class ModuleGraphProvider:
@@ -18,41 +28,44 @@ class ModuleGraphProvider:
         self,
         registered_modules: set[ModuleType],
         providers_by_module: dict[ModuleType, ProviderType],
+        allow_provider_resources: bool,
     ):
         self._registered_modules = registered_modules
-        self._providers_by_module = providers_by_module
+        self._providers = providers_by_module
         self._instances_by_resource: dict[ResourceTypes[Any], Any] = {}
         self._fake_provider_instance = UnusableProviderInstance()
+        self._allow_provider_resources = allow_provider_resources
 
     def provide(self, resource: ResourceTypes[T]) -> T:
-        if type(resource) is ModuleResource:
-            if resource.module not in self._registered_modules:
-                raise ModuleNotRegisteredForResource(
-                    resource,
-                    self._registered_modules,
-                    set(self._providers_by_module.keys()),
-                )
-        elif type(resource) is PrivateResource:
-            if resource.provider.module not in self._registered_modules:
-                raise ModuleNotRegisteredForResource(
-                    resource,
-                    self._registered_modules,
-                    set(self._providers_by_module.keys()),
-                )
-            if (
-                resource.provider
-                is not self._providers_by_module[resource.provider.module]
-            ):
+        self._ensure_known_module(resource)
+        if isinstance(resource, ModuleResource):
+            return self._provide(resource)
+        else:
+            if not self._allow_provider_resources:
+                raise ProviderResourcesNotAllowed(resource)
+            if resource.provider is not self._providers[resource.provider.module]:
                 raise ProviderNotProvidingForModule(
-                    resource, self._providers_by_module[resource.provider.module]
+                    resource, self._providers[resource.provider.module]
                 )
+            return self._provide(resource)
 
-        return self._provide(resource)
+    def _ensure_known_module(self, resource: ResourceTypes[Any]) -> None:
+        if resource.module not in self._registered_modules:
+            raise ModuleNotRegisteredForResource(
+                resource,
+                self._registered_modules,
+                set(self._providers.keys()),
+            )
 
     def _provide(self, resource: ResourceTypes[T]) -> T:
         if resource in self._instances_by_resource:
             return cast(T, self._instances_by_resource[resource])
-        provider_method = self._get_provider_method_for_resource(resource)
+        if type(resource) is OverridingResource:
+            return self._provide(resource.overrides)
+
+        provider_method = self._providers[resource.module]._get_provider_method(
+            resource
+        )
         method_parameters = {
             name: self._provide(resource)
             for name, resource in provider_method.dependencies.items()
@@ -65,19 +78,6 @@ class ModuleGraphProvider:
             raise ProviderMethodsCantAccessProviderInstance(resource, provider_method)
         self._instances_by_resource[resource] = instance
         return instance
-
-    def _get_provider_method_for_resource(
-        self, resource: ResourceTypes[T]
-    ) -> ProviderMethod[T]:
-        if type(resource) is ModuleResource:
-            module = resource.module
-        elif type(resource) is PrivateResource:
-            module = resource.provider.module
-        else:
-            raise TypeError()
-
-        provider = self._providers_by_module[module]
-        return provider._get_provider_method(resource)
 
 
 class UnusableProviderInstance:

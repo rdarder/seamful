@@ -29,7 +29,6 @@ class Container:
 
         self._allow_overrides = False
         self._allow_implicit_modules = False
-        self._allow_provider_resources = False
 
     def register(
         self, module: ModuleType, provider: Optional[ProviderType] = None
@@ -55,10 +54,10 @@ class Container:
             allow_implicit_module=self._allow_implicit_modules,
         )
 
-    def close_registrations(self) -> None:
+    def close_registrations(self, allow_provider_resources: bool = False) -> None:
         if not self._is_registering:
             raise ContainerAlreadyReadyForProvisioning()
-        self._provider = self._registry.close_registration()
+        self._provider = self._registry.close_registration(allow_provider_resources)
         self._is_registering = False
 
     def provide(self, resource: Type[T]) -> T:
@@ -80,7 +79,6 @@ class Container:
         *,
         allow_overrides: bool = False,
         allow_implicit_modules: bool = False,
-        allow_provider_resources: bool = False,
     ) -> None:
         if self._is_providing:
             raise CannotReopenRegistrationsAfterHavingProvidedResources()
@@ -89,7 +87,6 @@ class Container:
         self._is_registering = True
         self._allow_overrides = allow_overrides
         self._allow_implicit_modules = allow_implicit_modules
-        self._allow_provider_resources = allow_provider_resources
 
     @classmethod
     def empty(cls) -> Container:

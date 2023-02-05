@@ -25,7 +25,7 @@ from wiring.provider.errors import (
     InvalidOverridingResourceAnnotationInProvider,
 )
 from wiring.provider.provider_type import (
-    OverridingResourceTypeMismatch,
+    OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
 )
 from wiring.resource import (
@@ -504,7 +504,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         class SomeModule(Module):
             a = SomeBaseClass
 
-        with self.assertRaises(OverridingResourceTypeMismatch) as ctx:
+        with self.assertRaises(OverridingResourceIncompatibleType) as ctx:
 
             class SomeProvider(Provider[SomeModule]):
                 a = int

@@ -11,6 +11,7 @@ from typing import (
     Callable,
     Tuple,
     TypeVar,
+    cast,
 )
 
 from wiring.module.module_type import ModuleType
@@ -47,7 +48,7 @@ from wiring.provider.errors import (
 T = TypeVar("T")
 
 
-class OverridingResourceTypeMismatch(Exception):
+class OverridingResourceIncompatibleType(Exception):
     def __init__(self, resource: OverridingResource[Any]):
         self.resource = resource
 
@@ -218,7 +219,10 @@ class ProviderType(type):
 
     def _get_provider_method(self, resource: ResourceTypes[T]) -> ProviderMethod[T]:
         self._ensure_related_resource(resource)
-        provider_method = self._provider_methods_by_resource[resource]
+        target_resource = (
+            resource.overrides if type(resource) is OverridingResource else resource
+        )
+        provider_method = self._provider_methods_by_resource[target_resource]
         return provider_method
 
     def _list_provider_methods(self) -> Iterable[ProviderMethod[Any]]:
@@ -261,7 +265,7 @@ class ProviderType(type):
                         overrides=overrides,
                     )
                     if not issubclass(candidate, overrides.type):
-                        raise OverridingResourceTypeMismatch(overriding_resource)
+                        raise OverridingResourceIncompatibleType(overriding_resource)
                     self._add_resource(overriding_resource)
                 else:
                     private_resource: PrivateResource[Any] = PrivateResource.make_bound(
@@ -300,10 +304,11 @@ class ProviderType(type):
         self._provider_methods_by_resource[provider_method.resource] = provider_method
 
     def _ensure_related_resource(self, resource: ResourceTypes[Any]) -> None:
-        if type(resource) is ModuleResource:
-            if resource not in self.module:
+        resource_type = type(resource)
+        if resource_type is ModuleResource:
+            if cast(ModuleResource[Any], resource) not in self.module:
                 raise UnrelatedResource(self, resource)
-        elif type(resource) is PrivateResource:
+        elif resource_type is PrivateResource or resource_type is OverridingResource:
             if resource not in self._resources:
                 raise UnrelatedResource(self, resource)
         else:

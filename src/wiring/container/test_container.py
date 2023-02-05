@@ -133,7 +133,7 @@ class TestContainerProvision(TestCase):
         self.assertEqual(ctx.exception.type, SomeClass)
 
 
-class TestContainerProvidesProviderResources(TestCase):
+class TestContainerProvidesPrivateResources(TestCase):
     def test_can_provide_private_resource(self) -> None:
         class SomeModule(Module):
             pass
@@ -146,7 +146,7 @@ class TestContainerProvidesProviderResources(TestCase):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.close_registrations(allow_provider_resources=True)
         self.assertEqual(container.provide(SomeProvider.a), 10)
 
     def test_provider_method_can_depend_on_private_resource(self) -> None:
@@ -166,6 +166,111 @@ class TestContainerProvidesProviderResources(TestCase):
         container.register(SomeModule, SomeProvider)
         container.close_registrations()
         self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider[SomeModule]):
+            b: TypeAlias = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        class AnotherModule(Module):
+            c = int
+
+        with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
+
+            class AnotherProvider(Provider[AnotherModule]):
+                def provide_c(self, b: SomeProvider.b) -> int:
+                    return b + 1
+
+        self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
+        self.assertEqual(ctx.exception.parameter_name, "b")
+        self.assertEqual(ctx.exception.target, AnotherModule.c)
+
+
+class TestContainerProvidesOverridingResources(TestCase):
+    def test_can_provide_overriding_resource(self) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            pass
+
+        class SomeModule(Module):
+            a: TypeAlias = SomeBaseClass
+
+        class SomeProvider(Provider[SomeModule]):
+            a: TypeAlias = SomeConcreteClass
+
+            def provide_a(self) -> SomeConcreteClass:
+                return SomeConcreteClass()
+
+        container = Container.empty()
+        container.register(SomeModule, SomeProvider)
+        container.close_registrations(allow_provider_resources=True)
+
+        from_overriden = container.provide(SomeProvider.a)
+        self.assertIsInstance(from_overriden, SomeConcreteClass)
+        from_module = container.provide(SomeModule.a)
+        self.assertIs(from_overriden, from_module)
+
+    def test_provider_method_can_depend_on_private_resource(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider[SomeModule]):
+            b = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.close_registrations()
+        self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_method_can_depend_on_overriding_resource(self) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            pass
+
+        class AnotherClass:
+            def __init__(self, some: SomeConcreteClass):
+                self.some = some
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeBaseClass
+            another: TypeAlias = AnotherClass
+
+        class SomeProvider(Provider[SomeModule]):
+            some: TypeAlias = SomeConcreteClass
+
+            def provide_some(self) -> SomeConcreteClass:
+                return SomeConcreteClass()
+
+            def provide_another(self, some: SomeConcreteClass) -> AnotherClass:
+                return AnotherClass(some)
+
+        container = Container.empty()
+        container.register(SomeModule, SomeProvider)
+        container.close_registrations()
+
+        another = container.provide(SomeModule.another)
+        self.assertIsInstance(another, AnotherClass)
+        some = container.provide(SomeModule.some)
+        self.assertIsInstance(some, SomeConcreteClass)
+        self.assertIs(another.some, some)
 
     def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
         class SomeModule(Module):

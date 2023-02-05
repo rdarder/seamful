@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from wiring.container.errors import (
     ModuleWithoutRegisteredOrDefaultProvider,
@@ -9,7 +9,12 @@ from wiring.container.errors import (
 from wiring.container.graph_provider import ModuleGraphProvider
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
-from wiring.resource import ModuleResource, ResourceTypes, PrivateResource
+from wiring.resource import (
+    ModuleResource,
+    ResourceTypes,
+    PrivateResource,
+    OverridingResource,
+)
 
 
 class ModuleGraphSolver:
@@ -26,7 +31,7 @@ class ModuleGraphSolver:
         ] = registered_modules.copy()
         self._unused_providers_by_module = registered_providers.copy()
 
-    def solve(self) -> ModuleGraphProvider:
+    def solve(self, allow_provider_resources: bool) -> ModuleGraphProvider:
         while len(self._needed_modules_without_providers) > 0:
             for module in self._needed_modules_without_providers.copy():
                 provider = self._use_provider_for_module(module)
@@ -36,7 +41,11 @@ class ModuleGraphSolver:
 
         self._fail_on_circular_dependencies()
         self._fail_on_unused_implicit_modules()
-        return ModuleGraphProvider(self._registered_modules, self._providers_by_module)
+        return ModuleGraphProvider(
+            self._registered_modules,
+            self._providers_by_module,
+            allow_provider_resources,
+        )
 
     def _use_provider_for_module(self, module: ModuleType) -> ProviderType:
         if module in self._unused_providers_by_module:
@@ -71,12 +80,7 @@ class ModuleGraphSolver:
     ) -> Optional[list[ResolutionStep]]:
         if target in solved:
             return None
-        if type(target) is PrivateResource:
-            provider = target.provider
-        elif type(target) is ModuleResource:
-            provider = self._providers_by_module[target.module]
-        else:
-            raise NotImplementedError()
+        provider = self._get_provider_for_resource(target)
         provider_method = provider._get_provider_method(target)
         in_stack.add(target)
         for parameter_name, depends_on in provider_method.dependencies.items():
@@ -94,6 +98,14 @@ class ModuleGraphSolver:
         in_stack.remove(target)
         solved.add(target)
         return None
+
+    def _get_provider_for_resource(self, resource: ResourceTypes[Any]) -> ProviderType:
+        if isinstance(resource, (PrivateResource, OverridingResource)):
+            return cast(PrivateResource[Any], resource).provider
+        elif isinstance(resource, ModuleResource):
+            return self._providers_by_module[resource.module]
+        else:
+            raise TypeError()
 
     def _fail_on_unused_implicit_modules(self) -> None:
         if len(self._unused_providers_by_module) > 0:
