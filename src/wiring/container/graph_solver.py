@@ -83,6 +83,8 @@ class ModuleGraphSolver:
         provider = self._get_provider_for_resource(target)
         provider_method = provider._get_provider_method(target)
         in_stack.add(target)
+        if isinstance(target, OverridingResource):
+            in_stack.add(target.overrides)
         for parameter_name, depends_on in provider_method.dependencies.items():
             if depends_on in in_stack:
                 return [

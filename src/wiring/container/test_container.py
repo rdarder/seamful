@@ -963,6 +963,60 @@ class TestCircularDependencies(TestCase):
             ],
         )
 
+    def test_catches_circular_dependencies_involving_overriding_resources(self) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeConcreteClass(SomeBaseClass):
+            def __init__(self, param: int):
+                self.param = param
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeBaseClass
+            a: TypeAlias = int
+
+        class SomeProvider(Provider[SomeModule]):
+            some: TypeAlias = SomeConcreteClass
+            private: TypeAlias = int
+
+            def provide_a(self, some: SomeConcreteClass) -> int:
+                return some.param
+
+            def provide_some(self, private: int) -> SomeConcreteClass:
+                return SomeConcreteClass(private)
+
+            def provide_private(self, a: int) -> int:
+                return a + 1
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        with self.assertRaises(CircularDependency) as ctx:
+            container.close_registrations()
+
+        self._assert_contains_loop(
+            ctx.exception.loop,
+            [
+                ResolutionStep.from_types(
+                    SomeProvider.private,
+                    get_provider_method(SomeProvider, SomeProvider.private),
+                    "a",
+                    SomeModule.a,
+                ),
+                ResolutionStep.from_types(
+                    SomeModule.a,
+                    get_provider_method(SomeProvider, SomeModule.a),
+                    "some",
+                    SomeProvider.some,
+                ),
+                ResolutionStep.from_types(
+                    SomeProvider.some,
+                    get_provider_method(SomeProvider, SomeModule.some),
+                    "private",
+                    SomeProvider.private,
+                ),
+            ],
+        )
+
     def test_providers_can_have_a_circular_module_dependency_without_a_circular_resource_dependency(
         self,
     ) -> None:
@@ -1004,14 +1058,14 @@ class TestCircularDependencies(TestCase):
             container_tip = container.index(expected[0])
         except ValueError:
             self.assertEqual(
-                container, expected
+                expected, container
             )  # this will fail regardless, but assertEqual produces a diff.
             return
         first_segment = container[container_tip : container_tip + target_length]
         remaining_elements = target_length - len(first_segment)
         second_segment = container[:remaining_elements]
         container_segment = first_segment + second_segment
-        self.assertEqual(container_segment, expected)
+        self.assertEqual(expected, container_segment)
 
 
 T = TypeVar("T")
