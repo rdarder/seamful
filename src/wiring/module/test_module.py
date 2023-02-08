@@ -1,10 +1,6 @@
 from typing import TypeAlias
 from unittest import TestCase
 
-from wiring.module.module_type import (
-    CannotDefinePrivateResourceInModule,
-    CannotDefineOverridingResourceInModule,
-)
 from wiring.provider import Provider
 from wiring.module import Module
 from wiring.module.errors import (
@@ -17,6 +13,9 @@ from wiring.module.errors import (
     ModulesCannotBeInstantiated,
     InvalidPrivateResourceAnnotationInModule,
     InvalidOverridingResourceAnnotationInModule,
+    CannotDefinePrivateResourceInModule,
+    CannotDefineOverridingResourceInModule,
+    ModulesMustInheritDirectlyFromModuleClass,
 )
 from wiring.resource import Resource
 
@@ -185,6 +184,18 @@ class TestModuleInstances(TestCase):
         with self.assertRaises(ModulesCannotBeInstantiated) as ctx:
             SomeModule()
         self.assertEqual(ctx.exception.module, SomeModule)
+
+    def test_modules_cannot_be_defined_as_a_subclass_of_another_module(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(ModulesMustInheritDirectlyFromModuleClass) as ctx:
+
+            class SubModule(SomeModule):
+                pass
+
+        self.assertEqual(ctx.exception.module_class_name, "SubModule")
+        self.assertEqual(ctx.exception.inherits_from, (SomeModule,))
 
 
 class TestModuleDefaultProvider(TestCase):

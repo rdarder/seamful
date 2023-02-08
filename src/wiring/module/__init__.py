@@ -1,5 +1,3 @@
-from .module_type import ModuleType
+from .module_type import Module
 
-
-class Module(metaclass=ModuleType):
-    pass
+__all__ = ("Module",)

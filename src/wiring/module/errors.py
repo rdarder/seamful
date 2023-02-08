@@ -64,3 +64,23 @@ class CannotUseExistingModuleResource(Exception):
 class ModulesCannotBeInstantiated(Exception):
     def __init__(self, module: ModuleType):
         self.module = module
+
+
+class CannotDefinePrivateResourceInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, t: type):
+        self.module = module
+        self.name = name
+        self.type = t
+
+
+class CannotDefineOverridingResourceInModule(Exception):
+    def __init__(self, module: ModuleType, name: str, t: type):
+        self.module = module
+        self.name = name
+        self.type = t
+
+
+class ModulesMustInheritDirectlyFromModuleClass(Exception):
+    def __init__(self, module_class_name: str, inherits_from: tuple[type, ...]):
+        self.module_class_name = module_class_name
+        self.inherits_from = inherits_from

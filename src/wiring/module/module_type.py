@@ -13,25 +13,14 @@ from wiring.module.errors import (
     ModulesCannotBeInstantiated,
     InvalidPrivateResourceAnnotationInModule,
     InvalidOverridingResourceAnnotationInModule,
+    CannotDefinePrivateResourceInModule,
+    CannotDefineOverridingResourceInModule,
+    ModulesMustInheritDirectlyFromModuleClass,
 )
 from wiring.resource import ModuleResource, PrivateResource, OverridingResource
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
-
-
-class CannotDefinePrivateResourceInModule(Exception):
-    def __init__(self, module: ModuleType, name: str, t: type):
-        self.module = module
-        self.name = name
-        self.type = t
-
-
-class CannotDefineOverridingResourceInModule(Exception):
-    def __init__(self, module: ModuleType, name: str, t: type):
-        self.module = module
-        self.name = name
-        self.type = t
 
 
 class ModuleType(type):
@@ -40,6 +29,8 @@ class ModuleType(type):
     _default_provider: Optional[ProviderType]
 
     def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
+        if len(bases) > 0 and bases != (Module,):
+            raise ModulesMustInheritDirectlyFromModuleClass(name, bases)
         type.__init__(self, name, bases, dct)
         self._resources = set()
         self._resources_by_name = {}
@@ -121,3 +112,7 @@ class ModuleType(type):
         if provider.module is not self:
             raise DefaultProviderProvidesToAnotherModule(self, provider)
         self._default_provider = provider
+
+
+class Module(metaclass=ModuleType):
+    pass
