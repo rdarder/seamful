@@ -217,7 +217,7 @@ class TestModuleDefaultProvider(TestCase):
         class AnotherModule(Module):
             pass
 
-        class AnotherProvider(Provider[AnotherModule]):
+        class AnotherProvider(Provider, module=AnotherModule):
             pass
 
         with self.assertRaises(DefaultProviderProvidesToAnotherModule) as ctx:

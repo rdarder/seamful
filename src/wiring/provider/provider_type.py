@@ -6,15 +6,14 @@ from itertools import islice
 from typing import (
     Any,
     Generic,
-    get_args,
     Iterable,
     Callable,
-    Tuple,
     TypeVar,
     cast,
+    TYPE_CHECKING,
+    Optional,
 )
 
-from wiring.module.module_type import ModuleType
 from wiring.resource import (
     ModuleResource,
     PrivateResource,
@@ -24,7 +23,6 @@ from wiring.resource import (
 from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
-    MissingProviderModuleAnnotation,
     ProvidersModuleIsNotAModule,
     CannotProvideBaseModule,
     UnrelatedResource,
@@ -43,22 +41,18 @@ from wiring.provider.errors import (
     PrivateResourceCannotOccludeModuleResource,
     CannotDependOnResourceFromAnotherProvider,
     InvalidOverridingResourceAnnotationInProvider,
+    OverridingResourceIncompatibleType,
+    OverridingResourceNameDoesntMatchModuleResource,
+    ProvidersDontSupportMultipleInheritance,
+    ProviderDeclarationMissingModule,
+    BaseProviderProvidesFromADifferentModule,
+    ProvidersMustInheritFromProviderClass,
 )
 
 T = TypeVar("T")
 
-
-class OverridingResourceIncompatibleType(Exception):
-    def __init__(self, resource: OverridingResource[Any]):
-        self.resource = resource
-
-
-class OverridingResourceNameDoesntMatchModuleResource(Exception):
-    def __init__(self, t: type, name: str, provider: ProviderType, module: ModuleType):
-        self.type = t
-        self.name = name
-        self.provider = provider
-        self.module = module
+if TYPE_CHECKING:
+    from wiring.module.module_type import ModuleType
 
 
 class ProviderType(type):
@@ -66,11 +60,21 @@ class ProviderType(type):
     _resources: set[OverridingResource[Any] | PrivateResource[Any]]
     _provider_methods_by_resource: dict[ResourceTypes[Any], ProviderMethod[Any]]
 
-    def __init__(self, name: str, bases: tuple[type, ...], dct: dict[str, Any]):
+    def __init__(
+        self,
+        name: str,
+        bases: tuple[type, ...],
+        dct: dict[str, Any],
+        *,
+        module: Optional[ModuleType] = None,
+    ) -> None:
         type.__init__(self, name, bases, dct)
-        if self._is_base_provider_class(bases):
+        if len(bases) == 0:
             return
-        self.module = self._determine_module_from_generic_argument(dct)
+        if len(bases) > 1:
+            raise ProvidersDontSupportMultipleInheritance(self, bases)
+
+        self.module = self._determine_module_from_class_declaration(bases[0], module)
         self._provider_methods_by_resource = {}
         self._resources_by_name = {}
         self._resources = set()
@@ -80,26 +84,26 @@ class ProviderType(type):
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         raise ProvidersCannotBeInstantiated(self)
 
-    def _is_base_provider_class(self, bases: Tuple[type, ...]) -> bool:
-        return len(bases) == 1 and bases[0] == Generic  # type: ignore
-        # TODO: this is wrong
-
-    def _determine_module_from_generic_argument(
-        self, dct: dict[str, Any]
+    def _determine_module_from_class_declaration(
+        self, base: type, module: Optional[ModuleType]
     ) -> ModuleType:
-        from wiring.module import Module  # circular import
-        from wiring.module.module_type import ModuleType
+        from wiring.module.module_type import ModuleType, Module
 
-        bases = dct.get("__orig_bases__")
-        if bases is None or len(bases) == 0:
-            raise MissingProviderModuleAnnotation(self)
-        generic_provider = bases[0]
-        module = get_args(generic_provider)[0]
-        if not isinstance(module, ModuleType):
-            raise ProvidersModuleIsNotAModule(self, module)
-        if module is Module:
-            raise CannotProvideBaseModule(self)
-        return module
+        if base is Provider:
+            if module is None:
+                raise ProviderDeclarationMissingModule(self)
+            elif module is Module:
+                raise CannotProvideBaseModule(self)
+            elif isinstance(module, ModuleType):
+                return module
+            else:
+                raise ProvidersModuleIsNotAModule(self, module)
+        elif issubclass(base, Provider):
+            if module is not None and module is not base.module:
+                raise BaseProviderProvidesFromADifferentModule(self, base, module)
+            return base.module
+        else:
+            raise ProvidersMustInheritFromProviderClass(self)
 
     def _collect_provider_methods(self) -> None:
         for provider_resource in self._resources:
@@ -321,3 +325,11 @@ class ProviderMethod(Generic[T]):
     provider: ProviderType
     resource: ResourceTypes[Any]
     dependencies: dict[str, ResourceTypes[Any]]
+
+
+M = TypeVar("M")
+
+
+class Provider(metaclass=ProviderType):
+    def __init_subclass__(cls, *, module: Optional[ModuleType] = None) -> None:
+        pass

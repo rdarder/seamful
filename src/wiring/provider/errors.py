@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
+from wiring.module.module_type import ModuleType
 from wiring.resource import (
     ModuleResource,
     PrivateResource,
@@ -25,11 +26,6 @@ class MissingProviderMethod(Exception):
 class ProviderMethodNotCallable(Exception):
     def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
         self.resource = resource
-        self.provider = provider
-
-
-class MissingProviderModuleAnnotation(Exception):
-    def __init__(self, provider: ProviderType):
         self.provider = provider
 
 
@@ -204,3 +200,39 @@ class CannotDependOnResourceFromAnotherProvider(Exception):
         self.target = target
         self.parameter_resource = parameter_resource
         self.parameter_name = parameter_name
+
+
+class OverridingResourceIncompatibleType(Exception):
+    def __init__(self, resource: OverridingResource[Any]):
+        self.resource = resource
+
+
+class OverridingResourceNameDoesntMatchModuleResource(Exception):
+    def __init__(self, t: type, name: str, provider: ProviderType, module: ModuleType):
+        self.type = t
+        self.name = name
+        self.provider = provider
+        self.module = module
+
+
+class ProvidersDontSupportMultipleInheritance(Exception):
+    def __init__(self, provider: ProviderType, bases: tuple[type, ...]):
+        self.provider = provider
+        self.bases = bases
+
+
+class ProviderDeclarationMissingModule(Exception):
+    def __init__(self, provider: ProviderType):
+        self.provider = provider
+
+
+class BaseProviderProvidesFromADifferentModule(Exception):
+    def __init__(self, provider: ProviderType, base: ProviderType, module: ModuleType):
+        self.provider = provider
+        self.base = base
+        self.module = module
+
+
+class ProvidersMustInheritFromProviderClass(Exception):
+    def __init__(self, provider: ProviderType):
+        self.provider = provider

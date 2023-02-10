@@ -3,11 +3,10 @@ from unittest import TestCase
 
 from wiring.container import Container
 from wiring.module import Module
-from wiring.provider.provider import Provider
+from wiring.provider import Provider
 from wiring.provider.errors import (
     MissingProviderMethod,
     ProviderMethodNotCallable,
-    MissingProviderModuleAnnotation,
     ProvidersModuleIsNotAModule,
     CannotProvideBaseModule,
     UnrelatedResource,
@@ -23,8 +22,6 @@ from wiring.provider.errors import (
     CannotDefinePublicResourceInProvider,
     PrivateResourceCannotOccludeModuleResource,
     InvalidOverridingResourceAnnotationInProvider,
-)
-from wiring.provider.provider_type import (
     OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
 )
@@ -41,7 +38,7 @@ class TestProviderInstances(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             pass
 
         with self.assertRaises(ProvidersCannotBeInstantiated) as ctx:
@@ -54,7 +51,7 @@ class TestProviderInstances(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def __init__(self) -> None:
                 pass
 
@@ -68,7 +65,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -83,7 +80,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
         with self.assertRaises(MissingProviderMethod) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 pass
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -95,7 +92,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
         with self.assertRaises(ProviderMethodNotCallable) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 provide_a = 10
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -105,7 +102,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             pass
 
         fake_resource = ModuleResource.make_bound(
@@ -121,7 +118,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = int
 
             def provide_a(self) -> int:
@@ -140,7 +137,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a: TypeAlias = int
 
             def provide_a(self) -> int:
@@ -161,7 +158,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
         with self.assertRaises(MissingProviderMethod) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a: TypeAlias = int
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -188,7 +185,7 @@ class TestProviderCollectingProviderMethods(TestCase):
         class SomeModule(Module):
             a = Resource(SomeBaseClass)
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = Resource(SomeConcreteClass, override=True)
 
             def provide_a(self) -> SomeConcreteClass:
@@ -205,21 +202,13 @@ class TestProviderCollectingProviderMethods(TestCase):
 
 
 class TestProviderModuleAnnotation(TestCase):
-    def test_missing_provider_module_generic_annotation(self) -> None:
-        with self.assertRaises(MissingProviderModuleAnnotation) as ctx:
-
-            class SomeProvider(Provider):  # type: ignore
-                pass
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-
     def test_invalid_provider_module_annotation(self) -> None:
         class SomeClass:
             pass
 
         with self.assertRaises(ProvidersModuleIsNotAModule) as ctx:
 
-            class SomeProvider(Provider[SomeClass]):
+            class SomeProvider(Provider, module=SomeClass):  # pyright: ignore
                 pass
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -228,7 +217,7 @@ class TestProviderModuleAnnotation(TestCase):
     def test_cannot_provide_base_module(self) -> None:
         with self.assertRaises(CannotProvideBaseModule) as ctx:
 
-            class SomeProvider(Provider[Module]):
+            class SomeProvider(Provider, module=Module):
                 pass
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -237,7 +226,7 @@ class TestProviderModuleAnnotation(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             pass
 
         self.assertEqual(SomeProvider.module, SomeModule)
@@ -250,7 +239,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodMissingReturnTypeAnnotation) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self):  # type: ignore
                     return 10
 
@@ -266,7 +255,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self) -> str:
                     return "test"
 
@@ -285,7 +274,7 @@ class TestProviderMethodFromSignature(TestCase):
         class SomeModule(Module):
             a = SomeBaseClass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> SpecificClass:
                 return SpecificClass()
 
@@ -302,7 +291,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodParameterMissingTypeAnnotation) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self, b) -> int:  # type: ignore
                     return 10
 
@@ -316,7 +305,7 @@ class TestProviderMethodFromSignature(TestCase):
             a: TypeAlias = int
             b: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: SomeModule.b) -> int:
                 return b + 1
 
@@ -333,7 +322,7 @@ class TestProviderMethodFromSignature(TestCase):
             a = int
             b = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: int) -> int:
                 return b + 1
 
@@ -349,7 +338,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodParameterUnrelatedName) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self, b: int) -> int:
                     return b + 1
 
@@ -365,7 +354,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodParameterResourceTypeMismatch) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self, b: str) -> int:
                     return 10
 
@@ -391,7 +380,7 @@ class TestProviderMethodFromSignature(TestCase):
             a = int
             b = SomeConcreteClass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: SomeBaseClass) -> int:
                 return 10
 
@@ -407,7 +396,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodParameterInvalidTypeAnnotation) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self, b: True) -> int:  # type: ignore
                     return 10
 
@@ -431,7 +420,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a = Resource(SomeConcreteClass, override=True)
 
                 def provide_a(self) -> SomeBaseClass:
@@ -449,7 +438,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = int
 
             def provide_a(self) -> int:
@@ -476,7 +465,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         class SomeModule(Module):
             a = SomeBaseClass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = SomeConcreteClass
 
             def provide_a(self) -> SomeConcreteClass:
@@ -506,7 +495,7 @@ class TestProviderResourcesTypeAliases(TestCase):
 
         with self.assertRaises(OverridingResourceIncompatibleType) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a = int
 
                 def provide_a(self) -> SomeConcreteClass:
@@ -521,7 +510,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a: TypeAlias = int
 
             def provide_a(self) -> int:
@@ -543,7 +532,7 @@ class TestProviderResourcesTypeAliases(TestCase):
 
         with self.assertRaises(PrivateResourceCannotOccludeModuleResource) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a = Resource(int, private=True)
 
                 def provide_a(self) -> int:
@@ -559,7 +548,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = Resource(int, private=True)
 
             def provide_a(self) -> int:
@@ -585,7 +574,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         class SomeModule(Module):
             a = Resource(SomeBaseClass)
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = Resource(SomeConcreteClass, override=True)
 
             def provide_a(self) -> SomeConcreteClass:
@@ -611,7 +600,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
 
         with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
 
-            class SomeProvider(Provider[AnotherModule]):
+            class SomeProvider(Provider, module=AnotherModule):
                 b = SomeModule.a
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -624,7 +613,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
 
         with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a = Resource(int, private=False, override=False)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -639,7 +628,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
 
         with self.assertRaises(PrivateResourceCannotOccludeModuleResource) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a = Resource(int, private=True)
 
                 def provide_a(self) -> int:
@@ -657,7 +646,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
 
         with self.assertRaises(OverridingResourceNameDoesntMatchModuleResource) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a = Resource(int, override=True)
 
         self.assertEqual(ctx.exception.name, "a")
@@ -673,7 +662,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
 
         with self.assertRaises(InvalidAttributeAnnotationInProvider) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a: int
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -688,7 +677,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
 
         with self.assertRaises(InvalidPrivateResourceAnnotationInProvider) as ctx:
 
-            class SomeProvider(Provider[SomeModule]):
+            class SomeProvider(Provider, module=SomeModule):
                 a: Resource(int, private=True)  # type: ignore
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
@@ -708,7 +697,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
         class SomeModule(Module):
             a = Resource(SomeBaseClass)
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a = Resource(SomeConcreteClass, override=True)
 
             def provide_a(self) -> SomeConcreteClass:
@@ -716,7 +705,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
 
         with self.assertRaises(InvalidOverridingResourceAnnotationInProvider) as ctx:
 
-            class AnotherProvider(Provider[SomeModule]):
+            class AnotherProvider(Provider, module=SomeModule):
                 a: SomeProvider.a  # type: ignore
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
@@ -730,7 +719,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             b = Resource(int, private=True)
 
             def provide_b(self) -> int:
@@ -738,7 +727,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
 
         with self.assertRaises(InvalidPrivateResourceAnnotationInProvider) as ctx:
 
-            class AnotherProvider(Provider[SomeModule]):
+            class AnotherProvider(Provider, module=SomeModule):
                 c: SomeProvider.b  # type: ignore
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
@@ -747,3 +736,19 @@ class TestProviderResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.resource.is_bound, True)
         self.assertEqual(ctx.exception.resource.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource.name, "b")
+
+
+class TestProviderSubclasses(TestCase):
+    def test_a_subclass_of_a_provider_is_also_a_provider_for_the_same_module(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            pass
+
+        class AnotherProvider(SomeProvider):
+            pass
+
+        self.assertIs(AnotherProvider.module, SomeModule)

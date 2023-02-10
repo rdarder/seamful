@@ -102,8 +102,7 @@ class ModuleType(type):
 
     @default_provider.setter
     def default_provider(self, provider: ProviderType) -> None:
-        from wiring.provider.provider_type import ProviderType
-        from wiring.provider.provider import Provider
+        from wiring.provider.provider_type import Provider, ProviderType
 
         if not isinstance(provider, ProviderType):
             raise DefaultProviderIsNotAProvider(self, provider)

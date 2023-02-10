@@ -2,7 +2,6 @@ from typing import TypeAlias, Sequence, Type, cast, TypeVar
 from unittest import TestCase
 
 from wiring.module import Module
-from wiring.provider import Provider
 from wiring.container import Container
 from wiring.container.errors import (
     ModuleNotRegisteredForResource,
@@ -20,7 +19,7 @@ from wiring.container.errors import (
     CannotReopenRegistrationsAfterHavingProvidedResources,
     RegisteredProvidersNotUsed,
 )
-from wiring.provider.provider_type import ProviderType, ProviderMethod
+from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.provider.errors import CannotDependOnResourceFromAnotherProvider
 from wiring.resource import Resource, ModuleResource
 
@@ -30,7 +29,7 @@ class TestContainerProvision(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -46,7 +45,7 @@ class TestContainerProvision(TestCase):
         class SomeModule(Module):
             a: TypeAlias = SomeClass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> SomeClass:
                 return SomeClass()
 
@@ -72,7 +71,7 @@ class TestContainerProvision(TestCase):
             storage: TypeAlias = Storage
             service: TypeAlias = SomeService
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_storage(self) -> Storage:
                 return Storage()
 
@@ -91,7 +90,7 @@ class TestContainerProvision(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -112,7 +111,7 @@ class TestContainerProvision(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -138,7 +137,7 @@ class TestContainerProvidesPrivateResources(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a: TypeAlias = int
 
             def provide_a(self) -> int:
@@ -153,7 +152,7 @@ class TestContainerProvidesPrivateResources(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             b = int
 
             def provide_a(self, b: int) -> int:
@@ -171,7 +170,7 @@ class TestContainerProvidesPrivateResources(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             b: TypeAlias = int
 
             def provide_a(self, b: int) -> int:
@@ -185,7 +184,7 @@ class TestContainerProvidesPrivateResources(TestCase):
 
         with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
 
-            class AnotherProvider(Provider[AnotherModule]):
+            class AnotherProvider(Provider, module=AnotherModule):
                 def provide_c(self, b: SomeProvider.b) -> int:
                     return b + 1
 
@@ -205,7 +204,7 @@ class TestContainerProvidesOverridingResources(TestCase):
         class SomeModule(Module):
             a: TypeAlias = SomeBaseClass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             a: TypeAlias = SomeConcreteClass
 
             def provide_a(self) -> SomeConcreteClass:
@@ -224,7 +223,7 @@ class TestContainerProvidesOverridingResources(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             b = int
 
             def provide_a(self, b: int) -> int:
@@ -253,7 +252,7 @@ class TestContainerProvidesOverridingResources(TestCase):
             some: TypeAlias = SomeBaseClass
             another: TypeAlias = AnotherClass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             some: TypeAlias = SomeConcreteClass
 
             def provide_some(self) -> SomeConcreteClass:
@@ -276,7 +275,7 @@ class TestContainerProvidesOverridingResources(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             b: TypeAlias = int
 
             def provide_a(self, b: int) -> int:
@@ -290,7 +289,7 @@ class TestContainerProvidesOverridingResources(TestCase):
 
         with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
 
-            class AnotherProvider(Provider[AnotherModule]):
+            class AnotherProvider(Provider, module=AnotherModule):
                 def provide_c(self, b: SomeProvider.b) -> int:
                     return b + 1
 
@@ -304,14 +303,14 @@ class TestContainerCallingProviderMethods(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
         class AnotherModule(Module):
             b: TypeAlias = int
 
-        class AnotherProvider(Provider[AnotherModule]):
+        class AnotherProvider(Provider, module=AnotherModule):
             def provide_b(self, a: SomeModule.a) -> int:
                 return a + 1
 
@@ -328,7 +327,7 @@ class TestContainerCallingProviderMethods(TestCase):
             a = int
             b = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: int) -> int:
                 return b + 1
 
@@ -347,7 +346,7 @@ class TestContainerCallingProviderMethods(TestCase):
             a: TypeAlias = int
             b: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: SomeModule.b) -> int:
                 return b + 1
 
@@ -366,7 +365,7 @@ class TestContainerCallingProviderMethods(TestCase):
             a = Resource(int)
             b = Resource(int)
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: SomeModule.b) -> int:  # type: ignore
                 # mypy doesn´t like implicit aliases, pyright types just fine.
                 return b + 1  # pyright: ignore
@@ -383,7 +382,7 @@ class TestContainerCallingProviderMethods(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class ProviderAssumingInstanceIsAvailable(Provider[SomeModule]):
+        class ProviderAssumingInstanceIsAvailable(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 if getattr(self, "cache", None) is None:
                     setattr(self, "cache", 10)
@@ -407,7 +406,7 @@ class TestContainerRegistration(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -422,7 +421,7 @@ class TestContainerRegistration(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -442,7 +441,7 @@ class TestContainerRegistration(TestCase):
             a = int
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -459,7 +458,7 @@ class TestContainerRegistration(TestCase):
         class AnotherModule(Module):
             pass
 
-        class AnotherProvider(Provider[AnotherModule]):
+        class AnotherProvider(Provider, module=AnotherModule):
             pass
 
         container = Container.empty()
@@ -474,10 +473,10 @@ class TestContainerRegistration(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             pass
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             pass
 
         container = Container.empty()
@@ -493,7 +492,7 @@ class TestContainerRegistration(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             pass
 
         container = Container.empty()
@@ -519,12 +518,12 @@ class TestContainerRegistration(TestCase):
         class SomeModule(Module):
             pass
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             pass
 
         SomeModule.default_provider = SomeProvider
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             pass
 
         container = Container.empty()
@@ -540,7 +539,7 @@ class TestContainerOverrides(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -549,7 +548,7 @@ class TestContainerOverrides(TestCase):
         container.close_registrations()
         container.reopen_registrations(allow_overrides=True)
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 11
 
@@ -563,7 +562,7 @@ class TestContainerOverrides(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -574,7 +573,7 @@ class TestContainerOverrides(TestCase):
         container.close_registrations()
         container.reopen_registrations(allow_overrides=True)
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 11
 
@@ -588,7 +587,7 @@ class TestContainerOverrides(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -605,7 +604,7 @@ class TestContainerOverrides(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -614,7 +613,7 @@ class TestContainerOverrides(TestCase):
         container.close_registrations()
         container.reopen_registrations()
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 11
 
@@ -634,11 +633,11 @@ class TestContainerImplicitProviders(TestCase):
         class AnotherModule(Module):
             b: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: AnotherModule.b) -> int:
                 return b + 1
 
-        class AnotherProvider(Provider[AnotherModule]):
+        class AnotherProvider(Provider, module=AnotherModule):
             def provide_b(self) -> int:
                 return 10
 
@@ -659,17 +658,17 @@ class TestContainerImplicitProviders(TestCase):
         class Module2(Module):
             b: TypeAlias = int
 
-        class Provider1(Provider[Module1]):
+        class Provider1(Provider, module=Module1):
             def provide_a(self, b: Module2.b) -> int:
                 return b + 1
 
-        class Provider2(Provider[Module2]):
+        class Provider2(Provider, module=Module2):
             def provide_b(self) -> int:
                 return 10
 
         Module2.default_provider = Provider2
 
-        class AnotherProvider2(Provider[Module2]):
+        class AnotherProvider2(Provider, module=Module2):
             def provide_b(self) -> int:
                 return 11
 
@@ -689,7 +688,7 @@ class TestContainerImplicitProviders(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -720,7 +719,7 @@ class TestDefaultProvider(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
@@ -734,13 +733,13 @@ class TestDefaultProvider(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
         SomeModule.default_provider = SomeProvider
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 11
 
@@ -753,13 +752,13 @@ class TestDefaultProvider(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 return 10
 
         SomeModule.default_provider = SomeProvider
 
-        class AnotherProvider(Provider[SomeModule]):
+        class AnotherProvider(Provider, module=SomeModule):
             def provide_a(self) -> int:
                 raise Exception("this provider was set after sealing!")
 
@@ -776,7 +775,7 @@ class TestCircularDependencies(TestCase):
         class SomeModule(Module):
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, a: SomeModule.a) -> int:
                 return a + 1
 
@@ -802,7 +801,7 @@ class TestCircularDependencies(TestCase):
             a: TypeAlias = int
             b: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: SomeModule.b) -> int:
                 return b + 1
 
@@ -844,15 +843,15 @@ class TestCircularDependencies(TestCase):
         class ModuleC(Module):
             c: TypeAlias = int
 
-        class ProviderA(Provider[ModuleA]):
+        class ProviderA(Provider, module=ModuleA):
             def provide_a(self, param1: ModuleB.b) -> int:
                 return param1 + 1
 
-        class ProviderB(Provider[ModuleB]):
+        class ProviderB(Provider, module=ModuleB):
             def provide_b(self, param2: ModuleC.c) -> int:
                 return param2 + 1
 
-        class ProviderC(Provider[ModuleC]):
+        class ProviderC(Provider, module=ModuleC):
             def provide_c(self, param3: ModuleA.a) -> int:
                 return param3 + 1
 
@@ -894,7 +893,7 @@ class TestCircularDependencies(TestCase):
             b: TypeAlias = int
             c: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             def provide_a(self, b: int) -> int:
                 return b
 
@@ -931,7 +930,7 @@ class TestCircularDependencies(TestCase):
         class SomeModule(Module):
             a = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             b = int
 
             def provide_a(self, b: int) -> int:
@@ -975,7 +974,7 @@ class TestCircularDependencies(TestCase):
             some: TypeAlias = SomeBaseClass
             a: TypeAlias = int
 
-        class SomeProvider(Provider[SomeModule]):
+        class SomeProvider(Provider, module=SomeModule):
             some: TypeAlias = SomeConcreteClass
             private: TypeAlias = int
 
@@ -1028,14 +1027,14 @@ class TestCircularDependencies(TestCase):
             b: TypeAlias = int
             d: TypeAlias = int
 
-        class Provider1(Provider[Module1]):
+        class Provider1(Provider, module=Module1):
             def provide_a(self) -> int:
                 return 2
 
             def provide_c(self, b: Module2.b) -> int:
                 return b * 5
 
-        class Provider2(Provider[Module2]):
+        class Provider2(Provider, module=Module2):
             def provide_b(self, a: Module1.a) -> int:
                 return a * 3
 
