@@ -20,7 +20,11 @@ from wiring.container.errors import (
     RegisteredProvidersNotUsed,
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
-from wiring.provider.errors import CannotDependOnResourceFromAnotherProvider
+from wiring.provider.errors import (
+    CannotDependOnResourceFromAnotherProvider,
+    ProviderMethodReturnTypeMismatch,
+    IncompatibleResourceTypeForInheritedResource,
+)
 from wiring.resource import Resource, ModuleResource
 
 
@@ -768,6 +772,228 @@ class TestDefaultProvider(TestCase):
 
         SomeModule.default_provider = AnotherProvider
         self.assertEqual(container.provide(SomeModule.a), 10)
+
+
+class TestProviderSubclasses(TestCase):
+    def test_provider_subclass_can_act_as_provider_and_use_base_methods_for_module_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            pass
+
+        container = Container()
+        container.register(SomeModule, AnotherProvider)
+        container.close_registrations()
+        self.assertEqual(container.provide(SomeModule.a), 10)
+
+    def test_provider_subclass_can_act_as_provider_and_use_base_method_for_overriding_resource(
+        self,
+    ) -> None:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = ConcreteClass
+
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass()
+
+        class AnotherProvider(SomeProvider):
+            pass
+
+        container = Container()
+        container.register(SomeModule, AnotherProvider)
+        container.close_registrations(allow_provider_resources=True)
+        self.assertIsInstance(container.provide(SomeModule.some), ConcreteClass)
+
+    def test_provider_subclass_can_act_as_provider_and_use_base_method_for_private_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            pass
+
+        container = Container()
+        container.register(SomeModule, AnotherProvider)
+        container.close_registrations(allow_provider_resources=True)
+        self.assertEqual(container.provide(AnotherProvider.a), 10)
+
+    def test_provider_subclass_can_act_as_provider_and_override_methods_for_module_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            a: TypeAlias = int
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            def provide_a(self) -> int:
+                return 11
+
+        container = Container()
+        container.register(SomeModule, AnotherProvider)
+        container.close_registrations()
+        self.assertEqual(container.provide(SomeModule.a), 11)
+
+    def test_provider_subclass_can_act_as_provider_and_override_methods_for_private_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            def provide_a(self) -> int:
+                return 11
+
+        container = Container()
+        container.register(SomeModule, AnotherProvider)
+        container.close_registrations(allow_provider_resources=True)
+        self.assertEqual(container.provide(AnotherProvider.a), 11)
+
+    def test_provider_subclass_can_act_as_provider_and_override_methods_for_overriding_resource(
+        self,
+    ) -> None:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            def __init__(self, param: int):
+                self.param = param
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = ConcreteClass
+
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass(10)
+
+        class AnotherProvider(SomeProvider):
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass(11)
+
+        container = Container()
+        container.register(SomeModule, AnotherProvider)
+        container.close_registrations(allow_provider_resources=True)
+        self.assertEqual(container.provide(AnotherProvider.some).param, 11)
+
+    def test_provider_subclass_must_refine_provider_method_if_refining_private_resource(
+        self,
+    ) -> None:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = SomeClass
+
+            def provide_some(self) -> SomeClass:
+                return SomeClass()
+
+        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
+
+            class AnotherProvider(SomeProvider):
+                some: TypeAlias = ConcreteClass
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.resource.type, ConcreteClass)
+        self.assertEqual(ctx.exception.mismatched_type, SomeClass)
+
+    def test_provider_subclass_must_refine_provider_method_if_refining_overriding_resource(
+        self,
+    ) -> None:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class MoreConcreteClass(ConcreteClass):
+            pass
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = ConcreteClass
+
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass()
+
+        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
+
+            class AnotherProvider(SomeProvider):
+                some: TypeAlias = MoreConcreteClass
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.resource.type, MoreConcreteClass)
+        self.assertEqual(ctx.exception.mismatched_type, ConcreteClass)
+
+    def test_provider_subclass_overriding_resource_must_be_subtypes_of_base_providers_resource(
+        self,
+    ) -> None:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class MoreConcreteClass(ConcreteClass):
+            pass
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = ConcreteClass
+
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass()
+
+        with self.assertRaises(IncompatibleResourceTypeForInheritedResource) as ctx:
+
+            class AnotherProvider(SomeProvider):
+                some: TypeAlias = SomeClass  # pyright: ignore
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.resource.type, SomeClass)
+        self.assertEqual(ctx.exception.base_provider, SomeProvider)
+        self.assertEqual(ctx.exception.base_resource, SomeProvider.some)
 
 
 class TestCircularDependencies(TestCase):

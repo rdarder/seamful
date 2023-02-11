@@ -9,10 +9,11 @@ from wiring.resource import (
     PrivateResource,
     ResourceTypes,
     OverridingResource,
+    ProviderResourceTypes,
 )
 
 if TYPE_CHECKING:
-    from wiring.provider.provider_type import ProviderType
+    from wiring.provider.provider_type import ProviderType, T
 
 fn = Callable[..., Any]
 
@@ -236,3 +237,18 @@ class BaseProviderProvidesFromADifferentModule(Exception):
 class ProvidersMustInheritFromProviderClass(Exception):
     def __init__(self, provider: ProviderType):
         self.provider = provider
+
+
+class IncompatibleResourceTypeForInheritedResource(Exception):
+    def __init__(
+        self,
+        provider: ProviderType,
+        resource: ProviderResourceTypes[T],
+        *,
+        base_provider: ProviderType,
+        base_resource: ProviderResourceTypes[T],
+    ) -> None:
+        self.provider = provider
+        self.resource = resource
+        self.base_provider = base_provider
+        self.base_resource = base_resource

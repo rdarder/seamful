@@ -57,6 +57,9 @@ class PrivateResource(Generic[T], type):
         self.module = provider.module
         self.is_bound = True
 
+    def bound_to_sub_provider(self, provider: ProviderType) -> PrivateResource[T]:
+        return PrivateResource.make_bound(self.type, self.name, provider)
+
     @staticmethod
     def make_unbound(t: Type[T]) -> PrivateResource[T]:
         return PrivateResource("PrivateResource", (), dict(type=t, is_bound=False))
@@ -107,6 +110,11 @@ class OverridingResource(Generic[T], type):
         self.overrides = overrides
         self.is_bound = True
 
+    def bound_to_sub_provider(self, provider: ProviderType) -> OverridingResource[T]:
+        return OverridingResource.make_bound(
+            self.type, self.name, provider, self.overrides
+        )
+
     @staticmethod
     def make_unbound(t: Type[T]) -> OverridingResource[T]:
         return OverridingResource(
@@ -149,6 +157,7 @@ class OverridingResource(Generic[T], type):
 
 ResourceTypes = Union[ModuleResource[T], PrivateResource[T], OverridingResource[T]]
 RESOURCE_TYPES = (ModuleResource, PrivateResource, OverridingResource)
+ProviderResourceTypes = Union[PrivateResource[T], OverridingResource[T]]
 
 
 def Resource(t: Type[T], private: bool = False, override: bool = False) -> Type[T]:

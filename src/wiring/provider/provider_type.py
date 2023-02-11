@@ -47,6 +47,7 @@ from wiring.provider.errors import (
     ProviderDeclarationMissingModule,
     BaseProviderProvidesFromADifferentModule,
     ProvidersMustInheritFromProviderClass,
+    IncompatibleResourceTypeForInheritedResource,
 )
 
 T = TypeVar("T")
@@ -69,22 +70,24 @@ class ProviderType(type):
         module: Optional[ModuleType] = None,
     ) -> None:
         type.__init__(self, name, bases, dct)
+        self._provider_methods_by_resource = {}
+        self._resources_by_name = {}
+        self._resources = set()
         if len(bases) == 0:
             return
         if len(bases) > 1:
             raise ProvidersDontSupportMultipleInheritance(self, bases)
-
-        self.module = self._determine_module_from_class_declaration(bases[0], module)
-        self._provider_methods_by_resource = {}
-        self._resources_by_name = {}
-        self._resources = set()
-        self._collect_resources(dct, inspect.get_annotations(self))
+        base_provider = bases[0]
+        self.module = self._get_module_from_class_declaration(base_provider, module)
+        self._collect_resources(
+            dct, inspect.get_annotations(self), cast(ProviderType, base_provider)
+        )
         self._collect_provider_methods()
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         raise ProvidersCannotBeInstantiated(self)
 
-    def _determine_module_from_class_declaration(
+    def _get_module_from_class_declaration(
         self, base: type, module: Optional[ModuleType]
     ) -> ModuleType:
         from wiring.module.module_type import ModuleType, Module
@@ -134,7 +137,7 @@ class ProviderType(type):
         method_dependencies = self._get_parameter_resources(signature, resource, method)
 
         bound_resource = (
-            resource.overrides if type(resource) is OverridingResource else resource
+            resource.overrides if isinstance(resource, OverridingResource) else resource
         )
         return ProviderMethod(
             provider=self,
@@ -236,6 +239,7 @@ class ProviderType(type):
         self,
         dct: dict[str, Any],
         annotations: dict[str, Any],
+        base_provider: ProviderType,
     ) -> None:
         for name, candidate in dct.items():
             if name.startswith("_"):
@@ -276,6 +280,19 @@ class ProviderType(type):
                         t=candidate, name=name, provider=self  # pyright: ignore
                     )
                     self._add_resource(private_resource)
+
+        for base_resource in base_provider._list_resources():
+            existing = self._resources_by_name.get(base_resource.name)
+            if existing is not None:
+                if not issubclass(existing.type, base_resource.type):
+                    raise IncompatibleResourceTypeForInheritedResource(
+                        self,
+                        existing,
+                        base_provider=base_provider,
+                        base_resource=base_resource,
+                    )
+            else:
+                self._add_resource(base_resource.bound_to_sub_provider(self))
 
         for name, annotation in annotations.items():
             if name.startswith("_") or name in self._resources_by_name:

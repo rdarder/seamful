@@ -752,3 +752,64 @@ class TestProviderSubclasses(TestCase):
             pass
 
         self.assertIs(AnotherProvider.module, SomeModule)
+
+    def test_a_provider_subclass_collects_parent_provider_resources(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            pass
+
+        resources = list(AnotherProvider._list_resources())
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertEqual(resource.type, int)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.module, SomeModule)
+        self.assertEqual(resource.provider, AnotherProvider)
+
+    def test_a_provider_subclass_doesnt_mutate_base_provider_resources(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            pass
+
+        resources = list(SomeProvider._list_resources())
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertEqual(resource.type, int)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.module, SomeModule)
+        self.assertEqual(resource.provider, SomeProvider)
+
+    def test_a_provider_subclass_can_add_extra_resources(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a: TypeAlias = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider):
+            b: TypeAlias = int
+
+            def provide_b(self) -> int:
+                return 11
+
+        self.assertEqual(len(list(AnotherProvider._list_resources())), 2)
+        self.assertEqual(len(list(AnotherProvider._list_provider_methods())), 2)
