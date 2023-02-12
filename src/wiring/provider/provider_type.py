@@ -48,6 +48,7 @@ from wiring.provider.errors import (
     BaseProviderProvidesFromADifferentModule,
     ProvidersMustInheritFromProviderClass,
     IncompatibleResourceTypeForInheritedResource,
+    ProviderModuleCantBeChanged,
 )
 
 T = TypeVar("T")
@@ -78,11 +79,19 @@ class ProviderType(type):
         if len(bases) > 1:
             raise ProvidersDontSupportMultipleInheritance(self, bases)
         base_provider = bases[0]
-        self.module = self._get_module_from_class_declaration(base_provider, module)
+        self._module = self._get_module_from_class_declaration(base_provider, module)
         self._collect_resources(
             dct, inspect.get_annotations(self), cast(ProviderType, base_provider)
         )
         self._collect_provider_methods()
+
+    @property
+    def module(self) -> ModuleType:
+        return self._module
+
+    @module.setter
+    def module(self, value: Any) -> None:
+        raise ProviderModuleCantBeChanged(self, value)
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         raise ProvidersCannotBeInstantiated(self)
@@ -112,7 +121,7 @@ class ProviderType(type):
         for provider_resource in self._resources:
             provider_method = self._build_provider_method(provider_resource)
             self._add_provider_method(provider_method)
-        for module_resource in self.module:
+        for module_resource in self._module:
             if module_resource.name in self._resources_by_name:
                 continue
             provider_method = self._build_provider_method(module_resource)
@@ -197,8 +206,8 @@ class ProviderType(type):
                 parameter_type, provider_resource, target, name
             )
             return provider_resource
-        elif name in self.module:
-            module_resource = self.module[name]
+        elif name in self._module:
+            module_resource = self._module[name]
             self._ensure_parameter_type_satisfies_resource_type(
                 parameter_type, module_resource, target, name
             )
@@ -249,21 +258,21 @@ class ProviderType(type):
                 if candidate.is_bound:
                     raise CannotUseExistingProviderResource(self, name, candidate)
                 candidate.bind(name=name, provider=self)
-                if name in self.module:
+                if name in self._module:
                     raise PrivateResourceCannotOccludeModuleResource(self, candidate)
                 self._add_resource(candidate)
             elif candidate_type is OverridingResource:
-                if name not in self.module:
+                if name not in self._module:
                     raise OverridingResourceNameDoesntMatchModuleResource(
-                        candidate.type, name, self, self.module
+                        candidate.type, name, self, self._module
                     )
-                candidate.bind(name=name, provider=self, overrides=self.module[name])
+                candidate.bind(name=name, provider=self, overrides=self._module[name])
                 self._add_resource(candidate)
             elif candidate_type is ModuleResource:
                 raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
             elif isinstance(candidate, type):
-                if name in self.module:
-                    overrides = self.module[name]
+                if name in self._module:
+                    overrides = self._module[name]
                     overriding_resource: OverridingResource[
                         Any
                     ] = OverridingResource.make_bound(
@@ -327,7 +336,7 @@ class ProviderType(type):
     def _ensure_related_resource(self, resource: ResourceTypes[Any]) -> None:
         resource_type = type(resource)
         if resource_type is ModuleResource:
-            if cast(ModuleResource[Any], resource) not in self.module:
+            if cast(ModuleResource[Any], resource) not in self._module:
                 raise UnrelatedResource(self, resource)
         elif resource_type is PrivateResource or resource_type is OverridingResource:
             if resource not in self._resources:

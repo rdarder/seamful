@@ -252,3 +252,9 @@ class IncompatibleResourceTypeForInheritedResource(Exception):
         self.resource = resource
         self.base_provider = base_provider
         self.base_resource = base_resource
+
+
+class ProviderModuleCantBeChanged(Exception):
+    def __init__(self, provider: ProviderType, assigned_to: Any):
+        self.provider = provider
+        self.assigned_to = assigned_to

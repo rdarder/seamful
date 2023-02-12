@@ -24,6 +24,7 @@ from wiring.provider.errors import (
     InvalidOverridingResourceAnnotationInProvider,
     OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
+    ProviderModuleCantBeChanged,
 )
 from wiring.resource import (
     ModuleResource,
@@ -33,7 +34,7 @@ from wiring.resource import (
 )
 
 
-class TestProviderInstances(TestCase):
+class TestProviderClassBehavior(TestCase):
     def test_providers_cannot_be_instantiated(self) -> None:
         class SomeModule(Module):
             pass
@@ -58,6 +59,23 @@ class TestProviderInstances(TestCase):
         with self.assertRaises(ProvidersCannotBeInstantiated) as ctx:
             SomeProvider()
         self.assertEqual(ctx.exception.provider, SomeProvider)
+
+    def test_providers_module_cannot_be_manually_set(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class AnotherModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            pass
+
+        with self.assertRaises(ProviderModuleCantBeChanged) as ctx:
+            SomeProvider.module = AnotherModule
+
+        self.assertEqual(ctx.exception.provider, SomeProvider)
+        self.assertEqual(ctx.exception.assigned_to, AnotherModule)
+        self.assertEqual(SomeProvider.module, SomeModule)
 
 
 class TestProviderCollectingProviderMethods(TestCase):
