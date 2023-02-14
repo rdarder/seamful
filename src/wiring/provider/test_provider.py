@@ -25,6 +25,7 @@ from wiring.provider.errors import (
     OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
     ProviderModuleCantBeChanged,
+    InvalidProviderAttributeName,
 )
 from wiring.resource import (
     ModuleResource,
@@ -162,7 +163,7 @@ class TestProviderCollectingProviderMethods(TestCase):
                 return 10
 
         self.assertIsInstance(SomeProvider.a, PrivateResource)
-        methods = list(SomeProvider._list_provider_methods())
+        methods = list(SomeProvider)
         self.assertEqual(len(methods), 1)
         method = methods[0]
         self.assertEqual(method.provider, SomeProvider)
@@ -210,7 +211,7 @@ class TestProviderCollectingProviderMethods(TestCase):
                 return SomeConcreteClass()
 
         self.assertIsInstance(SomeProvider.a, OverridingResource)
-        methods = list(SomeProvider._list_provider_methods())
+        methods = list(SomeProvider)
         self.assertEqual(len(methods), 1)
         method = methods[0]
         self.assertEqual(method.provider, SomeProvider)
@@ -462,7 +463,7 @@ class TestProviderResourcesTypeAliases(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        resources = list(SomeProvider._list_resources())
+        resources = list(SomeProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = cast(PrivateResource[Any], resources[0])
         self.assertIsInstance(resource, PrivateResource)
@@ -489,7 +490,7 @@ class TestProviderResourcesTypeAliases(TestCase):
             def provide_a(self) -> SomeConcreteClass:
                 return SomeConcreteClass()
 
-        resources = list(SomeProvider._list_resources())
+        resources = list(SomeProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = cast(OverridingResource[Any], resources[0])
         self.assertIsInstance(resource, OverridingResource)
@@ -534,7 +535,7 @@ class TestProviderResourcesTypeAliases(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        resources = list(SomeProvider._list_resources())
+        resources = list(SomeProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertIs(resource, SomeProvider.a)
@@ -572,7 +573,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        resources = list(SomeProvider._list_resources())
+        resources = list(SomeProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertIs(resource, SomeProvider.a)
@@ -598,7 +599,7 @@ class TestProviderResourcesFromResourceInstances(TestCase):
             def provide_a(self) -> SomeConcreteClass:
                 return SomeConcreteClass()
 
-        resources = list(SomeProvider._list_resources())
+        resources = list(SomeProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = cast(OverridingResource[Any], resources[0])
         self.assertIs(resource, SomeProvider.a)
@@ -784,7 +785,7 @@ class TestProviderSubclasses(TestCase):
         class AnotherProvider(SomeProvider):
             pass
 
-        resources = list(AnotherProvider._list_resources())
+        resources = list(AnotherProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertEqual(resource.type, int)
@@ -805,7 +806,7 @@ class TestProviderSubclasses(TestCase):
         class AnotherProvider(SomeProvider):
             pass
 
-        resources = list(SomeProvider._list_resources())
+        resources = list(SomeProvider.resources)
         self.assertEqual(len(resources), 1)
         resource = resources[0]
         self.assertEqual(resource.type, int)
@@ -829,5 +830,31 @@ class TestProviderSubclasses(TestCase):
             def provide_b(self) -> int:
                 return 11
 
-        self.assertEqual(len(list(AnotherProvider._list_resources())), 2)
-        self.assertEqual(len(list(AnotherProvider._list_provider_methods())), 2)
+        self.assertEqual(len(list(AnotherProvider.resources)), 2)
+        self.assertEqual(len(list(AnotherProvider)), 2)
+
+    def test_provider_attribute_cannot_be_named_module(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(InvalidProviderAttributeName) as ctx:
+
+            class SomeProvider(Provider, module=SomeModule):
+                module: TypeAlias = int
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.name, "module")
+        self.assertEqual(ctx.exception.assigned_to, int)
+
+    def test_provider_attribute_cannot_be_named_resources(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(InvalidProviderAttributeName) as ctx:
+
+            class SomeProvider(Provider, module=SomeModule):
+                resources: TypeAlias = int
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.name, "resources")
+        self.assertEqual(ctx.exception.assigned_to, int)

@@ -56,7 +56,7 @@ class ModuleGraphSolver:
             raise ModuleWithoutRegisteredOrDefaultProvider(module)
 
     def _add_modules_needed_by_provider(self, provider: ProviderType) -> None:
-        for provider_method in provider._list_provider_methods():
+        for provider_method in provider:
             for parameter_name, dependency in provider_method.dependencies.items():
                 if dependency.module not in self._providers_by_module:
                     self._needed_modules_without_providers.add(dependency.module)

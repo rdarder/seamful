@@ -258,3 +258,10 @@ class ProviderModuleCantBeChanged(Exception):
     def __init__(self, provider: ProviderType, assigned_to: Any):
         self.provider = provider
         self.assigned_to = assigned_to
+
+
+class InvalidProviderAttributeName(Exception):
+    def __init__(self, provider: ProviderType, name: str, assigned_to: Any):
+        self.provider = provider
+        self.name = name
+        self.assigned_to = assigned_to

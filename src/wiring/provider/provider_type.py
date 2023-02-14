@@ -12,6 +12,7 @@ from typing import (
     cast,
     TYPE_CHECKING,
     Optional,
+    Iterator,
 )
 
 from wiring.resource import (
@@ -49,6 +50,7 @@ from wiring.provider.errors import (
     ProvidersMustInheritFromProviderClass,
     IncompatibleResourceTypeForInheritedResource,
     ProviderModuleCantBeChanged,
+    InvalidProviderAttributeName,
 )
 
 T = TypeVar("T")
@@ -95,6 +97,15 @@ class ProviderType(type):
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         raise ProvidersCannotBeInstantiated(self)
+
+    def __iter__(self) -> Iterator[ProviderMethod[Any]]:
+        return iter(self._provider_methods_by_resource.values())
+
+    @property
+    def resources(
+        self,
+    ) -> Iterable[OverridingResource[Any] | PrivateResource[Any]]:
+        return self._resources
 
     def _get_module_from_class_declaration(
         self, base: type, module: Optional[ModuleType]
@@ -241,9 +252,6 @@ class ProviderType(type):
         provider_method = self._provider_methods_by_resource[target_resource]
         return provider_method
 
-    def _list_provider_methods(self) -> Iterable[ProviderMethod[Any]]:
-        return self._provider_methods_by_resource.values()
-
     def _collect_resources(
         self,
         dct: dict[str, Any],
@@ -253,6 +261,8 @@ class ProviderType(type):
         for name, candidate in dct.items():
             if name.startswith("_"):
                 continue
+            if name == "module" or name == "resources":
+                raise InvalidProviderAttributeName(self, name, candidate)
             candidate_type = type(candidate)
             if candidate_type is PrivateResource:
                 if candidate.is_bound:
@@ -290,7 +300,7 @@ class ProviderType(type):
                     )
                     self._add_resource(private_resource)
 
-        for base_resource in base_provider._list_resources():
+        for base_resource in base_provider.resources:
             existing = self._resources_by_name.get(base_resource.name)
             if existing is not None:
                 if not issubclass(existing.type, base_resource.type):
@@ -324,11 +334,6 @@ class ProviderType(type):
         self._resources_by_name[resource.name] = resource
         self._resources.add(resource)
         setattr(self, resource.name, resource)
-
-    def _list_resources(
-        self,
-    ) -> Iterable[OverridingResource[Any] | PrivateResource[Any]]:
-        return self._resources
 
     def _add_provider_method(self, provider_method: ProviderMethod[Any]) -> None:
         self._provider_methods_by_resource[provider_method.resource] = provider_method
