@@ -1297,4 +1297,4 @@ T = TypeVar("T")
 
 
 def get_provider_method(provider: ProviderType, resource: Type[T]) -> ProviderMethod[T]:
-    return provider._get_provider_method(cast(ModuleResource[T], resource))
+    return provider[cast(ModuleResource[T], resource)]

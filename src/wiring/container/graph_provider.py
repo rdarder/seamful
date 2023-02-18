@@ -11,15 +11,15 @@ from wiring.provider.provider_type import ProviderType
 from wiring.resource import (
     ModuleResource,
     ResourceTypes,
-    PrivateResource,
     OverridingResource,
+    ProviderResourceTypes,
 )
 
 T = TypeVar("T")
 
 
 class ProviderResourcesNotAllowed(Exception):
-    def __init__(self, resource: PrivateResource[Any] | OverridingResource[Any]):
+    def __init__(self, resource: ProviderResourceTypes[Any]):
         self.resource = resource
 
 
@@ -63,9 +63,7 @@ class ModuleGraphProvider:
         if type(resource) is OverridingResource:
             return self._provide(resource.overrides)
 
-        provider_method = self._providers[resource.module]._get_provider_method(
-            resource
-        )
+        provider_method = self._providers[resource.module][resource]
         method_parameters = {
             name: self._provide(resource)
             for name, resource in provider_method.dependencies.items()

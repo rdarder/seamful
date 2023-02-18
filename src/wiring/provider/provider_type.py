@@ -94,6 +94,14 @@ class ProviderType(type):
     def __iter__(self) -> Iterator[ProviderMethod[Any]]:
         return iter(self._provider_methods_by_resource.values())
 
+    def __getitem__(self, resource: ResourceTypes[T]) -> ProviderMethod[T]:
+        self._ensure_related_resource(resource)
+        target_resource = (
+            resource.overrides if type(resource) is OverridingResource else resource
+        )
+        provider_method = self._provider_methods_by_resource[target_resource]
+        return provider_method
+
     @property
     def module(self) -> ModuleType:
         return self._module
@@ -244,14 +252,6 @@ class ProviderType(type):
                 refers_to=resource,
                 mismatched_type=parameter_type,
             )
-
-    def _get_provider_method(self, resource: ResourceTypes[T]) -> ProviderMethod[T]:
-        self._ensure_related_resource(resource)
-        target_resource = (
-            resource.overrides if type(resource) is OverridingResource else resource
-        )
-        provider_method = self._provider_methods_by_resource[target_resource]
-        return provider_method
 
     def _collect_resources(
         self,

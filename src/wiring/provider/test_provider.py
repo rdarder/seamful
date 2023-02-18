@@ -88,7 +88,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        provider_method = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
+        provider_method = SomeProvider[SomeModule.a]  # type: ignore
         self.assertIs(provider_method.provider, SomeProvider)
         self.assertIs(provider_method.method, SomeProvider.provide_a)
         self.assertIs(provider_method.resource, SomeModule.a)
@@ -128,7 +128,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             t=int, name="fake", module=SomeModule  # pyright: ignore
         )
         with self.assertRaises(UnrelatedResource) as ctx:
-            SomeProvider._get_provider_method(fake_resource)
+            SomeProvider[fake_resource]
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource, fake_resource)
@@ -147,7 +147,7 @@ class TestProviderCollectingProviderMethods(TestCase):
             a = int
 
         with self.assertRaises(UnrelatedResource) as ctx:
-            SomeProvider._get_provider_method(AnotherModule.a)  # type: ignore
+            SomeProvider[AnotherModule.a]  # type: ignore
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
@@ -331,7 +331,7 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_b(self) -> int:
                 return 10
 
-        provider_method = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
+        provider_method = SomeProvider[SomeModule.a]  # type: ignore
         self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
 
     def test_provider_method_parameters_can_refer_to_own_module_resources_by_name(
@@ -348,7 +348,7 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_b(self) -> int:
                 return 10
 
-        provider_method = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
+        provider_method = SomeProvider[SomeModule.a]  # type: ignore
         self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
 
     def test_provider_method_must_either_match_by_resource_or_by_name(self) -> None:
@@ -406,7 +406,7 @@ class TestProviderMethodFromSignature(TestCase):
             def provide_b(self) -> SomeConcreteClass:
                 return SomeConcreteClass()
 
-        provide_a = SomeProvider._get_provider_method(SomeModule.a)  # type: ignore
+        provide_a = SomeProvider[SomeModule.a]  # type: ignore
         self.assertEqual(provide_a.dependencies, dict(b=SomeModule.b))
 
     def test_provider_method_parameter_annotation_must_be_a_type(self) -> None:
