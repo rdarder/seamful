@@ -84,3 +84,10 @@ class ModulesMustInheritDirectlyFromModuleClass(Exception):
     def __init__(self, module_class_name: str, inherits_from: tuple[type, ...]):
         self.module_class_name = module_class_name
         self.inherits_from = inherits_from
+
+
+class InvalidModuleAttribute(Exception):
+    def __init__(self, module: ModuleType, name: str, attribute_value: Any):
+        self.module = module
+        self.name = name
+        self.attribute_value = attribute_value
