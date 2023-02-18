@@ -20,6 +20,7 @@ from wiring.resource import (
     PrivateResource,
     ResourceTypes,
     OverridingResource,
+    ProviderResourceTypes,
 )
 from wiring.provider.errors import (
     MissingProviderMethod,
@@ -51,6 +52,7 @@ from wiring.provider.errors import (
     IncompatibleResourceTypeForInheritedResource,
     ProviderModuleCantBeChanged,
     InvalidProviderAttributeName,
+    InvalidProviderAttribute,
 )
 
 T = TypeVar("T")
@@ -60,8 +62,8 @@ if TYPE_CHECKING:
 
 
 class ProviderType(type):
-    _resources_by_name: dict[str, OverridingResource[Any] | PrivateResource[Any]]
-    _resources: set[OverridingResource[Any] | PrivateResource[Any]]
+    _resources_by_name: dict[str, ProviderResourceTypes[Any]]
+    _resources: set[ProviderResourceTypes[Any]]
     _provider_methods_by_resource: dict[ResourceTypes[Any], ProviderMethod[Any]]
 
     def __init__(
@@ -82,10 +84,15 @@ class ProviderType(type):
             raise ProvidersDontSupportMultipleInheritance(self, bases)
         base_provider = bases[0]
         self._module = self._get_module_from_class_declaration(base_provider, module)
-        self._collect_resources(
-            dct, inspect.get_annotations(self), cast(ProviderType, base_provider)
-        )
+        self._collect_resources(dct, cast(ProviderType, base_provider))
+        self._fail_on_misleading_annotations(inspect.get_annotations(self))
         self._collect_provider_methods()
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        raise ProvidersCannotBeInstantiated(self)
+
+    def __iter__(self) -> Iterator[ProviderMethod[Any]]:
+        return iter(self._provider_methods_by_resource.values())
 
     @property
     def module(self) -> ModuleType:
@@ -95,16 +102,10 @@ class ProviderType(type):
     def module(self, value: Any) -> None:
         raise ProviderModuleCantBeChanged(self, value)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> None:
-        raise ProvidersCannotBeInstantiated(self)
-
-    def __iter__(self) -> Iterator[ProviderMethod[Any]]:
-        return iter(self._provider_methods_by_resource.values())
-
     @property
     def resources(
         self,
-    ) -> Iterable[OverridingResource[Any] | PrivateResource[Any]]:
+    ) -> Iterable[ProviderResourceTypes[Any]]:
         return self._resources
 
     def _get_module_from_class_declaration(
@@ -255,50 +256,13 @@ class ProviderType(type):
     def _collect_resources(
         self,
         dct: dict[str, Any],
-        annotations: dict[str, Any],
         base_provider: ProviderType,
     ) -> None:
         for name, candidate in dct.items():
-            if name.startswith("_"):
+            if name.startswith("_") or name.startswith("provide_"):
                 continue
-            if name == "module" or name == "resources":
-                raise InvalidProviderAttributeName(self, name, candidate)
-            candidate_type = type(candidate)
-            if candidate_type is PrivateResource:
-                if candidate.is_bound:
-                    raise CannotUseExistingProviderResource(self, name, candidate)
-                candidate.bind(name=name, provider=self)
-                if name in self._module:
-                    raise PrivateResourceCannotOccludeModuleResource(self, candidate)
-                self._add_resource(candidate)
-            elif candidate_type is OverridingResource:
-                if name not in self._module:
-                    raise OverridingResourceNameDoesntMatchModuleResource(
-                        candidate.type, name, self, self._module
-                    )
-                candidate.bind(name=name, provider=self, overrides=self._module[name])
-                self._add_resource(candidate)
-            elif candidate_type is ModuleResource:
-                raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
-            elif isinstance(candidate, type):
-                if name in self._module:
-                    overrides = self._module[name]
-                    overriding_resource: OverridingResource[
-                        Any
-                    ] = OverridingResource.make_bound(
-                        t=candidate,  # pyright: ignore
-                        name=name,
-                        provider=self,
-                        overrides=overrides,
-                    )
-                    if not issubclass(candidate, overrides.type):
-                        raise OverridingResourceIncompatibleType(overriding_resource)
-                    self._add_resource(overriding_resource)
-                else:
-                    private_resource: PrivateResource[Any] = PrivateResource.make_bound(
-                        t=candidate, name=name, provider=self  # pyright: ignore
-                    )
-                    self._add_resource(private_resource)
+            resource = self._collect_resource(name, candidate)
+            self._add_resource(resource)
 
         for base_resource in base_provider.resources:
             existing = self._resources_by_name.get(base_resource.name)
@@ -313,24 +277,68 @@ class ProviderType(type):
             else:
                 self._add_resource(base_resource.bound_to_sub_provider(self))
 
-        for name, annotation in annotations.items():
-            if name.startswith("_") or name in self._resources_by_name:
-                continue
-            t = type(annotation)
-            if t is ModuleResource:
-                raise InvalidModuleResourceAnnotationInProvider(self, name, annotation)
-            elif t is PrivateResource:
-                raise InvalidPrivateResourceAnnotationInProvider(self, name, annotation)
-            elif t is OverridingResource:
-                raise InvalidOverridingResourceAnnotationInProvider(
-                    self, name, annotation
+    def _collect_resource(
+        self, name: str, candidate: Any
+    ) -> ProviderResourceTypes[Any]:
+        if name == "module" or name == "resources":
+            raise InvalidProviderAttributeName(self, name, candidate)
+        candidate_type = type(candidate)
+        if candidate_type is PrivateResource:
+            if candidate.is_bound:
+                raise CannotUseExistingProviderResource(self, name, candidate)
+            candidate.bind(name=name, provider=self)
+            if name in self._module:
+                raise PrivateResourceCannotOccludeModuleResource(self, candidate)
+            return cast(PrivateResource[Any], candidate)
+        elif candidate_type is OverridingResource:
+            if name not in self._module:
+                raise OverridingResourceNameDoesntMatchModuleResource(
+                    candidate.type, name, self, self._module
                 )
-            if isinstance(annotation, type):
-                raise InvalidAttributeAnnotationInProvider(self, name, annotation)
+            candidate.bind(name=name, provider=self, overrides=self._module[name])
+            return cast(OverridingResource[Any], candidate)
+        elif candidate_type is ModuleResource:
+            raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
+        elif isinstance(candidate, type):
+            if name in self._module:
+                overrides = self._module[name]
+                overriding_resource: OverridingResource[
+                    Any
+                ] = OverridingResource.make_bound(
+                    t=candidate,  # pyright: ignore
+                    name=name,
+                    provider=self,
+                    overrides=overrides,
+                )
+                if not issubclass(candidate, overrides.type):
+                    raise OverridingResourceIncompatibleType(overriding_resource)
+                return overriding_resource
+            else:
+                private_resource: PrivateResource[Any] = PrivateResource.make_bound(
+                    t=candidate, name=name, provider=self  # pyright: ignore
+                )
+                return private_resource
+        else:
+            raise InvalidProviderAttribute(self, name, candidate)
 
-    def _add_resource(
-        self, resource: OverridingResource[Any] | PrivateResource[Any]
-    ) -> None:
+    def _fail_on_misleading_annotations(self, annotations: dict[str, Any]) -> None:
+        for name, annotation in annotations.items():
+            self._fail_on_misleading_annotation(name, annotation)
+
+    def _fail_on_misleading_annotation(self, name: str, annotation: Any) -> None:
+        if name.startswith("_") or name in self._resources_by_name:
+            return
+        t = type(annotation)
+        if t is ModuleResource:
+            raise InvalidModuleResourceAnnotationInProvider(self, name, annotation)
+        elif t is PrivateResource:
+            raise InvalidPrivateResourceAnnotationInProvider(self, name, annotation)
+        elif t is OverridingResource:
+            raise InvalidOverridingResourceAnnotationInProvider(self, name, annotation)
+        if isinstance(annotation, type):
+            raise InvalidAttributeAnnotationInProvider(self, name, annotation)
+
+    def _add_resource(self, resource: ProviderResourceTypes[Any]) -> None:
         self._resources_by_name[resource.name] = resource
         self._resources.add(resource)
         setattr(self, resource.name, resource)

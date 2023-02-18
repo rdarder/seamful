@@ -265,3 +265,10 @@ class InvalidProviderAttributeName(Exception):
         self.provider = provider
         self.name = name
         self.assigned_to = assigned_to
+
+
+class InvalidProviderAttribute(Exception):
+    def __init__(self, provider: ProviderType, name: str, value: Any) -> None:
+        self.provider = provider
+        self.name = name
+        self.value = value
