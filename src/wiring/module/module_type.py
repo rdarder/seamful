@@ -76,7 +76,7 @@ class ModuleType(type):
 
     def _collect_resources(self, dct: dict[str, Any]) -> None:
         for name, candidate in dct.items():
-            if name.startswith("_"):
+            if name.startswith("__"):
                 continue
             resource = self._turn_attribute_into_resource(name, candidate)
             self._add_resource(resource)
@@ -101,7 +101,7 @@ class ModuleType(type):
     def _turn_attribute_into_resource(
         self, name: str, candidate: Any
     ) -> ModuleResource[Any]:
-        if name == "default_provider":
+        if name.startswith("_") or name == "default_provider":
             raise InvalidModuleAttribute(self, name, candidate)
         candidate_type = type(candidate)
         if candidate_type is ModuleResource:
