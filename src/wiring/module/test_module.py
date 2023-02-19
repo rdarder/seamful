@@ -16,6 +16,7 @@ from wiring.module.errors import (
     CannotDefinePrivateResourceInModule,
     CannotDefineOverridingResourceInModule,
     ModulesMustInheritDirectlyFromModuleClass,
+    InvalidModuleAttribute,
 )
 from wiring.resource import Resource
 
@@ -46,7 +47,7 @@ class TestModuleResourcesFromTypeAlias(TestCase):
         self.assertEqual(resource.module, SomeModule)
 
 
-class TestModuleResourcesFromResourceIntances(TestCase):
+class TestModuleResourcesFromResourceInstances(TestCase):
     def test_module_collect_resource_instances_and_binds_them(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
@@ -167,7 +168,7 @@ class TestModuleResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.resource.is_bound, False)
 
 
-class TestModuleInstances(TestCase):
+class TestModuleClassDeclaration(TestCase):
     def test_modules_cannot_be_instantiated(self) -> None:
         class SomeModule(Module):
             pass
@@ -196,6 +197,38 @@ class TestModuleInstances(TestCase):
 
         self.assertEqual(ctx.exception.module_class_name, "SubModule")
         self.assertEqual(ctx.exception.inherits_from, (SomeModule,))
+
+    def test_module_classes_cannot_have_private_attributes(self) -> None:
+        with self.assertRaises(InvalidModuleAttribute) as ctx:
+
+            class SomeModule(Module):
+                _something = int
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "_something")
+        self.assertEqual(ctx.exception.attribute_value, int)
+
+    def test_module_classes_cannot_have_an_attribute_named_default_provider(
+        self,
+    ) -> None:
+        with self.assertRaises(InvalidModuleAttribute) as ctx:
+
+            class SomeModule(Module):
+                default_provider = int
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "default_provider")
+        self.assertEqual(ctx.exception.attribute_value, int)
+
+    def test_module_classes_attributes_must_be_types_or_resources(self) -> None:
+        with self.assertRaises(InvalidModuleAttribute) as ctx:
+
+            class SomeModule(Module):
+                a = 10
+
+        self.assertEqual(ctx.exception.module.__name__, "SomeModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.attribute_value, 10)
 
 
 class TestModuleDefaultProvider(TestCase):
