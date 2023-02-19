@@ -235,8 +235,9 @@ class BaseProviderProvidesFromADifferentModule(Exception):
 
 
 class ProvidersMustInheritFromProviderClass(Exception):
-    def __init__(self, provider: ProviderType):
+    def __init__(self, provider: ProviderType, inherits_from: type):
         self.provider = provider
+        self.inherits_from = inherits_from
 
 
 class IncompatibleResourceTypeForInheritedResource(Exception):

@@ -21,7 +21,6 @@ from wiring.container.errors import (
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.provider.errors import (
-    CannotDependOnResourceFromAnotherProvider,
     ProviderMethodReturnTypeMismatch,
     IncompatibleResourceTypeForInheritedResource,
 )
@@ -170,32 +169,6 @@ class TestContainerProvidesPrivateResources(TestCase):
         container.close_registrations()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
-    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
-        class SomeModule(Module):
-            a = int
-
-        class SomeProvider(Provider, module=SomeModule):
-            b: TypeAlias = int
-
-            def provide_a(self, b: int) -> int:
-                return b + 1
-
-            def provide_b(self) -> int:
-                return 10
-
-        class AnotherModule(Module):
-            c = int
-
-        with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
-
-            class AnotherProvider(Provider, module=AnotherModule):
-                def provide_c(self, b: SomeProvider.b) -> int:
-                    return b + 1
-
-        self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
-        self.assertEqual(ctx.exception.parameter_name, "b")
-        self.assertEqual(ctx.exception.target, AnotherModule.c)
-
 
 class TestContainerProvidesOverridingResources(TestCase):
     def test_can_provide_overriding_resource(self) -> None:
@@ -274,32 +247,6 @@ class TestContainerProvidesOverridingResources(TestCase):
         some = container.provide(SomeModule.some)
         self.assertIsInstance(some, SomeConcreteClass)
         self.assertIs(another.some, some)
-
-    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
-        class SomeModule(Module):
-            a = int
-
-        class SomeProvider(Provider, module=SomeModule):
-            b: TypeAlias = int
-
-            def provide_a(self, b: int) -> int:
-                return b + 1
-
-            def provide_b(self) -> int:
-                return 10
-
-        class AnotherModule(Module):
-            c = int
-
-        with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
-
-            class AnotherProvider(Provider, module=AnotherModule):
-                def provide_c(self, b: SomeProvider.b) -> int:
-                    return b + 1
-
-        self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
-        self.assertEqual(ctx.exception.parameter_name, "b")
-        self.assertEqual(ctx.exception.target, AnotherModule.c)
 
 
 class TestContainerCallingProviderMethods(TestCase):

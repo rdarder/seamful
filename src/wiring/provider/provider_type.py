@@ -135,7 +135,7 @@ class ProviderType(type):
                 raise BaseProviderProvidesFromADifferentModule(self, base, module)
             return base.module
         else:
-            raise ProvidersMustInheritFromProviderClass(self)
+            raise ProvidersMustInheritFromProviderClass(self, base)
 
     def _collect_provider_methods(self) -> None:
         for provider_resource in self._resources:

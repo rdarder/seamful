@@ -26,7 +26,16 @@ from wiring.provider.errors import (
     OverridingResourceNameDoesntMatchModuleResource,
     ProviderModuleCantBeChanged,
     InvalidProviderAttributeName,
+    CannotUseExistingProviderResource,
+    InvalidModuleResourceAnnotationInProvider,
+    CannotDependOnResourceFromAnotherProvider,
+    ProvidersDontSupportMultipleInheritance,
+    ProviderDeclarationMissingModule,
+    BaseProviderProvidesFromADifferentModule,
+    ProvidersMustInheritFromProviderClass,
+    InvalidProviderAttribute,
 )
+from wiring.provider.provider_type import ProviderType
 from wiring.resource import (
     ModuleResource,
     Resource,
@@ -77,6 +86,62 @@ class TestProviderClassBehavior(TestCase):
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.assigned_to, AnotherModule)
         self.assertEqual(SomeProvider.module, SomeModule)
+
+    def test_providers_dont_support_multiple_inheritance(self) -> None:
+        class SomeBaseClass:
+            pass
+
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(ProvidersDontSupportMultipleInheritance) as ctx:
+
+            class SomeProvider(Provider, SomeBaseClass, module=SomeModule):
+                pass
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.bases, (Provider, SomeBaseClass))
+
+    def test_providers_must_state_which_module_it_provides_for_as_class_argument(
+        self,
+    ) -> None:
+        with self.assertRaises(ProviderDeclarationMissingModule) as ctx:
+
+            class SomeProvider(Provider):
+                pass
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+
+    def test_providers_must_inherit_from_provider_or_subclass(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeClass:
+            def __init_subclass__(cls, **kwargs: Any) -> None:
+                pass
+
+        with self.assertRaises(ProvidersMustInheritFromProviderClass) as ctx:
+
+            class SomeProvider(SomeClass, metaclass=ProviderType, module=SomeModule):
+                pass
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.inherits_from, SomeClass)
+
+    def test_provider_attributes_can_only_be_resources_or_provider_methods(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(InvalidProviderAttribute) as ctx:
+
+            class SomeProvider(Provider, module=SomeModule):
+                a = 10
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.value, 10)
 
 
 class TestProviderCollectingProviderMethods(TestCase):
@@ -249,6 +314,46 @@ class TestProviderModuleAnnotation(TestCase):
             pass
 
         self.assertEqual(SomeProvider.module, SomeModule)
+
+    def test_provider_cannot_have_module_resource_annotated_attributes(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        with self.assertRaises(InvalidModuleResourceAnnotationInProvider) as ctx:
+
+            class SomeProvider(Provider, module=SomeModule):
+                a: Resource(int)  # type: ignore
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertIsInstance(ctx.exception.resource, ModuleResource)
+
+    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider, module=SomeModule):
+            b: TypeAlias = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        class AnotherModule(Module):
+            c = int
+
+        with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
+
+            class AnotherProvider(Provider, module=AnotherModule):
+                def provide_c(self, b: SomeProvider.b) -> int:
+                    return b + 1
+
+        self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
+        self.assertEqual(ctx.exception.parameter_name, "b")
+        self.assertEqual(ctx.exception.target, AnotherModule.c)
 
 
 class TestProviderMethodFromSignature(TestCase):
@@ -673,6 +778,27 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.module, SomeModule)
 
+    def test_provider_refuses_resource_declaration_that_uses_another_provider_resource(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a = Resource(int, private=True)
+
+            def provide_a(self) -> int:
+                return 10
+
+        with self.assertRaises(CannotUseExistingProviderResource) as ctx:
+
+            class AnotherProvider(Provider, module=SomeModule):
+                a = SomeProvider.a
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
+
 
 class TestProviderResourcesFromAnnotations(TestCase):
     def test_provider_fails_on_class_attribute_with_only_type_annotation(self) -> None:
@@ -858,3 +984,22 @@ class TestProviderSubclasses(TestCase):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "resources")
         self.assertEqual(ctx.exception.assigned_to, int)
+
+    def test_provider_subclass_must_provide_for_the_same_module_as_base(self) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            pass
+
+        class AnotherModule(Module):
+            pass
+
+        with self.assertRaises(BaseProviderProvidesFromADifferentModule) as ctx:
+
+            class AnotherProvider(SomeProvider, module=AnotherModule):
+                pass
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.base, SomeProvider)
+        self.assertEqual(ctx.exception.module, AnotherModule)
