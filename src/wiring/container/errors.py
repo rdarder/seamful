@@ -3,12 +3,11 @@ from dataclasses import dataclass
 from typing import Union, Any, Type, cast, TYPE_CHECKING
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, ResourceTypes
+from wiring.resource import ModuleResource, ResourceTypes, ProviderResourceTypes
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 if TYPE_CHECKING:
     from wiring.container import Container
-    from wiring.container.registry import Registry
 
 
 class ModuleNotRegisteredForResource(Exception):
@@ -111,23 +110,19 @@ class ProviderMethodsCantAccessProviderInstance(Exception):
         self.provider_method = provider_method
 
 
-class UnexpectedCoreContainerNotReady(Exception):
-    def __init__(self, container: Container, core: Registry):
-        self.container = container
-        self.core = core
-
-
 class RegistrationMustBeClosedBeforeReopeningThem(Exception):
     def __init__(self, container: Container) -> None:
         self.container = container
 
 
 class ContainerAlreadyReadyForProvisioning(Exception):
-    pass
+    def __init__(self, container: Container):
+        self.container = container
 
 
 class CannotReopenRegistrationsAfterHavingProvidedResources(Exception):
-    pass
+    def __init__(self, container: Container):
+        self.container = container
 
 
 class RegisteredProvidersNotUsed(Exception):
@@ -136,6 +131,8 @@ class RegisteredProvidersNotUsed(Exception):
 
 
 class ProviderNotProvidingForModule(Exception):
-    def __init__(self, resource: ResourceTypes[Any], provider_in_use: ProviderType):
+    def __init__(
+        self, resource: ProviderResourceTypes[Any], provider_in_use: ProviderType
+    ):
         self.resource = resource
         self.provider_in_use = provider_in_use

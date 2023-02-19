@@ -56,7 +56,7 @@ class Container:
 
     def close_registrations(self, allow_provider_resources: bool = False) -> None:
         if not self._is_registering:
-            raise ContainerAlreadyReadyForProvisioning()
+            raise ContainerAlreadyReadyForProvisioning(self)
         self._provider = self._registry.close_registration(allow_provider_resources)
         self._is_registering = False
 
@@ -81,7 +81,7 @@ class Container:
         allow_implicit_modules: bool = False,
     ) -> None:
         if self._is_providing:
-            raise CannotReopenRegistrationsAfterHavingProvidedResources()
+            raise CannotReopenRegistrationsAfterHavingProvidedResources(self)
         if self._is_registering:
             raise RegistrationMustBeClosedBeforeReopeningThem(self)
         self._is_registering = True

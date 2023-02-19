@@ -18,6 +18,9 @@ from wiring.container.errors import (
     ProviderMethodsCantAccessProviderInstance,
     CannotReopenRegistrationsAfterHavingProvidedResources,
     RegisteredProvidersNotUsed,
+    RegistrationMustBeClosedBeforeReopeningThem,
+    ContainerAlreadyReadyForProvisioning,
+    ProviderNotProvidingForModule,
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.provider.errors import (
@@ -133,6 +136,30 @@ class TestContainerProvision(TestCase):
         with self.assertRaises(CannotProvideRawType) as ctx:
             container.provide(SomeClass)
         self.assertEqual(ctx.exception.type, SomeClass)
+
+    def test_refuses_to_provide_resource_not_defined_on_the_original_provider(
+        self,
+    ) -> None:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            pass
+
+        class AnotherProvider(Provider, module=SomeModule):
+            b: TypeAlias = int
+
+            def provide_b(self) -> int:
+                return 11
+
+        container = Container()
+        container.register(SomeModule, SomeProvider)
+        container.close_registrations(allow_provider_resources=True)
+
+        with self.assertRaises(ProviderNotProvidingForModule) as ctx:
+            container.provide(AnotherProvider.b)
+        self.assertEqual(ctx.exception.resource.provider, AnotherProvider)
+        self.assertEqual(ctx.exception.provider_in_use, SomeProvider)
 
 
 class TestContainerProvidesPrivateResources(TestCase):
@@ -546,8 +573,25 @@ class TestContainerOverrides(TestCase):
         container.register(SomeModule, SomeProvider)
         container.close_registrations()
         container.provide(SomeModule.a)
-        with self.assertRaises(CannotReopenRegistrationsAfterHavingProvidedResources):
+        with self.assertRaises(
+            CannotReopenRegistrationsAfterHavingProvidedResources
+        ) as ctx:
             container.reopen_registrations()
+
+        self.assertEqual(ctx.exception.container, container)
+
+    def test_registrations_must_be_closed_upon_reopening_them(self) -> None:
+        container = Container()
+        with self.assertRaises(RegistrationMustBeClosedBeforeReopeningThem) as ctx:
+            container.reopen_registrations()
+        self.assertEqual(ctx.exception.container, container)
+
+    def test_registrations_must_be_open_upon_closing_them(self) -> None:
+        container = Container()
+        container.close_registrations()
+        with self.assertRaises(ContainerAlreadyReadyForProvisioning) as ctx:
+            container.close_registrations()
+        self.assertEqual(ctx.exception.container, container)
 
     def test_cannot_override_reopened_container_if_overrides_are_not_explicitly_allowed(
         self,
