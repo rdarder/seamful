@@ -234,7 +234,8 @@ class TestModuleClassDeclaration(TestCase):
 
 
 class TestModuleDefaultProvider(TestCaseWithOutputFixtures):
-    def test_cant_use_base_provider_as_default_provider(self) -> None:
+    @validate_output
+    def test_cant_use_base_provider_as_default_provider(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -242,10 +243,12 @@ class TestModuleDefaultProvider(TestCaseWithOutputFixtures):
             SomeModule.default_provider = Provider
 
         self.assertEqual(ctx.exception.module, SomeModule)
+        return ctx.exception
 
+    @validate_output
     def test_cant_set_a_default_provider_to_one_that_provides_to_another_module(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -261,6 +264,7 @@ class TestModuleDefaultProvider(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.provider, AnotherProvider)
         self.assertEqual(ctx.exception.provider.module, AnotherModule)
+        return ctx.exception
 
     @validate_output
     def test_cant_set_a_default_provider_to_something_not_a_provider(

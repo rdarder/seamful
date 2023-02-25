@@ -45,15 +45,39 @@ class DefaultProviderIsNotAProvider(HelpfulException):
         )
 
 
-class CannotUseBaseProviderAsDefaultProvider(Exception):
+class CannotUseBaseProviderAsDefaultProvider(HelpfulException):
     def __init__(self, module: ModuleType):
         self.module = module
 
+    def explanation(self) -> str:
+        t = Text(
+            f"Attempted to set {sname(self.module)}.default_provider = "
+            f"Provider instead of a derived class."
+        )
+        return str(t)
 
-class DefaultProviderProvidesToAnotherModule(Exception):
+    def failsafe_explanation(self) -> str:
+        return (
+            "Attempted to set a module's default_provider to the base Provider class"
+            "instead of a derived class."
+        )
+        pass
+
+
+class DefaultProviderProvidesToAnotherModule(HelpfulException):
     def __init__(self, module: ModuleType, provider: ProviderType):
         self.module = module
         self.provider = provider
+
+    def explanation(self) -> str:
+        t = Text(
+            f"Attempted to set {sname(self.module)}.default_provider = {sname(self.provider)}, "
+            f"but {qname(self.provider)} provides for {qname(self.provider.module)} instead."
+        )
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to set a module's default_provider to a provider of a different module."
 
 
 class InvalidModuleResourceAnnotationInModule(Exception):

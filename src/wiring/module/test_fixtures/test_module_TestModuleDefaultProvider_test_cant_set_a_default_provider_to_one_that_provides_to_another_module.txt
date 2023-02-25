@@ -1,0 +1,2 @@
+Attempted to set SomeModule.default_provider = AnotherProvider, but
+'AnotherProvider' provides for 'AnotherModule' instead.

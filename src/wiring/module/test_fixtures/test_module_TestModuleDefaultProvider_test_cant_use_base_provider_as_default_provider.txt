@@ -1,0 +1,2 @@
+Attempted to set SomeModule.default_provider = Provider instead of a derived
+class.
