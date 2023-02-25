@@ -18,7 +18,9 @@ from wiring.module.errors import (
     ModulesMustInheritDirectlyFromModuleClass,
     InvalidModuleAttribute,
 )
+from wiring.errors import HelpfulException
 from wiring.resource import Resource
+from wiring.utils_for_tests import validate_output, TestCaseWithOutputFixtures
 
 
 class TestModuleResourcesFromTypeAlias(TestCase):
@@ -231,7 +233,7 @@ class TestModuleClassDeclaration(TestCase):
         self.assertEqual(ctx.exception.attribute_value, 10)
 
 
-class TestModuleDefaultProvider(TestCase):
+class TestModuleDefaultProvider(TestCaseWithOutputFixtures):
     def test_cant_use_base_provider_as_default_provider(self) -> None:
         class SomeModule(Module):
             pass
@@ -260,7 +262,10 @@ class TestModuleDefaultProvider(TestCase):
         self.assertEqual(ctx.exception.provider, AnotherProvider)
         self.assertEqual(ctx.exception.provider.module, AnotherModule)
 
-    def test_cant_set_a_default_provider_to_something_not_a_provider(self) -> None:
+    @validate_output
+    def test_cant_set_a_default_provider_to_something_not_a_provider(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -272,3 +277,4 @@ class TestModuleDefaultProvider(TestCase):
 
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.not_provider, NotAProvider)
+        return ctx.exception

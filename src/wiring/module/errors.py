@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from wiring.errors import (
+    Text,
+    HelpfulException,
+    qname,
+    sname,
+    point_to_definition,
+)
 from wiring.resource import ModuleResource, PrivateResource
 
 if TYPE_CHECKING:
@@ -9,10 +16,33 @@ if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
 
 
-class DefaultProviderIsNotAProvider(Exception):
-    def __init__(self, module: ModuleType, not_provider: ProviderType):
+class DefaultProviderIsNotAProvider(HelpfulException):
+    def __init__(self, module: ModuleType, not_provider: Any):
         self.module = module
         self.not_provider = not_provider
+
+    def explanation(self) -> str:
+        t = Text(
+            f"Attempted to set {sname(self.module)}.default_provider = "
+            f"{sname(self.not_provider)}, which is not a Provider."
+        )
+        t.newline(
+            f"It's likely that you intended {qname(self.not_provider)} "
+            "to inherit from Provider, like: "
+        )
+
+        with t.indented_block():
+            t.newline(f"class {sname(self.not_provider)}(Provider):")
+            t.indented_line("...")
+        t.blank()
+        t.newline(point_to_definition(self.not_provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "Attempted to set a module's default_provider to something "
+            "that's not a Provider."
+        )
 
 
 class CannotUseBaseProviderAsDefaultProvider(Exception):

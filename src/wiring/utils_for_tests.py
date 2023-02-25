@@ -1,0 +1,99 @@
+import inspect
+import os
+from functools import wraps
+from pathlib import Path
+from typing import Callable, Any, Type, TypeVar
+from unittest import TestCase
+
+
+class TestCaseWithOutputFixtures(TestCase):
+    regenerate_fixtures: bool
+    fixture_location: Path
+    fixture_prefix: str
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.regenerate_fixtures = os.environ.get("REGENERATE_FIXTURES") is not None
+        cls.fixture_location, cls.fixture_prefix = _get_fixture_location(cls)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if not cls.regenerate_fixtures:
+            return
+        used_fixtures = {
+            _get_fixture_path(cls, method)
+            for _, method in inspect.getmembers(cls)
+            if callable(method) and hasattr(method, "uses_fixtures")
+        }
+        existing_fixtures = set(
+            cls.fixture_location.glob(f"{cls.fixture_prefix}_*.txt")
+        )
+        for extra_fixture in existing_fixtures - used_fixtures:
+            print(f"Removing unused fixture {extra_fixture}")
+            extra_fixture.unlink()
+
+
+T = TypeVar("T", bound=TestCaseWithOutputFixtures)
+
+
+def validate_output(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
+    @wraps(test_method)
+    def validating_test_method(test: TestCaseWithOutputFixtures) -> None:
+        if not hasattr(test, "fixture_location"):
+            test.fail(
+                "Missing fixture location. TestCase class probably not set up for fixture tests."
+            )
+        if test.regenerate_fixtures:
+            print(f"Regenerating test fixtures for {test.id()}")
+            return _generate_text_fixture_for_test_method(test, test_method)
+
+        test_returns = _run_test_and_ensure_returns_something(test, test_method)
+        fixture_path = _get_fixture_path(test.__class__, test_method)
+        if not fixture_path.exists():
+            test.fail(f"Fixture {fixture_path} does not exist.")
+        with open(fixture_path, "r") as fixture_file:
+            loaded_fixture = fixture_file.read()
+        test.assertEqual(loaded_fixture, str(test_returns))
+
+    setattr(validating_test_method, "uses_fixtures", True)
+    return validating_test_method
+
+
+V = TypeVar("V")
+
+
+def _run_test_and_ensure_returns_something(
+    test: TestCase, test_method: Callable[..., V]
+) -> V:
+    test_returns = test_method(test)
+    if test_returns is None:
+        test.fail("Test case expected to return something, but returned None.")
+    return test_returns
+
+
+def _get_fixture_path(
+    test: Type[TestCaseWithOutputFixtures], test_method: Callable[..., Any]
+) -> Path:
+    fixture_name = f"{test.__name__}_{test_method.__name__}.txt"
+    fixture_path = test.fixture_location.joinpath(
+        f"{test.fixture_prefix}_{fixture_name}"
+    )
+    return fixture_path
+
+
+def _get_fixture_location(test: Type[TestCase]) -> tuple[Path, str]:
+    base = Path(inspect.getfile(test))
+    location = base.parent.joinpath("test_fixtures")
+    prefix = base.stem
+    return location, prefix
+
+
+def _generate_text_fixture_for_test_method(
+    test: TestCaseWithOutputFixtures, test_method: Callable[..., Any]
+) -> None:
+    test_returns = _run_test_and_ensure_returns_something(test, test_method)
+    fixture_path = _get_fixture_path(test.__class__, test_method)
+    if not fixture_path.parent.exists():
+        fixture_path.parent.mkdir()
+    with open(fixture_path, "w") as fixture_file:
+        fixture_file.write(str(test_returns))
