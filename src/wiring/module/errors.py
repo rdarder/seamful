@@ -34,7 +34,6 @@ class DefaultProviderIsNotAProvider(HelpfulException):
         with t.indented_block():
             t.newline(f"class {sname(self.not_provider)}(Provider):")
             t.indented_line("...")
-        t.blank()
         t.newline(point_to_definition(self.not_provider))
         return str(t)
 
@@ -80,11 +79,32 @@ class DefaultProviderProvidesToAnotherModule(HelpfulException):
         return "Attempted to set a module's default_provider to a provider of a different module."
 
 
-class InvalidModuleResourceAnnotationInModule(Exception):
+class InvalidModuleResourceAnnotationInModule(HelpfulException):
     def __init__(self, module: ModuleType, name: str, resource: ModuleResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name}: Resource({sname(self.resource.type)})")
+        t.newline(
+            "But it has no value. It's likely that you intended to define instead:"
+        )
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = Resource({sname(self.resource.type)})")
+        t.newline(point_to_definition(self.module))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a module attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
+        pass
 
 
 class InvalidPrivateResourceAnnotationInModule(Exception):

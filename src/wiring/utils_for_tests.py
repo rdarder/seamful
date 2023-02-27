@@ -74,9 +74,8 @@ def _run_test_and_ensure_returns_something(
 def _get_fixture_path(
     test: Type[TestCaseWithOutputFixtures], test_method: Callable[..., Any]
 ) -> Path:
-    fixture_name = f"{test.__name__}_{test_method.__name__}.txt"
     fixture_path = test.fixture_location.joinpath(
-        f"{test.fixture_prefix}_{fixture_name}"
+        f"{test.fixture_prefix}_{test_method.__name__}.txt"
     )
     return fixture_path
 
@@ -84,7 +83,7 @@ def _get_fixture_path(
 def _get_fixture_location(test: Type[TestCase]) -> tuple[Path, str]:
     base = Path(inspect.getfile(test))
     location = base.parent.joinpath("test_fixtures")
-    prefix = base.stem
+    prefix = f"{base.stem}_{test.__name__}"
     return location, prefix
 
 

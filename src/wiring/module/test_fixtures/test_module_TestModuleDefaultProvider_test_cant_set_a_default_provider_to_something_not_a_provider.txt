@@ -4,4 +4,4 @@ It's likely that you intended 'NotAProvider' to inherit from Provider, like:
     class NotAProvider(Provider):
         ...
 
-See wiring/module/test_module.py:276
+See wiring/module/test_module.py:278

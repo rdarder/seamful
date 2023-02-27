@@ -101,7 +101,7 @@ class TestModuleResourcesFromResourceInstances(TestCase):
         self.assertEqual(ctx.exception.type, int)
 
 
-class TestModuleResourcesFromAnnotations(TestCase):
+class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
     def test_module_fails_on_class_attribute_with_only_type_annotation(self) -> None:
         with self.assertRaises(InvalidAttributeAnnotationInModule) as ctx:
 
@@ -112,9 +112,10 @@ class TestModuleResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.annotation, int)
 
+    @validate_output
     def test_module_fails_on_class_attribute_annotated_with_module_resource_instance(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         with self.assertRaises(InvalidModuleResourceAnnotationInModule) as ctx:
 
             class SomeModule(Module):
@@ -124,6 +125,7 @@ class TestModuleResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
         self.assertEqual(ctx.exception.resource.is_bound, False)
+        return ctx.exception
 
     def test_module_fails_on_class_attribute_annotated_with_provider_resource_instance(
         self,

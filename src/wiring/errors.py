@@ -39,16 +39,22 @@ class Text:
         self._current_paragraph = []
 
     def indented_line(self, content: str) -> None:
-        with self.indented_block():
+        with self.indented_block(blank_before=False, blank_after=False):
             self.newline(content)
 
     @contextmanager
-    def indented_block(self) -> Iterator[None]:
+    def indented_block(
+        self, blank_before: bool = False, blank_after: bool = True
+    ) -> Iterator[None]:
+        if blank_before:
+            self.blank()
         self._flush_paragraph()
         self._indent += 4
         yield
         self._flush_paragraph()
         self._indent -= 4
+        if blank_after:
+            self.blank()
 
     def __str__(self) -> str:
         self._add_blank = False
