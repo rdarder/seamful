@@ -13,10 +13,12 @@ from wiring.module.errors import (
     ModulesCannotBeInstantiated,
     InvalidPrivateResourceAnnotationInModule,
     InvalidOverridingResourceAnnotationInModule,
-    CannotDefinePrivateResourceInModule,
-    CannotDefineOverridingResourceInModule,
+    InvalidPrivateResourceInModule,
+    InvalidOverridingResourceInModule,
     ModulesMustInheritDirectlyFromModuleClass,
-    InvalidModuleAttribute,
+    InvalidModuleAttributeType,
+    InvalidPrivateModuleAttribute,
+    InvalidModuleAttributeName,
 )
 from wiring.errors import HelpfulException
 from wiring.resource import Resource
@@ -82,8 +84,11 @@ class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.resource.name, "a")
         return ctx.exception
 
-    def test_module_refuses_definition_of_private_resource_in_it(self) -> None:
-        with self.assertRaises(CannotDefinePrivateResourceInModule) as ctx:
+    @validate_output
+    def test_module_refuses_definition_of_private_resource_in_it(
+        self,
+    ) -> HelpfulException:
+        with self.assertRaises(InvalidPrivateResourceInModule) as ctx:
 
             class SomeModule(Module):
                 a = Resource(int, private=True)
@@ -91,9 +96,13 @@ class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.type, int)
+        return ctx.exception
 
-    def test_module_refuses_definition_of_overriding_resource_in_it(self) -> None:
-        with self.assertRaises(CannotDefineOverridingResourceInModule) as ctx:
+    @validate_output
+    def test_module_refuses_definition_of_overriding_resource_in_it(
+        self,
+    ) -> HelpfulException:
+        with self.assertRaises(InvalidOverridingResourceInModule) as ctx:
 
             class SomeModule(Module):
                 a = Resource(int, override=True)
@@ -101,6 +110,7 @@ class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.type, int)
+        return ctx.exception
 
 
 class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
@@ -264,7 +274,10 @@ class TestModuleClassDeclaration(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module, SomeModule)
         return ctx.exception
 
-    def test_modules_cannot_be_defined_as_a_subclass_of_another_module(self) -> None:
+    @validate_output
+    def test_modules_cannot_be_defined_as_a_subclass_of_another_module(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -275,9 +288,11 @@ class TestModuleClassDeclaration(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.module_class_name, "SubModule")
         self.assertEqual(ctx.exception.inherits_from, (SomeModule,))
+        return ctx.exception
 
-    def test_module_classes_cannot_have_private_attributes(self) -> None:
-        with self.assertRaises(InvalidModuleAttribute) as ctx:
+    @validate_output
+    def test_module_classes_cannot_have_private_attributes(self) -> HelpfulException:
+        with self.assertRaises(InvalidPrivateModuleAttribute) as ctx:
 
             class SomeModule(Module):
                 _something = int
@@ -285,11 +300,13 @@ class TestModuleClassDeclaration(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "_something")
         self.assertEqual(ctx.exception.attribute_value, int)
+        return ctx.exception
 
+    @validate_output
     def test_module_classes_cannot_have_an_attribute_named_default_provider(
         self,
-    ) -> None:
-        with self.assertRaises(InvalidModuleAttribute) as ctx:
+    ) -> HelpfulException:
+        with self.assertRaises(InvalidModuleAttributeName) as ctx:
 
             class SomeModule(Module):
                 default_provider = int
@@ -297,9 +314,13 @@ class TestModuleClassDeclaration(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "default_provider")
         self.assertEqual(ctx.exception.attribute_value, int)
+        return ctx.exception
 
-    def test_module_classes_attributes_must_be_types_or_resources(self) -> None:
-        with self.assertRaises(InvalidModuleAttribute) as ctx:
+    @validate_output
+    def test_module_classes_attributes_must_be_types_or_resources(
+        self,
+    ) -> HelpfulException:
+        with self.assertRaises(InvalidModuleAttributeType) as ctx:
 
             class SomeModule(Module):
                 a = 10
@@ -307,6 +328,7 @@ class TestModuleClassDeclaration(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.attribute_value, 10)
+        return ctx.exception
 
 
 class TestModuleDefaultProvider(TestCaseWithOutputFixtures):

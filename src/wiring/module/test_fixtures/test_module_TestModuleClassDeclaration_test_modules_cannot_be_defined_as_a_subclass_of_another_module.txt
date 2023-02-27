@@ -1,0 +1,8 @@
+Module SubModule inherits from 'SomeModule'
+
+    class SubModule(SomeModule, ...):
+        ...
+
+But modules must inherit directly from Module, and only from Module.
+Subclassing another module is not supported. Depending on your use case, you'll
+likely need to just use two different, orthogonal modules

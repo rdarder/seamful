@@ -13,10 +13,12 @@ from wiring.module.errors import (
     ModulesCannotBeInstantiated,
     InvalidPrivateResourceAnnotationInModule,
     InvalidOverridingResourceAnnotationInModule,
-    CannotDefinePrivateResourceInModule,
-    CannotDefineOverridingResourceInModule,
+    InvalidPrivateResourceInModule,
+    InvalidOverridingResourceInModule,
     ModulesMustInheritDirectlyFromModuleClass,
-    InvalidModuleAttribute,
+    InvalidModuleAttributeType,
+    InvalidPrivateModuleAttribute,
+    InvalidModuleAttributeName,
 )
 from wiring.resource import ModuleResource, PrivateResource, OverridingResource
 
@@ -101,8 +103,10 @@ class ModuleType(type):
     def _turn_attribute_into_resource(
         self, name: str, candidate: Any
     ) -> ModuleResource[Any]:
-        if name.startswith("_") or name == "default_provider":
-            raise InvalidModuleAttribute(self, name, candidate)
+        if name.startswith("_"):
+            raise InvalidPrivateModuleAttribute(self, name, candidate)
+        elif name == "default_provider":
+            raise InvalidModuleAttributeName(self, name, candidate)
         candidate_type = type(candidate)
         if candidate_type is ModuleResource:
             if candidate.is_bound:
@@ -110,16 +114,16 @@ class ModuleType(type):
             candidate.bind(name=name, module=self)
             return cast(ModuleResource[Any], candidate)
         elif candidate_type is PrivateResource:
-            raise CannotDefinePrivateResourceInModule(self, name, candidate.type)
+            raise InvalidPrivateResourceInModule(self, name, candidate.type)
         elif candidate_type is OverridingResource:
-            raise CannotDefineOverridingResourceInModule(self, name, candidate.type)
+            raise InvalidOverridingResourceInModule(self, name, candidate.type)
         elif isinstance(candidate, type):
             resource: ModuleResource[Any] = ModuleResource.make_bound(
                 t=candidate, name=name, module=self  # pyright: ignore
             )
             return resource
         else:
-            raise InvalidModuleAttribute(self, name, candidate)
+            raise InvalidModuleAttributeType(self, name, candidate)
 
     def _add_resource(self, resource: ModuleResource[Any]) -> None:
         self._resources.add(resource)

@@ -9,4 +9,4 @@ that you intended to define instead:
     class AnotherModule(Module):
         a = Resource(ConcreteClass)
 
-See wiring/module/test_module.py:232
+See wiring/module/test_module.py:242

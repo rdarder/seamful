@@ -9,4 +9,4 @@ you intended to define instead:
     class SomeModule(Module):
         a = Resource(int)
 
-See wiring/module/test_module.py:202
+See wiring/module/test_module.py:212

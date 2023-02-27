@@ -281,28 +281,130 @@ class ModulesCannotBeInstantiated(HelpfulException):
         return "Modules cannot be instantiated."
 
 
-class CannotDefinePrivateResourceInModule(Exception):
+class InvalidPrivateResourceInModule(HelpfulException):
     def __init__(self, module: ModuleType, name: str, t: type):
         self.module = module
         self.name = name
         self.type = t
 
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines a private Resource.")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = Resource({sname(self.type)}, private=True)")
 
-class CannotDefineOverridingResourceInModule(Exception):
+        t.newline("But private resources are only meant for providers, not modules.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Modules cannot have private resources."
+
+
+class InvalidOverridingResourceInModule(HelpfulException):
     def __init__(self, module: ModuleType, name: str, t: type):
         self.module = module
         self.name = name
         self.type = t
 
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an overriding Resource.")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(
+                f"{self.name} = Resource({sname(self.type)}, override=True)"
+            )
 
-class ModulesMustInheritDirectlyFromModuleClass(Exception):
+        t.newline("But overriding resources are only meant for providers, not modules.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Modules cannot have overriding resources."
+
+
+class ModulesMustInheritDirectlyFromModuleClass(HelpfulException):
     def __init__(self, module_class_name: str, inherits_from: tuple[type, ...]):
         self.module_class_name = module_class_name
         self.inherits_from = inherits_from
 
+    def explanation(self) -> str:
+        from wiring.module.module_type import ModuleType
 
-class InvalidModuleAttribute(Exception):
+        base = self.inherits_from[0]
+        t = Text(f"Module {self.module_class_name} inherits from {qname(base)}")
+        with t.indented_block():
+            t.newline(f"class {self.module_class_name}({sname(base)}, ...):")
+            t.indented_line("...")
+        t.newline(
+            "But modules must inherit directly from Module, and only from Module."
+        )
+        if isinstance(base, ModuleType):
+            t.newline("Subclassing another module is not supported.")
+            t.sentence(
+                "Depending on your use case, you'll likely need to just use two "
+                "different, orthogonal modules"
+            )
+
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Modules cannot be subclassed. All modules must inherit directly from 'Module'."
+
+
+class InvalidModuleAttributeType(HelpfulException):
     def __init__(self, module: ModuleType, name: str, attribute_value: Any):
         self.module = module
         self.name = name
         self.attribute_value = attribute_value
+
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = {repr(self.attribute_value)}")
+
+        t.newline(f"But {repr(self.attribute_value)} is not a valid resource type.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Invalid module attribute type. All module attributes must be Resources"
+
+
+class InvalidPrivateModuleAttribute(HelpfulException):
+    def __init__(self, module: ModuleType, name: str, attribute_value: Any):
+        self.module = module
+        self.name = name
+        self.attribute_value = attribute_value
+
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = ...")
+
+        t.newline("But private attributes (starting with '_') are not supported.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Private attributes in modules are not supported."
+
+
+class InvalidModuleAttributeName(HelpfulException):
+    def __init__(self, module: ModuleType, name: str, attribute_value: Any):
+        self.module = module
+        self.name = name
+        self.attribute_value = attribute_value
+
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = ...")
+
+        t.newline(
+            f"But the name '{self.name}' is reserved and cannot be used for "
+            "defining a module resource."
+        )
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return f"Attribute name {self.name} cannot be used in a module definition"
