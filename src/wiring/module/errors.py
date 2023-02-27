@@ -86,16 +86,30 @@ class InvalidModuleResourceAnnotationInModule(HelpfulException):
         self.resource = resource
 
     def explanation(self) -> str:
-        t = Text(f"Module {qname(self.module)} defines an attribute:")
-        with t.indented_block():
-            t.newline(f"class {sname(self.module)}(Module):")
-            t.indented_line(f"{self.name}: Resource({sname(self.resource.type)})")
-        t.newline(
-            "But it has no value. It's likely that you intended to define instead:"
-        )
+        t = Text(f"Module {qname(self.module)} defines an attribute {self.name}")
+
+        if self.resource.is_bound and self.resource.module is not self.module:
+            with t.indented_block():
+                t.newline(f"class {sname(self.module)}(Module):")
+                t.indented_line(
+                    f"{self.name}: {sname(self.resource.module)}."
+                    f"{self.resource.name}"
+                )
+
+            t.sentence(
+                "It both doesn't have a value and points to another module's resource."
+            )
+        else:
+            with t.indented_block():
+                t.newline(f"class {sname(self.module)}(Module):")
+                t.indented_line(f"{self.name}: Resource({sname(self.resource.type)})")
+            t.newline("But it has no value.")
+
+        t.sentence("It's likely that you intended to define instead:")
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
             t.indented_line(f"{self.name} = Resource({sname(self.resource.type)})")
+
         t.newline(point_to_definition(self.module))
         return str(t)
 
@@ -104,21 +118,94 @@ class InvalidModuleResourceAnnotationInModule(HelpfulException):
             "There's a module attribute with a type annotation of a Resource, "
             "but it's value is not a Resource."
         )
-        pass
 
 
-class InvalidPrivateResourceAnnotationInModule(Exception):
+class InvalidPrivateResourceAnnotationInModule(HelpfulException):
     def __init__(self, module: ModuleType, name: str, resource: PrivateResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource
 
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute {self.name}")
 
-class InvalidOverridingResourceAnnotationInModule(Exception):
+        if self.resource.is_bound:
+            with t.indented_block():
+                t.newline(f"class {sname(self.module)}(Module):")
+                t.indented_line(
+                    f"{self.name}: {sname(self.resource.provider)}."
+                    f"{self.resource.name}"
+                )
+
+            t.sentence(
+                "It both doesn't have a value and points to a provider's resource."
+            )
+        else:
+            with t.indented_block():
+                t.newline(f"class {sname(self.module)}(Module):")
+                t.indented_line(
+                    f"{self.name}: Resource({sname(self.resource.type)}, "
+                    "private=True)"
+                )
+            t.newline("But it has no value, plus module resources cannot be private.")
+
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = Resource({sname(self.resource.type)})")
+
+        t.newline(point_to_definition(self.module))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a module attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
+
+
+class InvalidOverridingResourceAnnotationInModule(HelpfulException):
     def __init__(self, module: ModuleType, name: str, resource: PrivateResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute {self.name}")
+
+        if self.resource.is_bound:
+            with t.indented_block():
+                t.newline(f"class {sname(self.module)}(Module):")
+                t.indented_line(
+                    f"{self.name}: {sname(self.resource.provider)}."
+                    f"{self.resource.name}"
+                )
+
+            t.sentence(
+                "It both doesn't have a value and points to a provider's resource."
+            )
+        else:
+            with t.indented_block():
+                t.newline(f"class {sname(self.module)}(Module):")
+                t.indented_line(
+                    f"{self.name}: Resource({sname(self.resource.type)}, "
+                    "override=True)"
+                )
+            t.newline("But it has no value, plus module resources cannot be overrides.")
+
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = Resource({sname(self.resource.type)})")
+
+        t.newline(point_to_definition(self.module))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a module attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
 
 
 class InvalidAttributeAnnotationInModule(Exception):

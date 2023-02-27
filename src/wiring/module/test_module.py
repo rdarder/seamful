@@ -127,9 +127,10 @@ class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.resource.is_bound, False)
         return ctx.exception
 
-    def test_module_fails_on_class_attribute_annotated_with_provider_resource_instance(
+    @validate_output
+    def test_module_fails_on_class_attribute_annotated_with_private_resource_instance(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         with self.assertRaises(InvalidPrivateResourceAnnotationInModule) as ctx:
 
             class SomeModule(Module):
@@ -139,10 +140,37 @@ class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
         self.assertEqual(ctx.exception.resource.is_bound, False)
+        return ctx.exception
 
+    @validate_output
+    def test_module_fails_on_class_attribute_annotated_with_provider_resource_instance(
+        self,
+    ) -> HelpfulException:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a = Resource(int, private=True)
+
+            def provide_a(self) -> int:
+                return 10
+
+        with self.assertRaises(InvalidPrivateResourceAnnotationInModule) as ctx:
+
+            class AnotherModule(Module):
+                a: SomeProvider.a  # type: ignore
+
+        self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.is_bound, True)
+        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
+        return ctx.exception
+
+    @validate_output
     def test_module_fails_on_a_resource_annotated_with_an_external_module_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -157,10 +185,12 @@ class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.resource.is_bound, True)
         self.assertEqual(ctx.exception.resource.module, SomeModule)
         self.assertEqual(ctx.exception.resource.name, "a")
+        return ctx.exception
 
+    @validate_output
     def test_module_fails_on_class_attribute_annotated_with_overriding_resource_instance(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         with self.assertRaises(InvalidOverridingResourceAnnotationInModule) as ctx:
 
             class SomeModule(Module):
@@ -170,6 +200,38 @@ class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
         self.assertEqual(ctx.exception.resource.is_bound, False)
+        return ctx.exception
+
+    @validate_output
+    def test_module_fails_on_class_attribute_annotated_with_provider_overriding_resource_instance(
+        self,
+    ) -> HelpfulException:
+        class BaseClass:
+            pass
+
+        class ConcreteClass(BaseClass):
+            pass
+
+        class SomeModule(Module):
+            a: TypeAlias = BaseClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a: TypeAlias = ConcreteClass
+
+            def provide_a(self) -> ConcreteClass:
+                return ConcreteClass()
+
+        with self.assertRaises(InvalidOverridingResourceAnnotationInModule) as ctx:
+
+            class AnotherModule(Module):
+                a: SomeProvider.a
+
+        self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.resource.type, ConcreteClass)
+        self.assertEqual(ctx.exception.resource.is_bound, True)
+        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
+        return ctx.exception
 
 
 class TestModuleClassDeclaration(TestCase):

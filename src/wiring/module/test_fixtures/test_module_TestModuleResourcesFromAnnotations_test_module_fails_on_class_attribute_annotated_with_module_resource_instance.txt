@@ -1,8 +1,10 @@
-Module 'SomeModule' defines an attribute:
+Module 'SomeModule' defines an attribute a
+
     class SomeModule(Module):
         a: Resource(int)
 
 But it has no value. It's likely that you intended to define instead:
+
     class SomeModule(Module):
         a = Resource(int)
 

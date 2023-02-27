@@ -44,7 +44,7 @@ class Text:
 
     @contextmanager
     def indented_block(
-        self, blank_before: bool = False, blank_after: bool = True
+        self, blank_before: bool = True, blank_after: bool = True
     ) -> Iterator[None]:
         if blank_before:
             self.blank()
