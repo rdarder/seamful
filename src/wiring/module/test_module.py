@@ -49,7 +49,7 @@ class TestModuleResourcesFromTypeAlias(TestCase):
         self.assertEqual(resource.module, SomeModule)
 
 
-class TestModuleResourcesFromResourceInstances(TestCase):
+class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
     def test_module_collect_resource_instances_and_binds_them(self) -> None:
         class SomeModule(Module):
             a = Resource(int)
@@ -62,9 +62,10 @@ class TestModuleResourcesFromResourceInstances(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.module, SomeModule)
 
+    @validate_output
     def test_module_fails_on_a_resource_defined_as_another_modules_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -79,6 +80,7 @@ class TestModuleResourcesFromResourceInstances(TestCase):
         self.assertEqual(ctx.exception.resource.is_bound, True)
         self.assertEqual(ctx.exception.resource.module, SomeModule)
         self.assertEqual(ctx.exception.resource.name, "a")
+        return ctx.exception
 
     def test_module_refuses_definition_of_private_resource_in_it(self) -> None:
         with self.assertRaises(CannotDefinePrivateResourceInModule) as ctx:
@@ -102,7 +104,10 @@ class TestModuleResourcesFromResourceInstances(TestCase):
 
 
 class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
-    def test_module_fails_on_class_attribute_with_only_type_annotation(self) -> None:
+    @validate_output
+    def test_module_fails_on_class_attribute_with_only_type_annotation(
+        self,
+    ) -> HelpfulException:
         with self.assertRaises(InvalidAttributeAnnotationInModule) as ctx:
 
             class SomeModule(Module):
@@ -111,6 +116,7 @@ class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.annotation, int)
+        return ctx.exception
 
     @validate_output
     def test_module_fails_on_class_attribute_annotated_with_module_resource_instance(

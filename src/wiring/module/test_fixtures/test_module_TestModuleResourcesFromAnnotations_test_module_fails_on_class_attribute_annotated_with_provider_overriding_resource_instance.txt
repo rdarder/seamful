@@ -1,4 +1,4 @@
-Module 'AnotherModule' defines an attribute a
+Module 'AnotherModule' defines an attribute 'a'
 
     class AnotherModule(Module):
         a: SomeProvider.a
@@ -9,4 +9,4 @@ that you intended to define instead:
     class AnotherModule(Module):
         a = Resource(ConcreteClass)
 
-See wiring/module/test_module.py:226
+See wiring/module/test_module.py:232

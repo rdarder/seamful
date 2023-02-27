@@ -86,7 +86,7 @@ class InvalidModuleResourceAnnotationInModule(HelpfulException):
         self.resource = resource
 
     def explanation(self) -> str:
-        t = Text(f"Module {qname(self.module)} defines an attribute {self.name}")
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
 
         if self.resource.is_bound and self.resource.module is not self.module:
             with t.indented_block():
@@ -127,7 +127,7 @@ class InvalidPrivateResourceAnnotationInModule(HelpfulException):
         self.resource = resource
 
     def explanation(self) -> str:
-        t = Text(f"Module {qname(self.module)} defines an attribute {self.name}")
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
 
         if self.resource.is_bound:
             with t.indented_block():
@@ -171,7 +171,7 @@ class InvalidOverridingResourceAnnotationInModule(HelpfulException):
         self.resource = resource
 
     def explanation(self) -> str:
-        t = Text(f"Module {qname(self.module)} defines an attribute {self.name}")
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
 
         if self.resource.is_bound:
             with t.indented_block():
@@ -208,18 +208,60 @@ class InvalidOverridingResourceAnnotationInModule(HelpfulException):
         )
 
 
-class InvalidAttributeAnnotationInModule(Exception):
+class InvalidAttributeAnnotationInModule(HelpfulException):
     def __init__(self, module: ModuleType, name: str, annotation: type):
         self.module = module
         self.name = name
         self.annotation = annotation
 
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} defines an attribute '{self.name}'")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name}: {sname(self.annotation)}")
+        t.newline("But it has no value.")
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name}: TypeAlias = {sname(self.annotation)}")
+        t.newline(point_to_definition(self.module))
+        return str(t)
 
-class CannotUseExistingModuleResource(Exception):
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a module attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
+
+
+class CannotUseExistingModuleResource(HelpfulException):
     def __init__(self, module: ModuleType, name: str, resource: ModuleResource[Any]):
         self.module = module
         self.name = name
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Module {qname(self.module)} define as an attribute '{self.name}':")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(
+                f"{self.name} = {sname(self.resource.module)}.{self.resource.name}"
+            )
+
+        t.newline(
+            "Which refers to another module's resource. Resources cannot be reused."
+        )
+        t.sentence("It's likely that you indented:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.module)}(Module):")
+            t.indented_line(f"{self.name} = Resource({sname(self.resource.type)})")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "A module defines a resource by assigning it to another module's resource. "
+            "Module resources cannot be reused. Instead create a new one."
+        )
 
 
 class ModulesCannotBeInstantiated(Exception):

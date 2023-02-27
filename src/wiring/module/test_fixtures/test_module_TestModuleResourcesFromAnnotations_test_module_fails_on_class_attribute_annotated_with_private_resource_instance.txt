@@ -1,4 +1,4 @@
-Module 'SomeModule' defines an attribute a
+Module 'SomeModule' defines an attribute 'a'
 
     class SomeModule(Module):
         a: Resource(int, private=True)
@@ -9,4 +9,4 @@ you intended to define instead:
     class SomeModule(Module):
         a = Resource(int)
 
-See wiring/module/test_module.py:136
+See wiring/module/test_module.py:142
