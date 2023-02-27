@@ -240,16 +240,21 @@ class TestModuleResourcesFromAnnotations(TestCaseWithOutputFixtures):
         return ctx.exception
 
 
-class TestModuleClassDeclaration(TestCase):
-    def test_modules_cannot_be_instantiated(self) -> None:
+class TestModuleClassDeclaration(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_modules_cannot_be_instantiated(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
         with self.assertRaises(ModulesCannotBeInstantiated) as ctx:
             SomeModule()
         self.assertEqual(ctx.exception.module, SomeModule)
+        return ctx.exception
 
-    def test_modules_cannot_be_instantiated_even_if_defining_constructor(self) -> None:
+    @validate_output
+    def test_modules_cannot_be_instantiated_even_if_defining_constructor(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             def __init__(self) -> None:
                 pass
@@ -257,6 +262,7 @@ class TestModuleClassDeclaration(TestCase):
         with self.assertRaises(ModulesCannotBeInstantiated) as ctx:
             SomeModule()
         self.assertEqual(ctx.exception.module, SomeModule)
+        return ctx.exception
 
     def test_modules_cannot_be_defined_as_a_subclass_of_another_module(self) -> None:
         class SomeModule(Module):

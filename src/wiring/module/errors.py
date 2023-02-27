@@ -264,9 +264,21 @@ class CannotUseExistingModuleResource(HelpfulException):
         )
 
 
-class ModulesCannotBeInstantiated(Exception):
+class ModulesCannotBeInstantiated(HelpfulException):
     def __init__(self, module: ModuleType):
         self.module = module
+
+    def explanation(self) -> str:
+        t = Text(f"Attempted to make an instance of module {qname(self.module)}.")
+        t.newline("Modules cannot be instantiated.")
+        t.sentence(
+            "Instead, module resources can be referenced directly through the "
+            "module class."
+        )
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Modules cannot be instantiated."
 
 
 class CannotDefinePrivateResourceInModule(Exception):

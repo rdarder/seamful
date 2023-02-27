@@ -1,0 +1,3 @@
+Attempted to make an instance of module 'SomeModule'.
+Modules cannot be instantiated. Instead, module resources can be referenced
+directly through the module class.
