@@ -94,11 +94,16 @@ def _generate_text_fixture_for_test_method(
     fixture_path = _get_fixture_path(test.__class__, test_method)
     if not fixture_path.parent.exists():
         fixture_path.parent.mkdir()
-    elif fixture_path.exists():
+    if fixture_path.exists():
         with open(fixture_path, "r") as existing_fixture:
             contents = existing_fixture.read()
             if test_output == contents:
                 return
-    logging.getLogger().warning(f"Regenerating test fixtures for {test.id()}")
+            else:
+                logging.getLogger().warning(
+                    f"Regenerating test fixture for {test.id()}"
+                )
+
+    logging.getLogger().warning(f"Adding new test fixture for {test.id()}")
     with open(fixture_path, "w") as fixture_file:
         fixture_file.write(str(test_output))

@@ -3,9 +3,12 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from textwrap import wrap
-from typing import Optional, Any, Iterator
+from typing import Optional, Any, Iterator, TYPE_CHECKING
 
 import wiring
+
+if TYPE_CHECKING:
+    from wiring.resource import ResourceTypes
 
 
 class Text:
@@ -86,6 +89,25 @@ class HelpfulException(Exception, ABC):
 
 def qname(value: Any) -> str:
     return f"'{sname(value)}'"
+
+
+def rdef(resource: "ResourceTypes[Any]") -> str:
+    from wiring.resource import ModuleResource, OverridingResource, PrivateResource
+
+    if isinstance(resource, ModuleResource):
+        return f"{sname(resource.module)}.{resource.name} = Resource({sname(resource.type)})"
+    elif isinstance(resource, OverridingResource):
+        return (
+            f"{sname(resource.provider)}.{resource.name} = "
+            f"Resource({sname(resource.type)}, override=True)"
+        )
+    elif isinstance(resource, PrivateResource):
+        return (
+            f"{sname(resource.provider)}.{resource.name} = "
+            f"Resource({sname(resource.type)}, private=True)"
+        )
+    else:
+        raise TypeError()
 
 
 def sname(value: type) -> str:

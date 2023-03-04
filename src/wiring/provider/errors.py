@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
+from wiring.errors import HelpfulException, Text, qname, rdef
 from wiring.module.module_type import ModuleType
 from wiring.resource import (
     ModuleResource,
@@ -18,10 +19,27 @@ if TYPE_CHECKING:
 fn = Callable[..., Any]
 
 
-class MissingProviderMethod(Exception):
+class MissingProviderMethod(HelpfulException):
     def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
         self.resource = resource
         self.provider = provider
+
+    def explanation(self) -> str:
+        t = Text(
+            f"Provider {qname(self.provider)} provides for {qname(self.provider.module)}, "
+            "but it's missing a provider method for resource:"
+        )
+        with t.indented_block():
+            t.newline(rdef(self.resource))
+
+        t.newline(
+            f"Providers for {qname(self.provider.module)} must have a provider method "
+        )
+        t.sentence("for each of its resources.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Provider missing a provider method."
 
 
 class ProviderMethodNotCallable(Exception):

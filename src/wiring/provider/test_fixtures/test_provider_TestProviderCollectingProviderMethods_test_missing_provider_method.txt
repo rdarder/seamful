@@ -1,0 +1,7 @@
+Provider 'SomeProvider' provides for 'SomeModule', but it's missing a provider
+method for resource:
+
+    SomeModule.a = Resource(int)
+
+Providers for 'SomeModule' must have a provider method  for each of its
+resources.

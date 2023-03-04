@@ -2,6 +2,7 @@ from typing import TypeAlias, cast, Any
 from unittest import TestCase
 
 from wiring.container import Container
+from wiring.errors import HelpfulException
 from wiring.module import Module
 from wiring.provider import Provider
 from wiring.provider.errors import (
@@ -42,6 +43,7 @@ from wiring.resource import (
     PrivateResource,
     OverridingResource,
 )
+from wiring.utils_for_tests import TestCaseWithOutputFixtures, validate_output
 
 
 class TestProviderClassBehavior(TestCase):
@@ -144,7 +146,7 @@ class TestProviderClassBehavior(TestCase):
         self.assertEqual(ctx.exception.value, 10)
 
 
-class TestProviderCollectingProviderMethods(TestCase):
+class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
     def test_provider_collects_provider_methods(self) -> None:
         class SomeModule(Module):
             a = int
@@ -158,7 +160,8 @@ class TestProviderCollectingProviderMethods(TestCase):
         self.assertIs(provider_method.method, SomeProvider.provide_a)
         self.assertIs(provider_method.resource, SomeModule.a)
 
-    def test_missing_provider_method(self) -> None:
+    @validate_output
+    def test_missing_provider_method(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -169,6 +172,7 @@ class TestProviderCollectingProviderMethods(TestCase):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.resource, SomeModule.a)
+        return ctx.exception
 
     def test_provider_method_not_callable(self) -> None:
         class SomeModule(Module):
@@ -236,7 +240,10 @@ class TestProviderCollectingProviderMethods(TestCase):
         self.assertEqual(method.resource, SomeProvider.a)
         self.assertEqual(method.dependencies, {})
 
-    def test_missing_provider_method_for_private_provider_resource(self) -> None:
+    @validate_output
+    def test_missing_provider_method_for_private_provider_resource(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -250,6 +257,32 @@ class TestProviderCollectingProviderMethods(TestCase):
         self.assertIsInstance(resource, PrivateResource)
         self.assertEqual(resource.name, "a")
         self.assertEqual(resource.type, int)
+        return ctx.exception
+
+    @validate_output
+    def test_missing_provider_method_for_overriding_provider_resource(
+        self,
+    ) -> HelpfulException:
+        class BaseClass:
+            pass
+
+        class ConcreteClass(BaseClass):
+            pass
+
+        class SomeModule(Module):
+            a: TypeAlias = BaseClass
+
+        with self.assertRaises(MissingProviderMethod) as ctx:
+
+            class SomeProvider(Provider, module=SomeModule):
+                a: TypeAlias = ConcreteClass
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        resource = ctx.exception.resource
+        self.assertIsInstance(resource, OverridingResource)
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.type, ConcreteClass)
+        return ctx.exception
 
     def test_provider_collects_provider_method_when_overriden_resource_is_present(
         self,
