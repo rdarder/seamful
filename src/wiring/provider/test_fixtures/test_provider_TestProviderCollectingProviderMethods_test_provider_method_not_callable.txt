@@ -1,0 +1,5 @@
+SomeProvider.provide_a looks like a provider method for
+
+    SomeModule.a = Resource(int)
+
+but it's not callable.

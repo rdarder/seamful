@@ -174,7 +174,8 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.resource, SomeModule.a)
         return ctx.exception
 
-    def test_provider_method_not_callable(self) -> None:
+    @validate_output
+    def test_provider_method_not_callable(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -185,6 +186,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.resource, SomeModule.a)
+        return ctx.exception
 
     def test_provider_method_not_found(self) -> None:
         class SomeModule(Module):
@@ -318,8 +320,9 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         self.assertEqual(method.dependencies, {})
 
 
-class TestProviderModuleAnnotation(TestCase):
-    def test_invalid_provider_module_annotation(self) -> None:
+class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_invalid_provider_module_annotation(self) -> HelpfulException:
         class SomeClass:
             pass
 
@@ -330,14 +333,30 @@ class TestProviderModuleAnnotation(TestCase):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.invalid_module, SomeClass)
+        return ctx.exception
 
-    def test_cannot_provide_base_module(self) -> None:
+    @validate_output
+    def test_invalid_provider_module_annotation_not_even_a_class(
+        self,
+    ) -> HelpfulException:
+        with self.assertRaises(ProvidersModuleIsNotAModule) as ctx:
+
+            class SomeProvider(Provider, module=10):  # pyright: ignore
+                pass
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.invalid_module, 10)
+        return ctx.exception
+
+    @validate_output
+    def test_cannot_provide_base_module(self) -> HelpfulException:
         with self.assertRaises(CannotProvideBaseModule) as ctx:
 
             class SomeProvider(Provider, module=Module):
                 pass
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        return ctx.exception
 
     def test_empty_provider_provides_an_empty_module(self) -> None:
         class SomeModule(Module):

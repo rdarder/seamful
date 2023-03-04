@@ -3,7 +3,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING
 
-from wiring.errors import HelpfulException, Text, qname, rdef
+from wiring.errors import (
+    HelpfulException,
+    Text,
+    qname,
+    rdef,
+    sname,
+    point_to_definition,
+)
 from wiring.module.module_type import ModuleType
 from wiring.resource import (
     ModuleResource,
@@ -42,21 +49,73 @@ class MissingProviderMethod(HelpfulException):
         return "Provider missing a provider method."
 
 
-class ProviderMethodNotCallable(Exception):
+class ProviderMethodNotCallable(HelpfulException):
     def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
         self.resource = resource
         self.provider = provider
 
+    def explanation(self) -> str:
+        t = Text(
+            f"{sname(self.provider)}.provide_{self.resource.name} looks like "
+            "a provider method for"
+        )
+        with t.indented_block():
+            t.newline(f"{rdef(self.resource)}")
+        t.newline("but it's not callable.")
+        return str(t)
 
-class ProvidersModuleIsNotAModule(Exception):
+    def failsafe_explanation(self) -> str:
+        return "Provider method is not callable."
+
+
+class ProvidersModuleIsNotAModule(HelpfulException):
     def __init__(self, provider: ProviderType, invalid_module: Any):
         self.provider = provider
         self.invalid_module = invalid_module
 
+    def explanation(self) -> str:
+        t = Text(
+            f"Provider {qname(self.provider)} provides for {qname(self.invalid_module)}"
+        )
+        with t.indented_block():
+            t.newline(
+                f"class {sname(self.provider)}(Provider, module={sname(self.invalid_module)})"
+            )
+            t.indented_line("...")
 
-class CannotProvideBaseModule(Exception):
+        t.newline(f"but {qname(self.invalid_module)} is not a Module.")
+        if isinstance(self.invalid_module, type):
+            t.sentence(f"It's likely that you intended {qname(self.invalid_module)}")
+            t.sentence("to inherit from Module")
+            with t.indented_block():
+                t.newline(f"class {sname(self.invalid_module)}(Module):")
+                t.indented_line("...")
+
+            t.newline(point_to_definition(self.invalid_module))
+        else:
+            t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A provider's module is not a module."
+
+
+class CannotProvideBaseModule(HelpfulException):
     def __init__(self, provider: ProviderType):
         self.provider = provider
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} provides for 'Module'")
+        with t.indented_block():
+            t.newline(f"class {sname(self.provider)}(Provider, module=Module)")
+            t.indented_line("...")
+
+        t.newline("But Module is the base class for all Modules, not an actual module.")
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A Provider cannot provide for the base Module class. "
 
 
 class UnrelatedResource(Exception):
