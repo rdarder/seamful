@@ -1,4 +1,4 @@
-Module 'AnotherModule' define as an attribute 'b':
+Module 'AnotherModule' defines as an attribute 'b':
 
     class AnotherModule(Module):
         b = SomeModule.a
@@ -8,3 +8,5 @@ likely that you indented:
 
     class AnotherModule(Module):
         b = Resource(int)
+
+See wiring/module/test_module.py:76

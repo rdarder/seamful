@@ -4,3 +4,4 @@ Module 'SomeModule' defines an attribute '_something'
         _something = ...
 
 But private attributes (starting with '_') are not supported.
+See wiring/module/test_module.py:297

@@ -241,7 +241,7 @@ class CannotUseExistingModuleResource(HelpfulException):
         self.resource = resource
 
     def explanation(self) -> str:
-        t = Text(f"Module {qname(self.module)} define as an attribute '{self.name}':")
+        t = Text(f"Module {qname(self.module)} defines as an attribute '{self.name}':")
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
             t.indented_line(
@@ -255,6 +255,7 @@ class CannotUseExistingModuleResource(HelpfulException):
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
             t.indented_line(f"{self.name} = Resource({sname(self.resource.type)})")
+        t.newline(point_to_definition(self.module))
         return str(t)
 
     def failsafe_explanation(self) -> str:
@@ -294,6 +295,7 @@ class InvalidPrivateResourceInModule(HelpfulException):
             t.indented_line(f"{self.name} = Resource({sname(self.type)}, private=True)")
 
         t.newline("But private resources are only meant for providers, not modules.")
+        t.newline(point_to_definition(self.module))
         return str(t)
 
     def failsafe_explanation(self) -> str:
@@ -315,6 +317,7 @@ class InvalidOverridingResourceInModule(HelpfulException):
             )
 
         t.newline("But overriding resources are only meant for providers, not modules.")
+        t.newline(point_to_definition(self.module))
         return str(t)
 
     def failsafe_explanation(self) -> str:
@@ -363,6 +366,7 @@ class InvalidModuleAttributeType(HelpfulException):
             t.indented_line(f"{self.name} = {repr(self.attribute_value)}")
 
         t.newline(f"But {repr(self.attribute_value)} is not a valid resource type.")
+        t.newline(point_to_definition(self.module))
         return str(t)
 
     def failsafe_explanation(self) -> str:
@@ -382,6 +386,7 @@ class InvalidPrivateModuleAttribute(HelpfulException):
             t.indented_line(f"{self.name} = ...")
 
         t.newline("But private attributes (starting with '_') are not supported.")
+        t.newline(point_to_definition(self.module))
         return str(t)
 
     def failsafe_explanation(self) -> str:
@@ -404,6 +409,7 @@ class InvalidModuleAttributeName(HelpfulException):
             f"But the name '{self.name}' is reserved and cannot be used for "
             "defining a module resource."
         )
+        t.newline(point_to_definition(self.module))
         return str(t)
 
     def failsafe_explanation(self) -> str:

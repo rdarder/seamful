@@ -1,4 +1,5 @@
 import inspect
+import logging
 import os
 from functools import wraps
 from pathlib import Path
@@ -29,7 +30,7 @@ class TestCaseWithOutputFixtures(TestCase):
             cls.fixture_location.glob(f"{cls.fixture_prefix}_*.txt")
         )
         for extra_fixture in existing_fixtures - used_fixtures:
-            print(f"Removing unused fixture {extra_fixture}")
+            logging.getLogger().warning(f"Removing unused fixture {extra_fixture}")
             extra_fixture.unlink()
 
 
@@ -44,7 +45,6 @@ def validate_output(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
                 "Missing fixture location. TestCase class probably not set up for fixture tests."
             )
         if test.regenerate_fixtures:
-            print(f"Regenerating test fixtures for {test.id()}")
             return _generate_text_fixture_for_test_method(test, test_method)
 
         test_returns = _run_test_and_ensure_returns_something(test, test_method)
@@ -90,9 +90,15 @@ def _get_fixture_location(test: Type[TestCase]) -> tuple[Path, str]:
 def _generate_text_fixture_for_test_method(
     test: TestCaseWithOutputFixtures, test_method: Callable[..., Any]
 ) -> None:
-    test_returns = _run_test_and_ensure_returns_something(test, test_method)
+    test_output = str(_run_test_and_ensure_returns_something(test, test_method))
     fixture_path = _get_fixture_path(test.__class__, test_method)
     if not fixture_path.parent.exists():
         fixture_path.parent.mkdir()
+    elif fixture_path.exists():
+        with open(fixture_path, "r") as existing_fixture:
+            contents = existing_fixture.read()
+            if test_output == contents:
+                return
+    logging.getLogger().warning(f"Regenerating test fixtures for {test.id()}")
     with open(fixture_path, "w") as fixture_file:
-        fixture_file.write(str(test_returns))
+        fixture_file.write(str(test_output))

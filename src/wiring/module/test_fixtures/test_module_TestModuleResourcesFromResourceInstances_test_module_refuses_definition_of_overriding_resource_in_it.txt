@@ -4,3 +4,4 @@ Module 'SomeModule' defines an overriding Resource.
         a = Resource(int, override=True)
 
 But overriding resources are only meant for providers, not modules.
+See wiring/module/test_module.py:107

@@ -4,3 +4,4 @@ Module 'SomeModule' defines a private Resource.
         a = Resource(int, private=True)
 
 But private resources are only meant for providers, not modules.
+See wiring/module/test_module.py:93
