@@ -309,18 +309,42 @@ class ProviderMethodParameterMissingTypeAnnotation(HelpfulException):
         return "A provider method parameter is missing a type annotation."
 
 
-class ProviderMethodParameterUnrelatedName(Exception):
+class ProviderMethodParameterUnrelatedName(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
         provides: ResourceTypes[Any],
         method: fn,
         parameter_name: str,
+        parameter_type: type,
     ):
         self.provider = provider
         self.provides = provides
         self.method = method
         self.parameter_name = parameter_name
+        self.parameter_type = parameter_type
+
+    def explanation(self) -> str:
+        t = Text("In provider method")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}: {sname(self.parameter_type)}, "
+                f"...) -> {sname(self.provides.type)}"
+            )
+        t.newline(
+            f"Parameter '{self.parameter_name}' does not refer to any resource "
+            f"from {qname(self.provider)}"
+        )
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            f"Parameter '{self.parameter_name}' on provider method doesn't´t refer "
+            f"to any resource."
+        )
 
 
 class ProviderMethodParameterInvalidTypeAnnotation(Exception):

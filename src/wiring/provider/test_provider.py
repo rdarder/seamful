@@ -627,7 +627,10 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         provider_method = SomeProvider[SomeModule.a]  # type: ignore
         self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
 
-    def test_provider_method_must_either_match_by_resource_or_by_name(self) -> None:
+    @validate_output
+    def test_provider_method_must_either_match_by_resource_or_by_name(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -641,6 +644,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provides, SomeModule.a)
         self.assertEqual(ctx.exception.method.__name__, "provide_a")
         self.assertEqual(ctx.exception.parameter_name, "b")
+        return ctx.exception
 
     def test_provider_method_referring_to_module_resource_must_match_type(self) -> None:
         class SomeModule(Module):

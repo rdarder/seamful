@@ -237,7 +237,7 @@ class ProviderType(type):
             return module_resource
         else:
             raise ProviderMethodParameterUnrelatedName(
-                self, target, method, parameter_name=name
+                self, target, method, name, parameter_type
             )
 
     def _ensure_parameter_type_satisfies_resource_type(
