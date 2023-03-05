@@ -388,7 +388,7 @@ class ProviderMethodParameterInvalidTypeAnnotation(HelpfulException):
         pass
 
 
-class ProviderMethodParameterResourceTypeMismatch(Exception):
+class ProviderMethodParameterMatchesResourceNameButNotType(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
@@ -402,6 +402,29 @@ class ProviderMethodParameterResourceTypeMismatch(Exception):
         self.parameter_name = parameter_name
         self.refers_to = refers_to
         self.mismatched_type = mismatched_type
+
+    def explanation(self) -> str:
+        t = Text("In provider method")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}: {sname(self.mismatched_type)}, "
+                f"...) -> {sname(self.provides.type)}"
+            )
+        t.newline(f"Parameter '{self.parameter_name}' seems to refer to the resource: ")
+        with t.indented_block():
+            t.newline(rdef(self.refers_to))
+        t.newline("But the parameter type for")
+        t.sentence(f"{self.parameter_name}: {sname(self.mismatched_type)}")
+        t.sentence(
+            f"is not compatible with the resource type: {sname(self.refers_to.type)}"
+        )
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A provider method parameter name matches a resource, but not it's type"
 
 
 class ProvidersCannotBeInstantiated(Exception):

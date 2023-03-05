@@ -32,7 +32,7 @@ from wiring.provider.errors import (
     ProviderMethodParameterMissingTypeAnnotation,
     ProviderMethodParameterUnrelatedName,
     ProviderMethodParameterInvalidTypeAnnotation,
-    ProviderMethodParameterResourceTypeMismatch,
+    ProviderMethodParameterMatchesResourceNameButNotType,
     ProvidersCannotBeInstantiated,
     CannotUseExistingProviderResource,
     CannotDefinePublicResourceInProvider,
@@ -248,7 +248,7 @@ class ProviderType(type):
         parameter_name: str,
     ) -> None:
         if not issubclass(resource.type, parameter_type):
-            raise ProviderMethodParameterResourceTypeMismatch(
+            raise ProviderMethodParameterMatchesResourceNameButNotType(
                 self,
                 target,
                 parameter_name=parameter_name,

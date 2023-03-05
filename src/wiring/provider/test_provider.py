@@ -14,7 +14,7 @@ from wiring.provider.errors import (
     ProviderMethodReturnTypeMismatch,
     ProviderMethodParameterMissingTypeAnnotation,
     ProviderMethodParameterUnrelatedName,
-    ProviderMethodParameterResourceTypeMismatch,
+    ProviderMethodParameterMatchesResourceNameButNotType,
     ProviderMethodParameterInvalidTypeAnnotation,
     ProvidersCannotBeInstantiated,
     InvalidAttributeAnnotationInProvider,
@@ -646,12 +646,17 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.parameter_name, "b")
         return ctx.exception
 
-    def test_provider_method_referring_to_module_resource_must_match_type(self) -> None:
+    @validate_output
+    def test_provider_method_referring_to_module_resource_must_match_type(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = int
             b = int
 
-        with self.assertRaises(ProviderMethodParameterResourceTypeMismatch) as ctx:
+        with self.assertRaises(
+            ProviderMethodParameterMatchesResourceNameButNotType
+        ) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self, b: str) -> int:
@@ -665,6 +670,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.parameter_name, "b")
         self.assertEqual(ctx.exception.refers_to, SomeModule.b)
         self.assertEqual(ctx.exception.mismatched_type, str)
+        return ctx.exception
 
     def test_provider_method_referring_to_module_resource_can_be_a_superclass(
         self,
