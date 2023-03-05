@@ -528,13 +528,45 @@ class CannotDefinePublicResourceInProvider(HelpfulException):
         return "Unexpected module resource definition in provider."
 
 
-class InvalidModuleResourceAnnotationInProvider(Exception):
+class InvalidModuleResourceAnnotationInProvider(HelpfulException):
     def __init__(
         self, provider: ProviderType, name: str, resource: ModuleResource[Any]
     ):
         self.provider = provider
         self.name = name
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines an attribute '{self.name}'")
+
+        if self.resource.is_bound and self.resource.module is not self.provider.module:
+            with t.indented_block():
+                t.newline(
+                    f"{self.name}: {sname(self.resource.module)}.{self.resource.name}"
+                )
+
+            t.sentence(
+                "But it's an annotation without a value and refers to an unrelated Module."
+            )
+        else:
+            with t.indented_block():
+                t.newline(f"{self.name}: Resource({sname(self.resource.type)})")
+            t.newline("But it's an annotation without a value.")
+
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(
+                f"{self.name} = Resource({sname(self.resource.type)}, private=True)"
+            )
+
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a provider attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
 
 
 class InvalidPrivateResourceAnnotationInProvider(Exception):

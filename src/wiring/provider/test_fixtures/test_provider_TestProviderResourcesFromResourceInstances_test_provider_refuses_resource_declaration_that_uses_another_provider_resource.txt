@@ -7,4 +7,4 @@ defined as another provider's Resource. An equivalent, valid definition would be
 
     b = Resource(int, private=True)
 
-AnotherProvider: src/wiring/provider/test_provider.py:1020
+AnotherProvider: src/wiring/provider/test_provider.py:1024

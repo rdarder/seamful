@@ -420,7 +420,10 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
 
         self.assertEqual(SomeProvider.module, SomeModule)
 
-    def test_provider_cannot_have_module_resource_annotated_attributes(self) -> None:
+    @validate_output
+    def test_provider_cannot_have_module_resource_annotated_attributes(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -433,6 +436,7 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
         self.assertIsInstance(ctx.exception.resource, ModuleResource)
+        return ctx.exception
 
     def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
         class SomeModule(Module):
