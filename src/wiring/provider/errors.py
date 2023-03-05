@@ -280,7 +280,7 @@ class ProviderMethodReturnTypeMismatch(HelpfulException):
         )
 
 
-class ProviderMethodParameterMissingTypeAnnotation(Exception):
+class ProviderMethodParameterMissingTypeAnnotation(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
@@ -292,6 +292,21 @@ class ProviderMethodParameterMissingTypeAnnotation(Exception):
         self.provides = provides
         self.method = method
         self.parameter_name = parameter_name
+
+    def explanation(self) -> str:
+        t = Text("The provider method")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}, ...) -> {sname(self.provides.type)}"
+            )
+        t.newline(f"is missing a type annotation for parameter {self.parameter_name}.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A provider method parameter is missing a type annotation."
 
 
 class ProviderMethodParameterUnrelatedName(Exception):

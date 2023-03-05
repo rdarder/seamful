@@ -576,7 +576,10 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         self.assertIsInstance(got, SomeBaseClass)
         self.assertIsInstance(got, SpecificClass)
 
-    def test_provider_method_parameters_must_have_type_annotations(self) -> None:
+    @validate_output
+    def test_provider_method_parameters_must_have_type_annotations(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -590,6 +593,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provides, SomeModule.a)
         self.assertEqual(ctx.exception.method.__name__, "provide_a")
         self.assertEqual(ctx.exception.parameter_name, "b")
+        return ctx.exception
 
     def test_provider_method_parameters_can_refer_to_module_resources(self) -> None:
         class SomeModule(Module):
