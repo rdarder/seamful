@@ -1031,7 +1031,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         return ctx.exception
 
 
-class TestProviderResourcesFromAnnotations(TestCase):
+class TestProviderResourcesFromAnnotations(TestCaseWithOutputFixtures):
     def test_provider_fails_on_class_attribute_with_only_type_annotation(self) -> None:
         class SomeModule(Module):
             pass
@@ -1045,9 +1045,10 @@ class TestProviderResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.annotation, int)
 
+    @validate_output
     def test_provider_fails_on_class_attribute_annotated_with_private_resource_instance(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1060,10 +1061,12 @@ class TestProviderResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
         self.assertEqual(ctx.exception.resource.is_bound, False)
+        return ctx.exception
 
+    @validate_output
     def test_provider_fails_on_class_attribute_annotated_with_overriding_resource_instance(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeBaseClass:
             pass
 
@@ -1088,10 +1091,12 @@ class TestProviderResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.resource.type, SomeConcreteClass)
         self.assertEqual(ctx.exception.resource.is_bound, True)
+        return ctx.exception
 
+    @validate_output
     def test_provider_fails_on_a_resource_annotated_with_an_external_private_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1112,6 +1117,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.resource.is_bound, True)
         self.assertEqual(ctx.exception.resource.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource.name, "b")
+        return ctx.exception
 
 
 class TestProviderSubclasses(TestCaseWithOutputFixtures):

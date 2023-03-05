@@ -569,7 +569,7 @@ class InvalidModuleResourceAnnotationInProvider(HelpfulException):
         )
 
 
-class InvalidPrivateResourceAnnotationInProvider(Exception):
+class InvalidPrivateResourceAnnotationInProvider(HelpfulException):
     def __init__(
         self, provider: ProviderType, name: str, resource: PrivateResource[Any]
     ):
@@ -577,14 +577,82 @@ class InvalidPrivateResourceAnnotationInProvider(Exception):
         self.name = name
         self.resource = resource
 
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines an attribute '{self.name}'")
 
-class InvalidOverridingResourceAnnotationInProvider(Exception):
+        if self.resource.is_bound and self.resource.provider is not self.provider:
+            with t.indented_block():
+                t.newline(
+                    f"{self.name}: {sname(self.resource.provider)}.{self.resource.name}"
+                )
+
+            t.sentence(
+                "But it's an annotation without a value and refers to an unrelated Provider."
+            )
+        else:
+            with t.indented_block():
+                t.newline(
+                    f"{self.name}: Resource({sname(self.resource.type)}, private=True)"
+                )
+            t.newline("But it's an annotation without a value.")
+
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(
+                f"{self.name} = Resource({sname(self.resource.type)}, private=True)"
+            )
+
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a provider attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
+
+
+class InvalidOverridingResourceAnnotationInProvider(HelpfulException):
     def __init__(
         self, provider: ProviderType, name: str, resource: OverridingResource[Any]
     ):
         self.provider = provider
         self.name = name
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines an attribute '{self.name}'")
+
+        if self.resource.is_bound and self.resource.provider is not self.provider:
+            with t.indented_block():
+                t.newline(
+                    f"{self.name}: {sname(self.resource.provider)}.{self.resource.name}"
+                )
+
+            t.sentence(
+                "But it's an annotation without a value and refers to an unrelated Provider."
+            )
+        else:
+            with t.indented_block():
+                t.newline(
+                    f"{self.name}: Resource({sname(self.resource.type)}, override=True)"
+                )
+            t.newline("But it's an annotation without a value.")
+
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(
+                f"{self.name} = Resource({sname(self.resource.type)}, override=True)"
+            )
+
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a provider attribute with a type annotation of a Resource, "
+            "but it's value is not a Resource."
+        )
 
 
 class InvalidAttributeAnnotationInProvider(Exception):

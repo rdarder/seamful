@@ -1,0 +1,10 @@
+Provider 'AnotherProvider' defines an attribute 'a'
+
+    a: SomeProvider.a
+
+But it's an annotation without a value and refers to an unrelated Provider. It's
+likely that you intended to define instead:
+
+    a = Resource(SomeConcreteClass, override=True)
+
+AnotherProvider: src/wiring/provider/test_provider.py:1087
