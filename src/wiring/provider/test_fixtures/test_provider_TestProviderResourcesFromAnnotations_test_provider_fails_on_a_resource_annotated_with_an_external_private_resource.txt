@@ -7,4 +7,4 @@ likely that you intended to define instead:
 
     c = Resource(int, private=True)
 
-AnotherProvider: src/wiring/provider/test_provider.py:1111
+AnotherProvider: src/wiring/provider/test_provider.py:1099

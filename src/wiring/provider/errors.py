@@ -424,7 +424,7 @@ class ProviderMethodParameterMatchesResourceNameButNotType(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "A provider method parameter name matches a resource, but not it's type"
+        return "A provider method parameter name matches a resource, but not its type"
 
 
 class ProvidersCannotBeInstantiated(HelpfulException):
@@ -565,7 +565,7 @@ class InvalidModuleResourceAnnotationInProvider(HelpfulException):
     def failsafe_explanation(self) -> str:
         return (
             "There's a provider attribute with a type annotation of a Resource, "
-            "but it's value is not a Resource."
+            "but its value is not a Resource."
         )
 
 
@@ -608,7 +608,7 @@ class InvalidPrivateResourceAnnotationInProvider(HelpfulException):
     def failsafe_explanation(self) -> str:
         return (
             "There's a provider attribute with a type annotation of a Resource, "
-            "but it's value is not a Resource."
+            "but its value is not a Resource."
         )
 
 
@@ -651,21 +651,57 @@ class InvalidOverridingResourceAnnotationInProvider(HelpfulException):
     def failsafe_explanation(self) -> str:
         return (
             "There's a provider attribute with a type annotation of a Resource, "
-            "but it's value is not a Resource."
+            "but its value is not a Resource."
         )
 
 
-class InvalidAttributeAnnotationInProvider(Exception):
+class InvalidAttributeAnnotationInProvider(HelpfulException):
     def __init__(self, provider: ProviderType, name: str, annotation: type):
         self.provider = provider
         self.name = name
         self.annotation = annotation
 
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines an attribute '{self.name}'")
+        with t.indented_block():
+            t.newline(f"{self.name}: {sname(self.annotation)}")
+        t.newline("But it's an annotation without a value.")
+        t.sentence("It's likely that you intended to define instead:")
+        with t.indented_block():
+            t.newline(f"{self.name}: TypeAlias = {sname(self.annotation)}")
+        t.newline(point_to_definition(self.provider))
+        return str(t)
 
-class PrivateResourceCannotOccludeModuleResource(Exception):
+    def failsafe_explanation(self) -> str:
+        return (
+            "There's a provider attribute with a type annotation, but without a value."
+        )
+
+
+class PrivateResourceCannotOccludeModuleResource(HelpfulException):
     def __init__(self, provider: ProviderType, resource: PrivateResource[Any]):
         self.provider = provider
         self.resource = resource
+
+    def explanation(self) -> str:
+        resource = self.resource
+        t = Text(f"Provider {qname(self.provider)} defines resource {resource.name} as")
+        with t.indented_block():
+            t.newline(
+                f"{resource.name} = Resource({sname(resource.type)}, private=True)"
+            )
+
+        t.newline(
+            f"But {qname(self.provider)} provides for {qname(self.provider.module)},"
+        )
+        t.sentence(f"which also has a resource named '{resource.name}'.")
+        t.sentence("Private resource names cannot occlude its module resources.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A private provider resource is occluding its module resource with the same name"
 
 
 class CannotDependOnResourceFromAnotherProvider(Exception):

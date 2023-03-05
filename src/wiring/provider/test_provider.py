@@ -847,24 +847,6 @@ class TestProviderResourcesTypeAliases(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.provider, SomeProvider)
 
-    def test_provider_refuses_resource_from_type_alias_if_occludes_module_resource(
-        self,
-    ) -> None:
-        class SomeModule(Module):
-            a: TypeAlias = int
-
-        with self.assertRaises(PrivateResourceCannotOccludeModuleResource) as ctx:
-
-            class SomeProvider(Provider, module=SomeModule):
-                a = Resource(int, private=True)
-
-                def provide_a(self) -> int:
-                    return 10
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.resource.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
-
 
 class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
     def test_provider_collect_private_resource_instances_and_binds_them(self) -> None:
@@ -970,9 +952,10 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.resource.type, ConcreteClass)
         return ctx.exception
 
+    @validate_output
     def test_provider_refuses_private_resource_if_occludes_module_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -987,6 +970,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.resource.name, "a")
         self.assertEqual(ctx.exception.resource.type, int)
+        return ctx.exception
 
     def test_provider_refuses_overriding_resource_if_name_doesnt_match_module_resource(
         self,
@@ -1032,7 +1016,10 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
 
 
 class TestProviderResourcesFromAnnotations(TestCaseWithOutputFixtures):
-    def test_provider_fails_on_class_attribute_with_only_type_annotation(self) -> None:
+    @validate_output
+    def test_provider_fails_on_class_attribute_with_only_type_annotation(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1044,6 +1031,7 @@ class TestProviderResourcesFromAnnotations(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.annotation, int)
+        return ctx.exception
 
     @validate_output
     def test_provider_fails_on_class_attribute_annotated_with_private_resource_instance(

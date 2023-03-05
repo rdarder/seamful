@@ -8,4 +8,4 @@ If you meant to override SomeModule.a, you could do:
 
     b = Resource(<subtype of int>, override=True)
 
-SomeProvider: src/wiring/provider/test_provider.py:924
+SomeProvider: src/wiring/provider/test_provider.py:906
