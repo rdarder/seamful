@@ -26,7 +26,7 @@ from wiring.provider.errors import (
     OverridingResourceNameDoesntMatchModuleResource,
     ProviderModuleCantBeChanged,
     InvalidProviderAttributeName,
-    CannotUseExistingProviderResource,
+    ResourceDefinitionCannotReferOtherProvidersResource,
     InvalidModuleResourceAnnotationInProvider,
     CannotDependOnResourceFromAnotherProvider,
     ProvidersDontSupportMultipleInheritance,
@@ -862,7 +862,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         self.assertEqual(ctx.exception.resource.type, int)
 
 
-class TestProviderResourcesFromResourceInstances(TestCase):
+class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
     def test_provider_collect_private_resource_instances_and_binds_them(self) -> None:
         class SomeModule(Module):
             pass
@@ -973,9 +973,10 @@ class TestProviderResourcesFromResourceInstances(TestCase):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.module, SomeModule)
 
+    @validate_output
     def test_provider_refuses_resource_declaration_that_uses_another_provider_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -985,14 +986,18 @@ class TestProviderResourcesFromResourceInstances(TestCase):
             def provide_a(self) -> int:
                 return 10
 
-        with self.assertRaises(CannotUseExistingProviderResource) as ctx:
+        with self.assertRaises(
+            ResourceDefinitionCannotReferOtherProvidersResource
+        ) as ctx:
 
             class AnotherProvider(Provider, module=SomeModule):
-                a = SomeProvider.a
+                b = SomeProvider.a
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.name, "b")
         self.assertEqual(ctx.exception.resource.provider, SomeProvider)
+        self.assertEqual(ctx.exception.resource.name, "a")
+        return ctx.exception
 
 
 class TestProviderResourcesFromAnnotations(TestCase):

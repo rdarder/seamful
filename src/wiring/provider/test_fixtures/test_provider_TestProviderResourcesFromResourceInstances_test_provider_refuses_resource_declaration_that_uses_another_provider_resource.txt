@@ -1,0 +1,10 @@
+Provider 'AnotherProvider' defines resource b as
+
+    b = SomeProvider.a
+
+But it's not a valid resource definition. A Provider's Resource cannot be
+defined as another provider's Resource. An equivalent, valid definition would be
+
+    b = Resource(int, private=True)
+
+AnotherProvider: src/wiring/provider/test_provider.py:993

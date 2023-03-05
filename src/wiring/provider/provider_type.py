@@ -34,7 +34,7 @@ from wiring.provider.errors import (
     ProviderMethodParameterInvalidTypeAnnotation,
     ProviderMethodParameterMatchesResourceNameButNotType,
     ProvidersCannotBeInstantiated,
-    CannotUseExistingProviderResource,
+    ResourceDefinitionCannotReferOtherProvidersResource,
     CannotDefinePublicResourceInProvider,
     InvalidAttributeAnnotationInProvider,
     InvalidPrivateResourceAnnotationInProvider,
@@ -288,7 +288,9 @@ class ProviderType(type):
         candidate_type = type(candidate)
         if candidate_type is PrivateResource:
             if candidate.is_bound:
-                raise CannotUseExistingProviderResource(self, name, candidate)
+                raise ResourceDefinitionCannotReferOtherProvidersResource(
+                    self, name, candidate
+                )
             candidate.bind(name=name, provider=self)
             if name in self._module:
                 raise PrivateResourceCannotOccludeModuleResource(self, candidate)

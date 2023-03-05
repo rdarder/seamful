@@ -444,13 +444,34 @@ class ProvidersCannotBeInstantiated(HelpfulException):
         return "Providers cannot be instantiated."
 
 
-class CannotUseExistingProviderResource(Exception):
+class ResourceDefinitionCannotReferOtherProvidersResource(HelpfulException):
     def __init__(
         self, provider: ProviderType, name: str, resource: PrivateResource[Any]
     ):
         self.provider = provider
         self.name = name
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
+        resource = self.resource
+        with t.indented_block():
+            t.newline(f"{self.name} = {sname(resource.provider)}.{resource.name}")
+
+        t.newline("But it's not a valid resource definition.")
+        t.sentence(
+            "A Provider's Resource cannot be defined as another provider's Resource."
+        )
+
+        t.sentence("An equivalent, valid definition would be")
+        with t.indented_block():
+            t.newline(f"{self.name} = Resource({sname(resource.type)}, private=True)")
+
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A Provider's Resource cannot be defined as another provider's Resource."
 
 
 class CannotDefinePublicResourceInProvider(Exception):
