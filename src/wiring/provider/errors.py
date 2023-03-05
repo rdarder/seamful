@@ -347,7 +347,7 @@ class ProviderMethodParameterUnrelatedName(HelpfulException):
         )
 
 
-class ProviderMethodParameterInvalidTypeAnnotation(Exception):
+class ProviderMethodParameterInvalidTypeAnnotation(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
@@ -361,6 +361,31 @@ class ProviderMethodParameterInvalidTypeAnnotation(Exception):
         self.method = method
         self.parameter_name = parameter_name
         self.mismatched_type = mismatched_type
+
+    def explanation(self) -> str:
+        t = Text("In provider method")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}: {repr(self.mismatched_type)}, "
+                f"...) -> {sname(self.provides.type)}"
+            )
+        t.newline(
+            f"Parameter '{self.parameter_name}' has an invalid type annotation: "
+            f"{repr(self.mismatched_type)}."
+        )
+        t.blank()
+        if self.parameter_name in self.provider.module:
+            resource = self.provider.module[self.parameter_name]
+            t.newline(f"Perhaps you meant {qname(resource.type)}, referring to")
+            t.indented_line(rdef(resource))
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Invalid type annotation on provider method parameter."
+        pass
 
 
 class ProviderMethodParameterResourceTypeMismatch(Exception):

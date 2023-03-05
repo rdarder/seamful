@@ -689,9 +689,13 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         provide_a = SomeProvider[SomeModule.a]  # type: ignore
         self.assertEqual(provide_a.dependencies, dict(b=SomeModule.b))
 
-    def test_provider_method_parameter_annotation_must_be_a_type(self) -> None:
+    @validate_output
+    def test_provider_method_parameter_annotation_must_be_a_type(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = int
+            b = int
 
         with self.assertRaises(ProviderMethodParameterInvalidTypeAnnotation) as ctx:
 
@@ -699,11 +703,15 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
                 def provide_a(self, b: True) -> int:  # type: ignore
                     return 10
 
+                def provide_b(self) -> int:
+                    return 11
+
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.provides, SomeModule.a)
         self.assertEqual(ctx.exception.method.__name__, "provide_a")
         self.assertEqual(ctx.exception.parameter_name, "b")
         self.assertEqual(ctx.exception.mismatched_type, True)
+        return ctx.exception
 
     @validate_output
     def test_provider_method_for_binding_resource_must_satisfy_more_concrete_type(

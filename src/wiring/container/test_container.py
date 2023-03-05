@@ -23,9 +23,7 @@ from wiring.container.errors import (
     ProviderNotProvidingForModule,
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
-from wiring.provider.errors import (
-    IncompatibleResourceTypeForInheritedResource,
-)
+from wiring.provider.errors import IncompatibleResourceTypeForInheritedResource
 from wiring.resource import Resource, ModuleResource
 
 
