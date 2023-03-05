@@ -1,11 +1,10 @@
 import inspect
+import os
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from textwrap import wrap
 from typing import Optional, Any, Iterator, TYPE_CHECKING
-
-import wiring
 
 if TYPE_CHECKING:
     from wiring.resource import ResourceTypes
@@ -125,11 +124,10 @@ def fname(value: Any) -> str:
 
 
 def location(value: type) -> Optional[str]:
-    root_filename = inspect.getsourcefile(wiring)
+    root = Path(os.getcwd())
     module_filename = inspect.getsourcefile(value)
-    if root_filename is None or module_filename is None:
+    if root is None or module_filename is None:
         return None
-    root = Path(root_filename).parent.parent
     path = Path(module_filename)
     relative = path.relative_to(root)
     lineno = inspect.getsourcelines(value)[1]
@@ -138,4 +136,4 @@ def location(value: type) -> Optional[str]:
 
 def point_to_definition(value: type) -> Optional[str]:
     definition = location(value)
-    return f"See {definition}" if definition is not None else None
+    return f"{sname(value)}: {definition}" if definition is not None else None

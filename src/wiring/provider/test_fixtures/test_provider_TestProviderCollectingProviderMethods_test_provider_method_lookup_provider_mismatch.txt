@@ -1,0 +1,8 @@
+Requested 'SomeProvider' provider method for
+
+    AnotherProvider.a = Resource(int, private=True)
+
+Which belongs to 'AnotherProvider', not 'SomeProvider'.
+
+AnotherProvider: src/wiring/provider/test_provider.py:262
+SomeProvider: src/wiring/provider/test_provider.py:256

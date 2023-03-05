@@ -8,4 +8,4 @@ But it has no value. It's likely that you intended to define instead:
     class SomeModule(Module):
         a = Resource(int)
 
-See wiring/module/test_module.py:137
+SomeModule: src/wiring/module/test_module.py:137

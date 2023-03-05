@@ -27,7 +27,6 @@ from wiring.provider.errors import (
     ProviderMethodNotCallable,
     ProvidersModuleIsNotAModule,
     CannotProvideBaseModule,
-    UnrelatedResource,
     ProviderMethodMissingReturnTypeAnnotation,
     ProviderMethodReturnTypeMismatch,
     ProviderMethodParameterMissingTypeAnnotation,
@@ -53,6 +52,10 @@ from wiring.provider.errors import (
     ProviderModuleCantBeChanged,
     InvalidProviderAttributeName,
     InvalidProviderAttribute,
+    ResourceModuleMismatch,
+    ResourceProviderMismatch,
+    UnknownModuleResource,
+    UnknownProviderResource,
 )
 
 T = TypeVar("T")
@@ -347,13 +350,16 @@ class ProviderType(type):
         self._provider_methods_by_resource[provider_method.resource] = provider_method
 
     def _ensure_related_resource(self, resource: ResourceTypes[Any]) -> None:
-        resource_type = type(resource)
-        if resource_type is ModuleResource:
-            if cast(ModuleResource[Any], resource) not in self._module:
-                raise UnrelatedResource(self, resource)
-        elif resource_type is PrivateResource or resource_type is OverridingResource:
+        if isinstance(resource, ModuleResource):
+            if resource.module is not self._module:
+                raise ResourceModuleMismatch(self, resource)
+            elif resource not in self._module:
+                raise UnknownModuleResource(self, resource)
+        elif isinstance(resource, (PrivateResource, OverridingResource)):
+            if resource.provider is not self:
+                raise ResourceProviderMismatch(self, resource)
             if resource not in self._resources:
-                raise UnrelatedResource(self, resource)
+                raise UnknownProviderResource(self, resource)
         else:
             raise TypeError()
 

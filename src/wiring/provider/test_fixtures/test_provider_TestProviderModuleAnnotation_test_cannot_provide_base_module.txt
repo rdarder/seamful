@@ -4,4 +4,4 @@ Provider 'SomeProvider' provides for 'Module'
         ...
 
 But Module is the base class for all Modules, not an actual module.
-See wiring/provider/test_provider.py:355
+SomeProvider: src/wiring/provider/test_provider.py:404

@@ -10,7 +10,6 @@ from wiring.provider.errors import (
     ProviderMethodNotCallable,
     ProvidersModuleIsNotAModule,
     CannotProvideBaseModule,
-    UnrelatedResource,
     ProviderMethodMissingReturnTypeAnnotation,
     ProviderMethodReturnTypeMismatch,
     ProviderMethodParameterMissingTypeAnnotation,
@@ -35,6 +34,10 @@ from wiring.provider.errors import (
     BaseProviderProvidesFromADifferentModule,
     ProvidersMustInheritFromProviderClass,
     InvalidProviderAttribute,
+    ResourceModuleMismatch,
+    UnknownModuleResource,
+    UnknownProviderResource,
+    ResourceProviderMismatch,
 )
 from wiring.provider.provider_type import ProviderType
 from wiring.resource import (
@@ -188,7 +191,8 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.resource, SomeModule.a)
         return ctx.exception
 
-    def test_provider_method_not_found(self) -> None:
+    @validate_output
+    def test_provider_method_lookup_unknown_module_resource(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -198,13 +202,15 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         fake_resource = ModuleResource.make_bound(
             t=int, name="fake", module=SomeModule  # pyright: ignore
         )
-        with self.assertRaises(UnrelatedResource) as ctx:
+        with self.assertRaises(UnknownModuleResource) as ctx:
             SomeProvider[fake_resource]
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource, fake_resource)
+        return ctx.exception
 
-    def test_provider_unrelated_resource(self) -> None:
+    @validate_output
+    def test_provider_method_lookup_module_mismatch(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -217,11 +223,54 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         class AnotherModule(Module):
             a = int
 
-        with self.assertRaises(UnrelatedResource) as ctx:
+        with self.assertRaises(ResourceModuleMismatch) as ctx:
             SomeProvider[AnotherModule.a]  # type: ignore
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_method_lookup_unknown_provider_resource(self) -> HelpfulException:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            pass
+
+        fake_resource = PrivateResource.make_bound(
+            t=int, name="fake", provider=SomeProvider  # pyright: ignore
+        )
+        with self.assertRaises(UnknownProviderResource) as ctx:
+            SomeProvider[fake_resource]
+
+        self.assertEqual(ctx.exception.provider, SomeProvider)
+        self.assertEqual(ctx.exception.resource, fake_resource)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_method_lookup_provider_mismatch(self) -> HelpfulException:
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            a = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        class AnotherProvider(Provider, module=SomeModule):
+            a = int
+
+            def provide_a(self) -> int:
+                return 10
+
+        with self.assertRaises(ResourceProviderMismatch) as ctx:
+            SomeProvider[AnotherProvider.a]  # type: ignore
+
+        self.assertEqual(ctx.exception.provider, SomeProvider)
+        self.assertEqual(ctx.exception.resource, AnotherProvider.a)
+        return ctx.exception
 
     def test_provider_collects_methods_for_private_provider_resources(self) -> None:
         class SomeModule(Module):

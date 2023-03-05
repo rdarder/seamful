@@ -118,10 +118,93 @@ class CannotProvideBaseModule(HelpfulException):
         return "A Provider cannot provide for the base Module class. "
 
 
-class UnrelatedResource(Exception):
-    def __init__(self, provider: ProviderType, resource: ResourceTypes[Any]):
+class ResourceModuleMismatch(HelpfulException):
+    def __init__(self, provider: ProviderType, resource: ModuleResource[Any]):
         self.provider = provider
         self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Requested {qname(self.provider)} provider method for")
+        with t.indented_block():
+            t.newline(rdef(self.resource))
+
+        t.newline(
+            f"But {qname(self.provider)} provides for {qname(self.provider.module)},"
+        )
+        t.sentence(f"not {qname(self.resource.module)}")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        t.newline(point_to_definition(self.resource.module))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "Attempted to access a provider method for a resource from a different module "
+            "than the one provided."
+        )
+
+
+class UnknownModuleResource(HelpfulException):
+    def __init__(self, provider: ProviderType, resource: ModuleResource[Any]):
+        self.provider = provider
+        self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Requested {qname(self.provider)} provider method for")
+        with t.indented_block():
+            t.newline(rdef(self.resource))
+
+        t.newline(f"Which appears to be a resource of {qname(self.resource.module)},")
+        t.sentence("But that resource was not found.")
+        t.blank()
+        t.newline(point_to_definition(self.resource.module))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to access a provider method for an unknown module resource. "
+
+
+class ResourceProviderMismatch(HelpfulException):
+    def __init__(self, provider: ProviderType, resource: ProviderResourceTypes[Any]):
+        self.provider = provider
+        self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Requested {qname(self.provider)} provider method for")
+        with t.indented_block():
+            t.newline(rdef(self.resource))
+
+        t.newline(
+            f"Which belongs to {qname(self.resource.provider)}, "
+            f"not {qname(self.provider)}."
+        )
+        t.blank()
+        t.newline(point_to_definition(self.resource.provider))
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to access a provider method for a resource from another provider."
+
+
+class UnknownProviderResource(HelpfulException):
+    def __init__(self, provider: ProviderType, resource: ProviderResourceTypes[Any]):
+        self.provider = provider
+        self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Requested {qname(self.provider)} provider method for")
+        with t.indented_block():
+            t.newline(rdef(self.resource))
+
+        t.newline(f"Which appears to be a resource of {qname(self.provider)},")
+        t.sentence("But that resource was not found.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to access a provider method for a resource from another provider."
 
 
 class ProviderMethodMissingReturnTypeAnnotation(Exception):
