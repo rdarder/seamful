@@ -474,11 +474,58 @@ class ResourceDefinitionCannotReferOtherProvidersResource(HelpfulException):
         return "A Provider's Resource cannot be defined as another provider's Resource."
 
 
-class CannotDefinePublicResourceInProvider(Exception):
-    def __init__(self, provider: ProviderType, name: str, t: type):
+class CannotDefinePublicResourceInProvider(HelpfulException):
+    def __init__(
+        self, provider: ProviderType, name: str, resource: ModuleResource[Any]
+    ):
         self.provider = provider
         self.name = name
-        self.type = t
+        self.resource = resource
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
+        resource = self.resource
+        if resource.is_bound:
+            with t.indented_block():
+                t.newline(f"{self.name} = {sname(resource.module)}.{resource.name}")
+
+            t.newline("But it's not a valid resource definition.")
+            t.sentence(
+                "A Provider's Resource cannot be defined as another module's Resource."
+            )
+            if resource.module is self.provider.module:
+                t.newline(
+                    f"If you meant to override {sname(resource.module)}.{resource.name},"
+                )
+                t.sentence("you could do:")
+                with t.indented_block():
+                    t.newline(
+                        f"{self.name} = Resource(<subtype of {sname(resource.type)}>, "
+                        f"override=True)"
+                    )
+        else:
+            with t.indented_block():
+                t.newline(f"{self.name} = Resource({sname(resource.type)})")
+
+            t.newline("But providers can only have overriding or private resources.")
+            if self.name in self.provider.module:
+                t.sentence("If you meant to override a module resource, you could do:")
+                with t.indented_block():
+                    t.newline(
+                        f"{self.name} = Resource({sname(resource.type)}, override=True)"
+                    )
+            else:
+                t.sentence("If you meant to define a private resource, you could do:")
+                with t.indented_block():
+                    t.newline(
+                        f"{self.name} = Resource({sname(resource.type)}, private=True)>"
+                    )
+
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Unexpected module resource definition in provider."
 
 
 class InvalidModuleResourceAnnotationInProvider(Exception):

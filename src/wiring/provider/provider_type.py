@@ -303,7 +303,7 @@ class ProviderType(type):
             candidate.bind(name=name, provider=self, overrides=self._module[name])
             return cast(OverridingResource[Any], candidate)
         elif candidate_type is ModuleResource:
-            raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
+            raise CannotDefinePublicResourceInProvider(self, name, candidate)
         elif isinstance(candidate, type):
             if name in self._module:
                 overrides = self._module[name]

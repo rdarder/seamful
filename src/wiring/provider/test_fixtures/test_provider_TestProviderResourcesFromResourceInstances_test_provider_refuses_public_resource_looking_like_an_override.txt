@@ -1,0 +1,10 @@
+Provider 'SomeProvider' defines resource a as
+
+    a = Resource(ConcreteClass)
+
+But providers can only have overriding or private resources. If you meant to
+override a module resource, you could do:
+
+    a = Resource(ConcreteClass, override=True)
+
+SomeProvider: src/wiring/provider/test_provider.py:961

@@ -908,36 +908,63 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(resource.provider, SomeProvider)
         self.assertEqual(resource.overrides, SomeModule.a)
 
+    @validate_output
     def test_provider_fails_on_private_resource_defined_as_another_modules_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = Resource(int)
 
-        class AnotherModule(Module):
-            pass
-
         with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
 
-            class SomeProvider(Provider, module=AnotherModule):
+            class SomeProvider(Provider, module=SomeModule):
                 b = SomeModule.a
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "b")
-        self.assertEqual(ctx.exception.type, int)
+        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.resource.name, "a")
+        return ctx.exception
 
-    def test_provider_refuses_definition_of_module_resource_in_it(self) -> None:
+    @validate_output
+    def test_provider_refuses_public_resource_looking_like_private(
+        self,
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
         with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a = Resource(int, private=False, override=False)
+                a = Resource(int)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.type, int)
+        self.assertEqual(ctx.exception.resource.type, int)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_refuses_public_resource_looking_like_an_override(
+        self,
+    ) -> HelpfulException:
+        class BaseClass:
+            pass
+
+        class ConcreteClass:
+            pass
+
+        class SomeModule(Module):
+            a: TypeAlias = BaseClass
+
+        with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
+
+            class SomeProvider(Provider, module=SomeModule):
+                a = Resource(ConcreteClass)
+
+        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.resource.type, ConcreteClass)
+        return ctx.exception
 
     def test_provider_refuses_private_resource_if_occludes_module_resource(
         self,
