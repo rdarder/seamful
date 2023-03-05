@@ -49,8 +49,9 @@ from wiring.resource import (
 from wiring.utils_for_tests import TestCaseWithOutputFixtures, validate_output
 
 
-class TestProviderClassBehavior(TestCase):
-    def test_providers_cannot_be_instantiated(self) -> None:
+class TestProviderClassBehavior(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_providers_cannot_be_instantiated(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -60,10 +61,12 @@ class TestProviderClassBehavior(TestCase):
         with self.assertRaises(ProvidersCannotBeInstantiated) as ctx:
             SomeProvider()
         self.assertEqual(ctx.exception.provider, SomeProvider)
+        return ctx.exception
 
+    @validate_output
     def test_providers_cannot_be_instantiated_event_if_defining_constructor(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -74,6 +77,7 @@ class TestProviderClassBehavior(TestCase):
         with self.assertRaises(ProvidersCannotBeInstantiated) as ctx:
             SomeProvider()
         self.assertEqual(ctx.exception.provider, SomeProvider)
+        return ctx.exception
 
     def test_providers_module_cannot_be_manually_set(self) -> None:
         class SomeModule(Module):

@@ -1,0 +1,3 @@
+Attempted to make an instance of provider 'SomeProvider'.
+Providers cannot be instantiated. Instead, provider resources can be referenced
+directly through the provider class.

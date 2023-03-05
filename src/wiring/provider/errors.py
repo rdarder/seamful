@@ -427,9 +427,21 @@ class ProviderMethodParameterMatchesResourceNameButNotType(HelpfulException):
         return "A provider method parameter name matches a resource, but not it's type"
 
 
-class ProvidersCannotBeInstantiated(Exception):
+class ProvidersCannotBeInstantiated(HelpfulException):
     def __init__(self, provider: ProviderType):
         self.provider = provider
+
+    def explanation(self) -> str:
+        t = Text(f"Attempted to make an instance of provider {qname(self.provider)}.")
+        t.newline("Providers cannot be instantiated.")
+        t.sentence(
+            "Instead, provider resources can be referenced directly through the "
+            "provider class."
+        )
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Providers cannot be instantiated."
 
 
 class CannotUseExistingProviderResource(Exception):

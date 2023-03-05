@@ -6,4 +6,4 @@ resource they provide for. In this case it provides for
 
 So the return type must be compatible with 'int'
 
-SomeProvider: src/wiring/provider/test_provider.py:468
+SomeProvider: src/wiring/provider/test_provider.py:472
