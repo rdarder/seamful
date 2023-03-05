@@ -457,8 +457,9 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.target, AnotherModule.c)
 
 
-class TestProviderMethodFromSignature(TestCase):
-    def test_provider_method_must_have_return_type_annotation(self) -> None:
+class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_provider_method_must_have_return_type_annotation(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -471,10 +472,12 @@ class TestProviderMethodFromSignature(TestCase):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.resource, SomeModule.a)
         self.assertEqual(ctx.exception.method.__name__, "provide_a")
+        return ctx.exception
 
+    @validate_output
     def test_provider_method_must_have_a_compatible_return_type_annotation(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -488,6 +491,69 @@ class TestProviderMethodFromSignature(TestCase):
         self.assertEqual(ctx.exception.resource, SomeModule.a)
         self.assertEqual(ctx.exception.method.__name__, "provide_a")
         self.assertEqual(ctx.exception.mismatched_type, str)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_subclass_must_refine_provider_method_if_refining_overriding_resource(
+        self,
+    ) -> HelpfulException:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class MoreConcreteClass(ConcreteClass):
+            pass
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = ConcreteClass
+
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass()
+
+        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
+
+            class AnotherProvider(SomeProvider):
+                some: TypeAlias = MoreConcreteClass
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.resource.type, MoreConcreteClass)
+        self.assertEqual(ctx.exception.mismatched_type, ConcreteClass)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_subclass_must_refine_provider_method_if_refining_private_resource(
+        self,
+    ) -> HelpfulException:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class SomeModule(Module):
+            pass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = SomeClass
+
+            def provide_some(self) -> SomeClass:
+                return SomeClass()
+
+        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
+
+            class AnotherProvider(SomeProvider):
+                some: TypeAlias = ConcreteClass
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.resource.type, ConcreteClass)
+        self.assertEqual(ctx.exception.mismatched_type, SomeClass)
+
+        return ctx.exception
 
     def test_provider_method_return_type_can_be_more_specific_type(self) -> None:
         class SomeBaseClass:
@@ -631,9 +697,10 @@ class TestProviderMethodFromSignature(TestCase):
         self.assertEqual(ctx.exception.parameter_name, "b")
         self.assertEqual(ctx.exception.mismatched_type, True)
 
+    @validate_output
     def test_provider_method_for_binding_resource_must_satisfy_more_concrete_type(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeBaseClass:
             pass
 
@@ -654,6 +721,7 @@ class TestProviderMethodFromSignature(TestCase):
 
         self.assertEqual(ctx.exception.resource.type, SomeConcreteClass)
         self.assertEqual(ctx.exception.mismatched_type, SomeBaseClass)
+        return ctx.exception
 
 
 class TestProviderResourcesTypeAliases(TestCase):
@@ -984,7 +1052,7 @@ class TestProviderResourcesFromAnnotations(TestCase):
         self.assertEqual(ctx.exception.resource.name, "b")
 
 
-class TestProviderSubclasses(TestCase):
+class TestProviderSubclasses(TestCaseWithOutputFixtures):
     def test_a_subclass_of_a_provider_is_also_a_provider_for_the_same_module(
         self,
     ) -> None:

@@ -24,7 +24,6 @@ from wiring.container.errors import (
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.provider.errors import (
-    ProviderMethodReturnTypeMismatch,
     IncompatibleResourceTypeForInheritedResource,
 )
 from wiring.resource import Resource, ModuleResource
@@ -897,63 +896,6 @@ class TestProviderSubclasses(TestCase):
         container.register(SomeModule, AnotherProvider)
         container.close_registrations(allow_provider_resources=True)
         self.assertEqual(container.provide(AnotherProvider.some).param, 11)
-
-    def test_provider_subclass_must_refine_provider_method_if_refining_private_resource(
-        self,
-    ) -> None:
-        class SomeClass:
-            pass
-
-        class ConcreteClass(SomeClass):
-            pass
-
-        class SomeModule(Module):
-            pass
-
-        class SomeProvider(Provider, module=SomeModule):
-            some: TypeAlias = SomeClass
-
-            def provide_some(self) -> SomeClass:
-                return SomeClass()
-
-        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
-
-            class AnotherProvider(SomeProvider):
-                some: TypeAlias = ConcreteClass
-
-        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.resource.type, ConcreteClass)
-        self.assertEqual(ctx.exception.mismatched_type, SomeClass)
-
-    def test_provider_subclass_must_refine_provider_method_if_refining_overriding_resource(
-        self,
-    ) -> None:
-        class SomeClass:
-            pass
-
-        class ConcreteClass(SomeClass):
-            pass
-
-        class MoreConcreteClass(ConcreteClass):
-            pass
-
-        class SomeModule(Module):
-            some: TypeAlias = SomeClass
-
-        class SomeProvider(Provider, module=SomeModule):
-            some: TypeAlias = ConcreteClass
-
-            def provide_some(self) -> ConcreteClass:
-                return ConcreteClass()
-
-        with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
-
-            class AnotherProvider(SomeProvider):
-                some: TypeAlias = MoreConcreteClass
-
-        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.resource.type, MoreConcreteClass)
-        self.assertEqual(ctx.exception.mismatched_type, ConcreteClass)
 
     def test_provider_subclass_overriding_resource_must_be_subtypes_of_base_providers_resource(
         self,

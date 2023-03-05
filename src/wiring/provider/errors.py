@@ -207,7 +207,7 @@ class UnknownProviderResource(HelpfulException):
         return "Attempted to access a provider method for a resource from another provider."
 
 
-class ProviderMethodMissingReturnTypeAnnotation(Exception):
+class ProviderMethodMissingReturnTypeAnnotation(HelpfulException):
     def __init__(
         self, provider: ProviderType, resource: ResourceTypes[Any], method: fn
     ):
@@ -215,8 +215,30 @@ class ProviderMethodMissingReturnTypeAnnotation(Exception):
         self.resource = resource
         self.method = method
 
+    def explanation(self) -> str:
+        t = Text(
+            f"The provider method {sname(self.provider)}.provide_{self.resource.name}"
+        )
+        t.sentence("doesn't have a return type. ")
+        t.newline(
+            "All provider methods must have a return type annotation compatible with"
+        )
+        t.sentence("the resource they provide for. In this case it provides for")
+        with t.indented_block():
+            t.newline(rdef(self.resource))
 
-class ProviderMethodReturnTypeMismatch(Exception):
+        t.newline(
+            f"So the return type must be compatible with {qname(self.resource.type)}"
+        )
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A provider method is missing a return type annotation."
+
+
+class ProviderMethodReturnTypeMismatch(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
@@ -228,6 +250,34 @@ class ProviderMethodReturnTypeMismatch(Exception):
         self.resource = resource
         self.method = method
         self.mismatched_type = mismatched_type
+
+    def explanation(self) -> str:
+        t = Text("The provider method")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.resource.name}() -> "
+                f"{sname(self.mismatched_type)} "
+            )
+        t.sentence("provides for")
+        with t.indented_block():
+            t.newline(rdef(self.resource))
+        t.newline(
+            f"But the method's return type annotation {qname(self.mismatched_type)}"
+        )
+        t.sentence(f"is not compatible with {qname(self.resource.type)}")
+
+        t.newline(
+            f"So the return type must be compatible with {qname(self.resource.type)}"
+        )
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "A provider method's return type annotation is incompatible "
+            "with the resource it provides."
+        )
 
 
 class ProviderMethodParameterMissingTypeAnnotation(Exception):
