@@ -17,17 +17,13 @@ from wiring.provider.errors import (
     ProviderMethodParameterMatchesResourceNameButNotType,
     ProviderMethodParameterInvalidTypeAnnotation,
     ProvidersCannotBeInstantiated,
-    InvalidAttributeAnnotationInProvider,
-    InvalidPrivateResourceAnnotationInProvider,
     CannotDefinePublicResourceInProvider,
     PrivateResourceCannotOccludeModuleResource,
-    InvalidOverridingResourceAnnotationInProvider,
     OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
     ProviderModuleCantBeChanged,
     InvalidProviderAttributeName,
     ResourceDefinitionCannotReferOtherProvidersResource,
-    InvalidModuleResourceAnnotationInProvider,
     CannotDependOnResourceFromAnotherProvider,
     ProvidersDontSupportMultipleInheritance,
     ProviderDeclarationMissingModule,
@@ -419,24 +415,6 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
             pass
 
         self.assertEqual(SomeProvider.module, SomeModule)
-
-    @validate_output
-    def test_provider_cannot_have_module_resource_annotated_attributes(
-        self,
-    ) -> HelpfulException:
-        class SomeModule(Module):
-            pass
-
-        with self.assertRaises(InvalidModuleResourceAnnotationInProvider) as ctx:
-
-            class SomeProvider(Provider, module=SomeModule):
-                a: Resource(int)  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertIsInstance(ctx.exception.resource, ModuleResource)
-        return ctx.exception
 
     def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
         class SomeModule(Module):
@@ -1012,99 +990,6 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.name, "b")
         self.assertEqual(ctx.exception.resource.provider, SomeProvider)
         self.assertEqual(ctx.exception.resource.name, "a")
-        return ctx.exception
-
-
-class TestProviderResourcesFromAnnotations(TestCaseWithOutputFixtures):
-    @validate_output
-    def test_provider_fails_on_class_attribute_with_only_type_annotation(
-        self,
-    ) -> HelpfulException:
-        class SomeModule(Module):
-            pass
-
-        with self.assertRaises(InvalidAttributeAnnotationInProvider) as ctx:
-
-            class SomeProvider(Provider, module=SomeModule):
-                a: int
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.annotation, int)
-        return ctx.exception
-
-    @validate_output
-    def test_provider_fails_on_class_attribute_annotated_with_private_resource_instance(
-        self,
-    ) -> HelpfulException:
-        class SomeModule(Module):
-            pass
-
-        with self.assertRaises(InvalidPrivateResourceAnnotationInProvider) as ctx:
-
-            class SomeProvider(Provider, module=SomeModule):
-                a: Resource(int, private=True)  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, False)
-        return ctx.exception
-
-    @validate_output
-    def test_provider_fails_on_class_attribute_annotated_with_overriding_resource_instance(
-        self,
-    ) -> HelpfulException:
-        class SomeBaseClass:
-            pass
-
-        class SomeConcreteClass(SomeBaseClass):
-            pass
-
-        class SomeModule(Module):
-            a = Resource(SomeBaseClass)
-
-        class SomeProvider(Provider, module=SomeModule):
-            a = Resource(SomeConcreteClass, override=True)
-
-            def provide_a(self) -> SomeConcreteClass:
-                return SomeConcreteClass()
-
-        with self.assertRaises(InvalidOverridingResourceAnnotationInProvider) as ctx:
-
-            class AnotherProvider(Provider, module=SomeModule):
-                a: SomeProvider.a  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, SomeConcreteClass)
-        self.assertEqual(ctx.exception.resource.is_bound, True)
-        return ctx.exception
-
-    @validate_output
-    def test_provider_fails_on_a_resource_annotated_with_an_external_private_resource(
-        self,
-    ) -> HelpfulException:
-        class SomeModule(Module):
-            pass
-
-        class SomeProvider(Provider, module=SomeModule):
-            b = Resource(int, private=True)
-
-            def provide_b(self) -> int:
-                return 10
-
-        with self.assertRaises(InvalidPrivateResourceAnnotationInProvider) as ctx:
-
-            class AnotherProvider(Provider, module=SomeModule):
-                c: SomeProvider.b  # type: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.name, "c")
-        self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, True)
-        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
-        self.assertEqual(ctx.exception.resource.name, "b")
         return ctx.exception
 
 

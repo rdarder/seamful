@@ -4,4 +4,4 @@ Requested 'SomeProvider' provider method for
 
 Which appears to be a resource of 'SomeModule', But that resource was not found.
 
-SomeModule: src/wiring/provider/test_provider.py:200
+SomeModule: src/wiring/provider/test_provider.py:196

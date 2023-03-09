@@ -36,12 +36,8 @@ from wiring.provider.errors import (
     ProvidersCannotBeInstantiated,
     ResourceDefinitionCannotReferOtherProvidersResource,
     CannotDefinePublicResourceInProvider,
-    InvalidAttributeAnnotationInProvider,
-    InvalidPrivateResourceAnnotationInProvider,
-    InvalidModuleResourceAnnotationInProvider,
     PrivateResourceCannotOccludeModuleResource,
     CannotDependOnResourceFromAnotherProvider,
-    InvalidOverridingResourceAnnotationInProvider,
     OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
     ProvidersDontSupportMultipleInheritance,
@@ -88,7 +84,6 @@ class ProviderType(type):
         base_provider = bases[0]
         self._module = self._get_module_from_class_declaration(base_provider, module)
         self._collect_resources(dct, cast(ProviderType, base_provider))
-        self._fail_on_misleading_annotations(inspect.get_annotations(self))
         self._collect_provider_methods()
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
@@ -325,23 +320,6 @@ class ProviderType(type):
                 return private_resource
         else:
             raise InvalidProviderAttribute(self, name, candidate)
-
-    def _fail_on_misleading_annotations(self, annotations: dict[str, Any]) -> None:
-        for name, annotation in annotations.items():
-            self._fail_on_misleading_annotation(name, annotation)
-
-    def _fail_on_misleading_annotation(self, name: str, annotation: Any) -> None:
-        if name.startswith("_") or name in self._resources_by_name:
-            return
-        t = type(annotation)
-        if t is ModuleResource:
-            raise InvalidModuleResourceAnnotationInProvider(self, name, annotation)
-        elif t is PrivateResource:
-            raise InvalidPrivateResourceAnnotationInProvider(self, name, annotation)
-        elif t is OverridingResource:
-            raise InvalidOverridingResourceAnnotationInProvider(self, name, annotation)
-        if isinstance(annotation, type):
-            raise InvalidAttributeAnnotationInProvider(self, name, annotation)
 
     def _add_resource(self, resource: ProviderResourceTypes[Any]) -> None:
         self._resources_by_name[resource.name] = resource
