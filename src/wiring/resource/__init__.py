@@ -11,11 +11,15 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class ModuleResource(Generic[T], type):
+class ModuleResource(Generic[T]):
     type: Type[T]
     name: str
     module: ModuleType
     is_bound: bool
+
+    def __init__(self, type: Type[T]):
+        self.type = type
+        self.is_bound = False
 
     def bind(self, name: str, module: ModuleType) -> None:
         self.name = name
@@ -24,13 +28,13 @@ class ModuleResource(Generic[T], type):
 
     @staticmethod
     def make_unbound(t: Type[T]) -> ModuleResource[T]:
-        return ModuleResource("ModuleResource", (), dict(type=t, is_bound=False))
+        return ModuleResource(t)
 
     @staticmethod
     def make_bound(t: Type[T], name: str, module: ModuleType) -> ModuleResource[T]:
-        return ModuleResource(
-            "ModuleResource", (), dict(type=t, name=name, module=module, is_bound=True)
-        )
+        resource = ModuleResource(t)
+        resource.bind(name, module)
+        return resource
 
     def __hash__(self) -> int:
         if not self.is_bound:
@@ -44,12 +48,16 @@ class ModuleResource(Generic[T], type):
             return f"Unbound ModuleResource({self.type})"
 
 
-class PrivateResource(Generic[T], type):
+class PrivateResource(Generic[T]):
     type: Type[T]
     name: str
     provider: ProviderType
     is_bound: bool
     module: ModuleType
+
+    def __init__(self, type: Type[T]):
+        self.type = type
+        self.is_bound = False
 
     def bind(self, name: str, provider: ProviderType) -> None:
         self.name = name
@@ -62,21 +70,13 @@ class PrivateResource(Generic[T], type):
 
     @staticmethod
     def make_unbound(t: Type[T]) -> PrivateResource[T]:
-        return PrivateResource("PrivateResource", (), dict(type=t, is_bound=False))
+        return PrivateResource(t)
 
     @staticmethod
     def make_bound(t: Type[T], name: str, provider: ProviderType) -> PrivateResource[T]:
-        return PrivateResource(
-            "PrivateResource",
-            (),
-            dict(
-                type=t,
-                name=name,
-                provider=provider,
-                module=provider.module,
-                is_bound=True,
-            ),
-        )
+        resource = PrivateResource(t)
+        resource.bind(name, provider)
+        return resource
 
     def __hash__(self) -> int:
         if not self.is_bound:
@@ -93,13 +93,17 @@ class PrivateResource(Generic[T], type):
             return f"Unbound PrivateResource({self.type})"
 
 
-class OverridingResource(Generic[T], type):
+class OverridingResource(Generic[T]):
     type: Type[T]
     name: str
     provider: ProviderType
     module: ModuleType
     overrides: ModuleResource[T]
     is_bound: bool
+
+    def __init__(self, t: Type[T]):
+        self.type = t
+        self.is_bound = False
 
     def bind(
         self, name: str, provider: ProviderType, overrides: ModuleResource[T]
@@ -117,26 +121,15 @@ class OverridingResource(Generic[T], type):
 
     @staticmethod
     def make_unbound(t: Type[T]) -> OverridingResource[T]:
-        return OverridingResource(
-            "OverridingResource", (), dict(type=t, is_bound=False)
-        )
+        return OverridingResource(t)
 
     @staticmethod
     def make_bound(
         t: Type[T], name: str, provider: ProviderType, overrides: ModuleResource[Any]
     ) -> OverridingResource[T]:
-        return OverridingResource(
-            "OverridingResource",
-            (),
-            dict(
-                type=t,
-                name=name,
-                provider=provider,
-                module=provider.module,
-                overrides=overrides,
-                is_bound=True,
-            ),
-        )
+        resource = OverridingResource(t)
+        resource.bind(name, provider, overrides)
+        return resource
 
     def __hash__(self) -> int:
         if not self.is_bound:
