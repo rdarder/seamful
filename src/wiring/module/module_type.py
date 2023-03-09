@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-import inspect
 from typing import Any, Optional, TYPE_CHECKING, Iterator, cast
 
 from wiring.module.errors import (
     DefaultProviderIsNotAProvider,
     CannotUseBaseProviderAsDefaultProvider,
     DefaultProviderProvidesToAnotherModule,
-    InvalidModuleResourceAnnotationInModule,
-    InvalidAttributeAnnotationInModule,
     CannotUseExistingModuleResource,
     ModulesCannotBeInstantiated,
-    InvalidPrivateResourceAnnotationInModule,
-    InvalidOverridingResourceAnnotationInModule,
     InvalidPrivateResourceInModule,
     InvalidOverridingResourceInModule,
     ModulesMustInheritDirectlyFromModuleClass,
@@ -41,7 +36,6 @@ class ModuleType(type):
         if bases[0] != Module:
             raise ModulesMustInheritDirectlyFromModuleClass(name, bases)
         self._collect_resources(dct)
-        self._fail_on_misleading_annotations(inspect.get_annotations(self))
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         raise ModulesCannotBeInstantiated(self)
@@ -82,23 +76,6 @@ class ModuleType(type):
                 continue
             resource = self._turn_attribute_into_resource(name, candidate)
             self._add_resource(resource)
-
-    def _fail_on_misleading_annotations(self, annotations: dict[str, Any]) -> None:
-        for name, annotation in annotations.items():
-            self._fail_on_misleading_annotation(name, annotation)
-
-    def _fail_on_misleading_annotation(self, name: str, annotation: Any) -> None:
-        if name.startswith("_") or name in self._resources_by_name:
-            return
-        t = type(annotation)
-        if t is ModuleResource:
-            raise InvalidModuleResourceAnnotationInModule(self, name, annotation)
-        elif t is PrivateResource:
-            raise InvalidPrivateResourceAnnotationInModule(self, name, annotation)
-        elif t is OverridingResource:
-            raise InvalidOverridingResourceAnnotationInModule(self, name, annotation)
-        elif isinstance(annotation, type):
-            raise InvalidAttributeAnnotationInModule(self, name, annotation)
 
     def _turn_attribute_into_resource(
         self, name: str, candidate: Any
