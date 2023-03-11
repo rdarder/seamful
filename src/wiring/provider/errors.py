@@ -649,22 +649,75 @@ class OverridingResourceNameDoesntMatchModuleResource(HelpfulException):
         )
 
 
-class ProvidersDontSupportMultipleInheritance(Exception):
+class ProvidersDontSupportMultipleInheritance(HelpfulException):
     def __init__(self, provider: ProviderType, bases: tuple[type, ...]):
         self.provider = provider
         self.bases = bases
 
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} inherits from multiple bases:")
+        with t.indented_block():
+            bases = ", ".join(sname(base) for base in self.bases)
+            t.newline(f"class {sname(self.provider)}({bases}, module=...):")
 
-class ProviderDeclarationMissingModule(Exception):
+        t.newline("But multiple inheritance is not supported on providers.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Multiple inheritance for providers is not supported."
+
+
+class ProviderDeclarationMissingModule(HelpfulException):
     def __init__(self, provider: ProviderType):
         self.provider = provider
 
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} doesn't state which module it provides for.")
+        t.newline("In its definition:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.provider)}(Provider):")
+            t.indented_line("...")
 
-class BaseProviderProvidesFromADifferentModule(Exception):
+        t.newline("It's missing the keyword argument module. It should look like:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.provider)}(Provider, module=<A Module>):")
+            t.indented_line("...")
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Provider doesn't state which module it provides for."
+
+
+class BaseProviderProvidesFromADifferentModule(HelpfulException):
     def __init__(self, provider: ProviderType, base: ProviderType, module: ModuleType):
         self.provider = provider
         self.base = base
         self.module = module
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} is defined as:")
+
+        with t.indented_block():
+            t.newline(
+                f"class {sname(self.provider)}({sname(self.base)}, " f"module={sname(self.module)})"
+            )
+            t.indented_line("...")
+
+        t.newline(
+            f"But it's base provider {qname(self.base)} provides "
+            f"for {qname(self.base.module)}, which is different from {qname(self.module)}."
+        )
+        t.sentence("An extended provider must provide for the same module as it's base.")
+        t.blank()
+        t.newline(point_to_definition(self.base))
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Provider inherits from another provider, but they provide for different modules."
 
 
 class ProvidersMustInheritFromProviderClass(Exception):

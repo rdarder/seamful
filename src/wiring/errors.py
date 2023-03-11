@@ -64,16 +64,21 @@ class Text:
 
 class HelpfulException(Exception, ABC):
     def __str__(self) -> str:
-        message: str
         try:
             message = self.explanation()
-        except Exception:
-            message = self.failsafe_explanation()
-
-        if message[-1] == "\n":
-            return message
-        else:
-            return message + "\n"
+            if len(message) > 0 and message[-1] == "\n":
+                return message
+            else:
+                return message + "\n"
+        except Exception as e:
+            failsafe = self.failsafe_explanation()
+            return "\n".join(
+                (
+                    failsafe,
+                    "An error occurred when generating a more helpful error message:",
+                    str(e),
+                )
+            )
 
     @abstractmethod
     def explanation(self) -> str:

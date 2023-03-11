@@ -7,4 +7,4 @@ Parameter 'b' refers to a resource from another provider
 
 provider methods can only depend on other module resources, or its own provider
 resources.
-AnotherProvider: src/wiring/provider/test_provider.py:437
+AnotherProvider: src/wiring/provider/test_provider.py:441

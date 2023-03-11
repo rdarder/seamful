@@ -94,7 +94,8 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.assigned_to, AnotherModule)
         self.assertEqual(SomeProvider.module, SomeModule)
 
-    def test_providers_dont_support_multiple_inheritance(self) -> None:
+    @validate_output
+    def test_providers_dont_support_multiple_inheritance(self) -> HelpfulException:
         class SomeBaseClass:
             pass
 
@@ -108,16 +109,19 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.bases, (Provider, SomeBaseClass))
+        return ctx.exception
 
+    @validate_output
     def test_providers_must_state_which_module_it_provides_for_as_class_argument(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         with self.assertRaises(ProviderDeclarationMissingModule) as ctx:
 
             class SomeProvider(Provider):
                 pass
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
+        return ctx.exception
 
     def test_providers_must_inherit_from_provider_or_subclass(self) -> None:
         class SomeModule(Module):
@@ -1146,7 +1150,8 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.name, "resources")
         self.assertEqual(ctx.exception.assigned_to, int)
 
-    def test_provider_subclass_must_provide_for_the_same_module_as_base(self) -> None:
+    @validate_output
+    def test_provider_subclass_must_provide_for_the_same_module_as_base(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1164,3 +1169,4 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
         self.assertEqual(ctx.exception.base, SomeProvider)
         self.assertEqual(ctx.exception.module, AnotherModule)
+        return ctx.exception

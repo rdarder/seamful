@@ -10,4 +10,4 @@ be:
 
     b = Resource(int, ResourceKind.PRIVATE)
 
-AnotherProvider: src/wiring/provider/test_provider.py:1036
+AnotherProvider: src/wiring/provider/test_provider.py:1040

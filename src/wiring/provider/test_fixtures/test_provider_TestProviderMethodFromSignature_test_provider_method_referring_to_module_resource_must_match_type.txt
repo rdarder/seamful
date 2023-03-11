@@ -8,4 +8,4 @@ Parameter 'b' seems to refer to the resource:
 
 But the parameter type for b: str is not compatible with the resource type: int
 
-SomeProvider: src/wiring/provider/test_provider.py:692
+SomeProvider: src/wiring/provider/test_provider.py:696
