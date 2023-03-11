@@ -26,9 +26,7 @@ class ModuleGraphSolver:
         self._registered_modules = registered_modules
 
         self._providers_by_module: dict[ModuleType, ProviderType] = {}
-        self._needed_modules_without_providers: set[
-            ModuleType
-        ] = registered_modules.copy()
+        self._needed_modules_without_providers: set[ModuleType] = registered_modules.copy()
         self._unused_providers_by_module = registered_providers.copy()
 
     def solve(self, allow_provider_resources: bool) -> ModuleGraphProvider:
@@ -66,9 +64,7 @@ class ModuleGraphSolver:
         for module in self._registered_modules:
             for resource in module:
                 stack: set[ResourceTypes[Any]] = set()
-                loop = self._find_circular_dependency(
-                    resource, in_stack=stack, solved=solved
-                )
+                loop = self._find_circular_dependency(resource, in_stack=stack, solved=solved)
                 if loop is not None:
                     raise CircularDependency(loop)
 
@@ -87,9 +83,7 @@ class ModuleGraphSolver:
             in_stack.add(target.overrides)
         for parameter_name, depends_on in provider_method.dependencies.items():
             if depends_on in in_stack:
-                return [
-                    ResolutionStep(target, provider_method, parameter_name, depends_on)
-                ]
+                return [ResolutionStep(target, provider_method, parameter_name, depends_on)]
             loop = self._find_circular_dependency(depends_on, in_stack, solved)
             if loop is not None:
                 loop.insert(
@@ -111,6 +105,4 @@ class ModuleGraphSolver:
 
     def _fail_on_unused_implicit_modules(self) -> None:
         if len(self._unused_providers_by_module) > 0:
-            raise RegisteredProvidersNotUsed(
-                set(self._unused_providers_by_module.values())
-            )
+            raise RegisteredProvidersNotUsed(set(self._unused_providers_by_module.values()))

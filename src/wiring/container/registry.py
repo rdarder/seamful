@@ -29,9 +29,7 @@ class Registry:
     ) -> None:
         module = provider.module
         if module not in self._explicit_modules and not allow_implicit_module:
-            raise CannotRegisterProviderToNotRegisteredModule(
-                provider, self._explicit_modules
-            )
+            raise CannotRegisterProviderToNotRegisteredModule(provider, self._explicit_modules)
         if module in self._explicit_providers and not allow_override:
             raise CannotOverrideRegisteredProvider(
                 module,
@@ -41,6 +39,6 @@ class Registry:
         self._explicit_providers[module] = provider
 
     def close_registration(self, allow_provider_resources: bool) -> ModuleGraphProvider:
-        return ModuleGraphSolver(
-            self._explicit_modules, self._explicit_providers
-        ).solve(allow_provider_resources)
+        return ModuleGraphSolver(self._explicit_modules, self._explicit_providers).solve(
+            allow_provider_resources
+        )

@@ -19,7 +19,7 @@ from wiring.resource import (
     OverridingResource,
     ProviderResourceTypes,
     BoundResource,
-    UnboundResource,
+    ProviderResource,
 )
 
 if TYPE_CHECKING:
@@ -41,9 +41,7 @@ class MissingProviderMethod(HelpfulException):
         with t.indented_block():
             t.newline(rdef(self.resource))
 
-        t.newline(
-            f"Providers for {qname(self.provider.module)} must have a provider method "
-        )
+        t.newline(f"Providers for {qname(self.provider.module)} must have a provider method ")
         t.sentence("for each of its resources.")
         return str(t)
 
@@ -76,9 +74,7 @@ class ProvidersModuleIsNotAModule(HelpfulException):
         self.invalid_module = invalid_module
 
     def explanation(self) -> str:
-        t = Text(
-            f"Provider {qname(self.provider)} provides for {qname(self.invalid_module)}"
-        )
+        t = Text(f"Provider {qname(self.provider)} provides for {qname(self.invalid_module)}")
         with t.indented_block():
             t.newline(
                 f"class {sname(self.provider)}(Provider, module={sname(self.invalid_module)})"
@@ -130,9 +126,7 @@ class ResourceModuleMismatch(HelpfulException):
         with t.indented_block():
             t.newline(rdef(self.resource))
 
-        t.newline(
-            f"But {qname(self.provider)} provides for {qname(self.provider.module)},"
-        )
+        t.newline(f"But {qname(self.provider)} provides for {qname(self.provider.module)},")
         t.sentence(f"not {qname(self.resource.module)}")
         t.blank()
         t.newline(point_to_definition(self.provider))
@@ -177,8 +171,7 @@ class ResourceProviderMismatch(HelpfulException):
             t.newline(rdef(self.resource))
 
         t.newline(
-            f"Which belongs to {qname(self.resource.provider)}, "
-            f"not {qname(self.provider)}."
+            f"Which belongs to {qname(self.resource.provider)}, " f"not {qname(self.provider)}."
         )
         t.blank()
         t.newline(point_to_definition(self.resource.provider))
@@ -210,28 +203,20 @@ class UnknownProviderResource(HelpfulException):
 
 
 class ProviderMethodMissingReturnTypeAnnotation(HelpfulException):
-    def __init__(
-        self, provider: ProviderType, resource: ResourceTypes[Any], method: fn
-    ):
+    def __init__(self, provider: ProviderType, resource: ResourceTypes[Any], method: fn):
         self.provider = provider
         self.resource = resource
         self.method = method
 
     def explanation(self) -> str:
-        t = Text(
-            f"The provider method {sname(self.provider)}.provide_{self.resource.name}"
-        )
+        t = Text(f"The provider method {sname(self.provider)}.provide_{self.resource.name}")
         t.sentence("doesn't have a return type. ")
-        t.newline(
-            "All provider methods must have a return type annotation compatible with"
-        )
+        t.newline("All provider methods must have a return type annotation compatible with")
         t.sentence("the resource they provide for. In this case it provides for")
         with t.indented_block():
             t.newline(rdef(self.resource))
 
-        t.newline(
-            f"So the return type must be compatible with {qname(self.resource.type)}"
-        )
+        t.newline(f"So the return type must be compatible with {qname(self.resource.type)}")
         t.blank()
         t.newline(point_to_definition(self.provider))
         return str(t)
@@ -263,14 +248,10 @@ class ProviderMethodReturnTypeMismatch(HelpfulException):
         t.sentence("provides for")
         with t.indented_block():
             t.newline(rdef(self.resource))
-        t.newline(
-            f"But the method's return type annotation {qname(self.mismatched_type)}"
-        )
+        t.newline(f"But the method's return type annotation {qname(self.mismatched_type)}")
         t.sentence(f"is not compatible with {qname(self.resource.type)}")
 
-        t.newline(
-            f"So the return type must be compatible with {qname(self.resource.type)}"
-        )
+        t.newline(f"So the return type must be compatible with {qname(self.resource.type)}")
         t.blank()
         t.newline(point_to_definition(self.provider))
         return str(t)
@@ -418,9 +399,7 @@ class ProviderMethodParameterMatchesResourceNameButNotType(HelpfulException):
             t.newline(rdef(self.refers_to))
         t.newline("But the parameter type for")
         t.sentence(f"{self.parameter_name}: {sname(self.mismatched_type)}")
-        t.sentence(
-            f"is not compatible with the resource type: {sname(self.refers_to.type)}"
-        )
+        t.sentence(f"is not compatible with the resource type: {sname(self.refers_to.type)}")
         t.blank()
         t.newline(point_to_definition(self.provider))
         return str(t)
@@ -437,8 +416,7 @@ class ProvidersCannotBeInstantiated(HelpfulException):
         t = Text(f"Attempted to make an instance of provider {qname(self.provider)}.")
         t.newline("Providers cannot be instantiated.")
         t.sentence(
-            "Instead, provider resources can be referenced directly through the "
-            "provider class."
+            "Instead, provider resources can be referenced directly through the " "provider class."
         )
         return str(t)
 
@@ -453,20 +431,33 @@ class ResourceDefinitionCannotReferToExistingResource(HelpfulException):
         self.resource = resource
 
     def explanation(self) -> str:
-        t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
+        t = Text(
+            f"Provider {qname(self.provider)} defines resource {self.name} as another, "
+            "existing resource."
+        )
         resource = self.resource
         with t.indented_block():
-            pass
-            t.newline(f"{self.name} = {sname(resource.provider)}.{resource.name}")
+            t.newline(
+                f"class {sname(self.provider)}" f"(Provider, module={sname(self.provider.module)}):"
+            )
+            t.indented_line("...")
+            if isinstance(resource, ProviderResource):
+                t.indented_line(f"{self.name} = {sname(resource.provider)}.{resource.name}")
+            elif isinstance(resource, ModuleResource):
+                t.indented_line(f"{self.name} = {sname(resource.module)}.{resource.name}")
 
         t.newline("But it's not a valid resource definition.")
-        t.sentence(
-            "A Provider's Resource cannot be defined as another provider's Resource."
-        )
-
-        t.sentence("An equivalent, valid definition would be")
+        t.sentence("A Provider's Resource cannot be defined as an already existing Resource.")
+        t.sentence("An equivalent, valid definition would be:")
         with t.indented_block():
-            t.newline(f"{self.name} = Resource({sname(resource.type)}, private=True)")
+            if isinstance(resource, ModuleResource):
+                t.newline(f"{self.name} = Resource({sname(resource.type)})")
+            elif isinstance(resource, PrivateResource):
+                t.newline(f"{self.name} = Resource({sname(resource.type)}, ResourceKind.PRIVATE)")
+            elif isinstance(resource, OverridingResource):
+                t.newline(f"{self.name} = Resource({sname(resource.type)}, ResourceKind.OVERRIDE)")
+            else:
+                raise TypeError()
 
         t.newline(point_to_definition(self.provider))
         return str(t)
@@ -483,42 +474,18 @@ class CannotDefinePublicResourceInProvider(HelpfulException):
 
     def explanation(self) -> str:
         t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
-        resource = self.resource
-        if resource.is_bound:
-            with t.indented_block():
-                t.newline(f"{self.name} = {sname(resource.module)}.{resource.name}")
+        with t.indented_block():
+            t.newline(f"{self.name} = Resource({sname(self.type)})")
 
-            t.newline("But it's not a valid resource definition.")
-            t.sentence(
-                "A Provider's Resource cannot be defined as another module's Resource."
-            )
-            if resource.module is self.provider.module:
-                t.newline(
-                    f"If you meant to override {sname(resource.module)}.{resource.name},"
-                )
-                t.sentence("you could do:")
-                with t.indented_block():
-                    t.newline(
-                        f"{self.name} = Resource(<subtype of {sname(resource.type)}>, "
-                        f"override=True)"
-                    )
+        t.newline("But providers can only have overriding or private resources.")
+        if self.name in self.provider.module:
+            t.sentence("If you meant to override a module resource, you could do:")
+            with t.indented_block():
+                t.newline(f"{self.name} = Resource({sname(self.type)}, ResourceKind.OVERRIDE)")
         else:
+            t.sentence("If you meant to define a private resource, you could do:")
             with t.indented_block():
-                t.newline(f"{self.name} = Resource({sname(resource.type)})")
-
-            t.newline("But providers can only have overriding or private resources.")
-            if self.name in self.provider.module:
-                t.sentence("If you meant to override a module resource, you could do:")
-                with t.indented_block():
-                    t.newline(
-                        f"{self.name} = Resource({sname(resource.type)}, override=True)"
-                    )
-            else:
-                t.sentence("If you meant to define a private resource, you could do:")
-                with t.indented_block():
-                    t.newline(
-                        f"{self.name} = Resource({sname(resource.type)}, private=True)>"
-                    )
+                t.newline(f"{self.name} = Resource({sname(self.type)}, ResourceKind.PRIVATE)")
 
         t.newline(point_to_definition(self.provider))
         return str(t)
@@ -534,17 +501,12 @@ class PrivateResourceCannotOccludeModuleResource(HelpfulException):
         self.type = t
 
     def explanation(self) -> str:
-        resource = self.resource
-        t = Text(f"Provider {qname(self.provider)} defines resource {resource.name} as")
+        t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
         with t.indented_block():
-            t.newline(
-                f"{resource.name} = Resource({sname(resource.type)}, private=True)"
-            )
+            t.newline(f"{self.name} = Resource({sname(self.type)}, ResourceKind.PRIVATE)")
 
-        t.newline(
-            f"But {qname(self.provider)} provides for {qname(self.provider.module)},"
-        )
-        t.sentence(f"which also has a resource named '{resource.name}'.")
+        t.newline(f"But {qname(self.provider)} provides for {qname(self.provider.module)},")
+        t.sentence(f"which also has a resource named '{self.name}'.")
         t.sentence("Private resource names cannot occlude its module resources.")
         t.blank()
         t.newline(point_to_definition(self.provider))

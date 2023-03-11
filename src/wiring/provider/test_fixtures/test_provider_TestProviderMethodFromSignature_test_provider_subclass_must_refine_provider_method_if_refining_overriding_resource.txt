@@ -4,10 +4,10 @@ The provider method
 
 provides for
 
-    AnotherProvider.some = Resource(MoreConcreteClass, override=True)
+    AnotherProvider.some = Resource(MoreConcreteClass, ResourceKind.OVERRIDE)
 
 But the method's return type annotation 'ConcreteClass' is not compatible with
 'MoreConcreteClass'
 So the return type must be compatible with 'MoreConcreteClass'
 
-AnotherProvider: src/wiring/provider/test_provider.py:506
+AnotherProvider: src/wiring/provider/test_provider.py:505

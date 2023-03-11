@@ -97,9 +97,7 @@ class ProviderType(type):
 
     def __getitem__(self, resource: ResourceTypes[T]) -> ProviderMethod[T]:
         self._ensure_related_resource(resource)
-        target_resource = (
-            resource.overrides if type(resource) is OverridingResource else resource
-        )
+        target_resource = resource.overrides if type(resource) is OverridingResource else resource
         provider_method = self._provider_methods_by_resource[target_resource]
         return provider_method
 
@@ -209,9 +207,7 @@ class ProviderType(type):
 
         if type(parameter_type) is PrivateResource:
             # when providers can be subclassed, part of this is a valid use case.
-            raise CannotDependOnResourceFromAnotherProvider(
-                target, parameter_type, name
-            )
+            raise CannotDependOnResourceFromAnotherProvider(target, parameter_type, name)
 
         if not isinstance(parameter_type, type):
             raise ProviderMethodParameterInvalidTypeAnnotation(
@@ -234,9 +230,7 @@ class ProviderType(type):
             )
             return module_resource
         else:
-            raise ProviderMethodParameterUnrelatedName(
-                self, target, method, name, parameter_type
-            )
+            raise ProviderMethodParameterUnrelatedName(self, target, method, name, parameter_type)
 
     def _ensure_parameter_type_satisfies_resource_type(
         self,
@@ -278,42 +272,30 @@ class ProviderType(type):
             else:
                 self._add_resource(base_resource.bound_to_sub_provider(self))
 
-    def _collect_resource(
-        self, name: str, candidate: Any
-    ) -> ProviderResourceTypes[Any]:
+    def _collect_resource(self, name: str, candidate: Any) -> ProviderResourceTypes[Any]:
         if name == "module" or name == "resources":
             raise InvalidProviderAttributeName(self, name, candidate)
         if isinstance(candidate, UnboundResource):
             if name in self._module:
                 if candidate.kind == ResourceKind.MODULE:
-                    raise CannotDefinePublicResourceInProvider(
-                        self, name, candidate.type
-                    )
+                    raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
                 elif candidate.kind == ResourceKind.PRIVATE:
-                    raise PrivateResourceCannotOccludeModuleResource(
-                        self, name, candidate.type
-                    )
-                return OverridingResource(
-                    candidate.type, name, self, self._module[name]
-                )
+                    raise PrivateResourceCannotOccludeModuleResource(self, name, candidate.type)
+                return OverridingResource(candidate.type, name, self, self._module[name])
             else:
                 if candidate.kind == ResourceKind.OVERRIDE:
                     raise OverridingResourceNameDoesntMatchModuleResource(
                         self, name, candidate.type
                     )
                 if candidate.kind == ResourceKind.MODULE:
-                    raise CannotDefinePublicResourceInProvider(
-                        self, name, candidate.type
-                    )
+                    raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
                 return PrivateResource(candidate.type, name, self)
         elif isinstance(candidate, BoundResource):
             raise ResourceDefinitionCannotReferToExistingResource(self, name, candidate)
         elif isinstance(candidate, type):
             if name in self._module:
                 overrides = self._module[name]
-                overriding_resource = OverridingResource[Any](
-                    candidate, name, self, overrides
-                )
+                overriding_resource = OverridingResource[Any](candidate, name, self, overrides)
                 if not issubclass(candidate, overrides.type):
                     raise OverridingResourceIncompatibleType(overriding_resource)
                 return overriding_resource

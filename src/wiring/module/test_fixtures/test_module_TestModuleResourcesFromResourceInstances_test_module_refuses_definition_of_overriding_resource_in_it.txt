@@ -1,7 +1,7 @@
 Module 'SomeModule' defines an overriding Resource.
 
     class SomeModule(Module):
-        a = Resource(int, override=True)
+        a = Resource(int, ResourceKind.OVERRIDE)
 
 But overriding resources are only meant for providers, not modules.
 SomeModule: src/wiring/module/test_module.py:103

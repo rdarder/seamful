@@ -570,9 +570,7 @@ class TestContainerOverrides(TestCase):
         container.register(SomeModule, SomeProvider)
         container.close_registrations()
         container.provide(SomeModule.a)
-        with self.assertRaises(
-            CannotReopenRegistrationsAfterHavingProvidedResources
-        ) as ctx:
+        with self.assertRaises(CannotReopenRegistrationsAfterHavingProvidedResources) as ctx:
             container.reopen_registrations()
 
         self.assertEqual(ctx.exception.container, container)
@@ -667,9 +665,7 @@ class TestContainerImplicitProviders(TestCase):
         container = Container.empty()
         container.register(Module1, Provider1)
         container.close_registrations()
-        container.reopen_registrations(
-            allow_overrides=True, allow_implicit_modules=True
-        )
+        container.reopen_registrations(allow_overrides=True, allow_implicit_modules=True)
         container.register_provider(AnotherProvider2)
         container.close_registrations()
         self.assertEqual(container.provide(Module1.a), 12)
@@ -686,9 +682,7 @@ class TestContainerImplicitProviders(TestCase):
 
         container = Container.empty()
         container.close_registrations()
-        container.reopen_registrations(
-            allow_overrides=True, allow_implicit_modules=True
-        )
+        container.reopen_registrations(allow_overrides=True, allow_implicit_modules=True)
         container.register_provider(SomeProvider)
         with self.assertRaises(RegisteredProvidersNotUsed) as ctx:
             container.close_registrations()

@@ -42,6 +42,7 @@ from wiring.resource import (
     PrivateResource,
     OverridingResource,
     ResourceKind,
+    ProviderResource,
 )
 from wiring.utils_for_tests import TestCaseWithOutputFixtures, validate_output
 
@@ -638,9 +639,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
             a = int
             b = int
 
-        with self.assertRaises(
-            ProviderMethodParameterMatchesResourceNameButNotType
-        ) as ctx:
+        with self.assertRaises(ProviderMethodParameterMatchesResourceNameButNotType) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
                 def provide_a(self, b: str) -> int:
@@ -987,7 +986,8 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
         self.assertEqual(ctx.exception.name, "b")
-        self.assertEqual(ctx.exception.resource.provider, SomeProvider)
+        self.assertIsInstance(ctx.exception.resource, ProviderResource)
+        self.assertEqual(cast(ProviderResource[Any], ctx.exception.resource).provider, SomeProvider)
         self.assertEqual(ctx.exception.resource.name, "a")
         return ctx.exception
 

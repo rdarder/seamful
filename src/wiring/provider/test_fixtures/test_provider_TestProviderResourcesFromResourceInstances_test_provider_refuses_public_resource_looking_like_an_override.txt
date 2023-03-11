@@ -5,6 +5,6 @@ Provider 'SomeProvider' defines resource a as
 But providers can only have overriding or private resources. If you meant to
 override a module resource, you could do:
 
-    a = Resource(ConcreteClass, override=True)
+    a = Resource(ConcreteClass, ResourceKind.OVERRIDE)
 
-SomeProvider: src/wiring/provider/test_provider.py:925
+SomeProvider: src/wiring/provider/test_provider.py:922

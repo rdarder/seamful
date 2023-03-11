@@ -30,9 +30,7 @@ class Container:
         self._allow_overrides = False
         self._allow_implicit_modules = False
 
-    def register(
-        self, module: ModuleType, provider: Optional[ProviderType] = None
-    ) -> None:
+    def register(self, module: ModuleType, provider: Optional[ProviderType] = None) -> None:
         if not self._is_registering:
             raise RegistrationsAreClosed(module)
         self._registry.register_module(module)

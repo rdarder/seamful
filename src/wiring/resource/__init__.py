@@ -22,7 +22,7 @@ class UnboundResource(Generic[T]):
         self.type = t
         self.kind = kind
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"UnboundResource({self.type.__name__})"
 
 
@@ -59,9 +59,7 @@ class PrivateResource(ProviderResource[T]):
 
 
 class OverridingResource(ProviderResource[T]):
-    def __init__(
-        self, t: Type[T], name: str, provider: ProviderType, overrides: ModuleResource
-    ):
+    def __init__(self, t: Type[T], name: str, provider: ProviderType, overrides: ModuleResource[T]):
         assert provider.module is overrides.module
         super().__init__(t, name, provider)
         self.overrides = overrides
@@ -70,9 +68,7 @@ class OverridingResource(ProviderResource[T]):
         return OverridingResource(self.type, self.name, provider, self.overrides)
 
     def __hash__(self) -> int:
-        return hash(
-            (self.__class__, self.type, self.name, self.provider, self.overrides)
-        )
+        return hash((self.__class__, self.type, self.name, self.provider, self.overrides))
 
     def __repr__(self) -> str:
         return (

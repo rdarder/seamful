@@ -82,9 +82,7 @@ class ModuleType(type):
             resource = self._turn_attribute_into_resource(name, candidate)
             self._add_resource(resource)
 
-    def _turn_attribute_into_resource(
-        self, name: str, candidate: Any
-    ) -> ModuleResource[Any]:
+    def _turn_attribute_into_resource(self, name: str, candidate: Any) -> ModuleResource[Any]:
         if name.startswith("_"):
             raise InvalidPrivateModuleAttribute(self, name, candidate)
         elif name == "default_provider":

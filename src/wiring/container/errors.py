@@ -41,9 +41,7 @@ class CannotRegisterProviderToNotRegisteredModule(Exception):
 
 
 class CannotOverrideRegisteredProvider(Exception):
-    def __init__(
-        self, module: ModuleType, *, registered: ProviderType, registering: ProviderType
-    ):
+    def __init__(self, module: ModuleType, *, registered: ProviderType, registering: ProviderType):
         self.module = module
         self.registered = registered
         self.registering = registering
@@ -131,8 +129,6 @@ class RegisteredProvidersNotUsed(Exception):
 
 
 class ProviderNotProvidingForModule(Exception):
-    def __init__(
-        self, resource: ProviderResourceTypes[Any], provider_in_use: ProviderType
-    ):
+    def __init__(self, resource: ProviderResourceTypes[Any], provider_in_use: ProviderType):
         self.resource = resource
         self.provider_in_use = provider_in_use

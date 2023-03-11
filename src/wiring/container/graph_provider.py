@@ -65,13 +65,10 @@ class ModuleGraphProvider:
 
         provider_method = self._providers[resource.module][resource]
         method_parameters = {
-            name: self._provide(resource)
-            for name, resource in provider_method.dependencies.items()
+            name: self._provide(resource) for name, resource in provider_method.dependencies.items()
         }
         try:
-            instance = provider_method.method(
-                self._fake_provider_instance, **method_parameters
-            )
+            instance = provider_method.method(self._fake_provider_instance, **method_parameters)
         except InvalidProviderInstanceAccess:
             raise ProviderMethodsCantAccessProviderInstance(resource, provider_method)
         self._instances_by_resource[resource] = instance

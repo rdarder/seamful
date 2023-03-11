@@ -38,10 +38,7 @@ class DefaultProviderIsNotAProvider(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return (
-            "Attempted to set a module's default_provider to something "
-            "that's not a Provider."
-        )
+        return "Attempted to set a module's default_provider to something " "that's not a Provider."
 
 
 class CannotUseBaseProviderAsDefaultProvider(HelpfulException):
@@ -89,13 +86,9 @@ class CannotUseExistingModuleResource(HelpfulException):
         t = Text(f"Module {qname(self.module)} defines as an attribute '{self.name}':")
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
-            t.indented_line(
-                f"{self.name} = {sname(self.resource.module)}.{self.resource.name}"
-            )
+            t.indented_line(f"{self.name} = {sname(self.resource.module)}.{self.resource.name}")
 
-        t.newline(
-            "Which refers to another module's resource. Resources cannot be reused."
-        )
+        t.newline("Which refers to another module's resource. Resources cannot be reused.")
         t.sentence("It's likely that you indented:")
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
@@ -118,8 +111,7 @@ class ModulesCannotBeInstantiated(HelpfulException):
         t = Text(f"Attempted to make an instance of module {qname(self.module)}.")
         t.newline("Modules cannot be instantiated.")
         t.sentence(
-            "Instead, module resources can be referenced directly through the "
-            "module class."
+            "Instead, module resources can be referenced directly through the " "module class."
         )
         return str(t)
 
@@ -137,7 +129,7 @@ class InvalidPrivateResourceInModule(HelpfulException):
         t = Text(f"Module {qname(self.module)} defines a private Resource.")
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
-            t.indented_line(f"{self.name} = Resource({sname(self.type)}, private=True)")
+            t.indented_line(f"{self.name} = Resource({sname(self.type)}, ResourceKind.PRIVATE)")
 
         t.newline("But private resources are only meant for providers, not modules.")
         t.newline(point_to_definition(self.module))
@@ -157,9 +149,7 @@ class InvalidOverridingResourceInModule(HelpfulException):
         t = Text(f"Module {qname(self.module)} defines an overriding Resource.")
         with t.indented_block():
             t.newline(f"class {sname(self.module)}(Module):")
-            t.indented_line(
-                f"{self.name} = Resource({sname(self.type)}, override=True)"
-            )
+            t.indented_line(f"{self.name} = Resource({sname(self.type)}, ResourceKind.OVERRIDE)")
 
         t.newline("But overriding resources are only meant for providers, not modules.")
         t.newline(point_to_definition(self.module))
@@ -182,9 +172,7 @@ class ModulesMustInheritDirectlyFromModuleClass(HelpfulException):
         with t.indented_block():
             t.newline(f"class {self.module_class_name}({sname(base)}, ...):")
             t.indented_line("...")
-        t.newline(
-            "But modules must inherit directly from Module, and only from Module."
-        )
+        t.newline("But modules must inherit directly from Module, and only from Module.")
         if isinstance(base, ModuleType):
             t.newline("Subclassing another module is not supported.")
             t.sentence(

@@ -26,9 +26,7 @@ class TestCaseWithOutputFixtures(TestCase):
             for _, method in inspect.getmembers(cls)
             if callable(method) and hasattr(method, "uses_fixtures")
         }
-        existing_fixtures = set(
-            cls.fixture_location.glob(f"{cls.fixture_prefix}_*.txt")
-        )
+        existing_fixtures = set(cls.fixture_location.glob(f"{cls.fixture_prefix}_*.txt"))
         for extra_fixture in existing_fixtures - used_fixtures:
             logging.getLogger().warning(f"Removing unused fixture {extra_fixture}")
             extra_fixture.unlink()
@@ -62,9 +60,7 @@ def validate_output(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
 V = TypeVar("V")
 
 
-def _run_test_and_ensure_returns_something(
-    test: TestCase, test_method: Callable[..., V]
-) -> V:
+def _run_test_and_ensure_returns_something(test: TestCase, test_method: Callable[..., V]) -> V:
     test_returns = test_method(test)
     if test_returns is None:
         test.fail("Test case expected to return something, but returned None.")
@@ -100,9 +96,7 @@ def _generate_text_fixture_for_test_method(
             if test_output == contents:
                 return
             else:
-                logging.getLogger().warning(
-                    f"Regenerating test fixture for {test.id()}"
-                )
+                logging.getLogger().warning(f"Regenerating test fixture for {test.id()}")
 
     logging.getLogger().warning(f"Adding new test fixture for {test.id()}")
     with open(fixture_path, "w") as fixture_file:

@@ -45,9 +45,7 @@ class Text:
             self.newline(content)
 
     @contextmanager
-    def indented_block(
-        self, blank_before: bool = True, blank_after: bool = True
-    ) -> Iterator[None]:
+    def indented_block(self, blank_before: bool = True, blank_after: bool = True) -> Iterator[None]:
         if blank_before:
             self.blank()
         self._flush_paragraph()
@@ -98,12 +96,12 @@ def rdef(resource: "ResourceTypes[Any]") -> str:
     elif isinstance(resource, OverridingResource):
         return (
             f"{sname(resource.provider)}.{resource.name} = "
-            f"Resource({sname(resource.type)}, override=True)"
+            f"Resource({sname(resource.type)}, ResourceKind.OVERRIDE)"
         )
     elif isinstance(resource, PrivateResource):
         return (
             f"{sname(resource.provider)}.{resource.name} = "
-            f"Resource({sname(resource.type)}, private=True)"
+            f"Resource({sname(resource.type)}, ResourceKind.PRIVATE)"
         )
     else:
         raise TypeError()
