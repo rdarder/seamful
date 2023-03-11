@@ -18,6 +18,8 @@ from wiring.resource import (
     ResourceTypes,
     OverridingResource,
     ProviderResourceTypes,
+    BoundResource,
+    UnboundResource,
 )
 
 if TYPE_CHECKING:
@@ -444,10 +446,8 @@ class ProvidersCannotBeInstantiated(HelpfulException):
         return "Providers cannot be instantiated."
 
 
-class ResourceDefinitionCannotReferOtherProvidersResource(HelpfulException):
-    def __init__(
-        self, provider: ProviderType, name: str, resource: PrivateResource[Any]
-    ):
+class ResourceDefinitionCannotReferToExistingResource(HelpfulException):
+    def __init__(self, provider: ProviderType, name: str, resource: BoundResource[Any]):
         self.provider = provider
         self.name = name
         self.resource = resource
@@ -456,6 +456,7 @@ class ResourceDefinitionCannotReferOtherProvidersResource(HelpfulException):
         t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
         resource = self.resource
         with t.indented_block():
+            pass
             t.newline(f"{self.name} = {sname(resource.provider)}.{resource.name}")
 
         t.newline("But it's not a valid resource definition.")
@@ -475,12 +476,10 @@ class ResourceDefinitionCannotReferOtherProvidersResource(HelpfulException):
 
 
 class CannotDefinePublicResourceInProvider(HelpfulException):
-    def __init__(
-        self, provider: ProviderType, name: str, resource: ModuleResource[Any]
-    ):
+    def __init__(self, provider: ProviderType, name: str, t: type):
         self.provider = provider
         self.name = name
-        self.resource = resource
+        self.type = t
 
     def explanation(self) -> str:
         t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
@@ -529,9 +528,10 @@ class CannotDefinePublicResourceInProvider(HelpfulException):
 
 
 class PrivateResourceCannotOccludeModuleResource(HelpfulException):
-    def __init__(self, provider: ProviderType, resource: PrivateResource[Any]):
+    def __init__(self, provider: ProviderType, name: str, t: type):
         self.provider = provider
-        self.resource = resource
+        self.name = name
+        self.type = t
 
     def explanation(self) -> str:
         resource = self.resource
@@ -572,11 +572,10 @@ class OverridingResourceIncompatibleType(Exception):
 
 
 class OverridingResourceNameDoesntMatchModuleResource(Exception):
-    def __init__(self, t: type, name: str, provider: ProviderType, module: ModuleType):
-        self.type = t
-        self.name = name
+    def __init__(self, provider: ProviderType, name: str, t: type):
         self.provider = provider
-        self.module = module
+        self.name = name
+        self.type = t
 
 
 class ProvidersDontSupportMultipleInheritance(Exception):

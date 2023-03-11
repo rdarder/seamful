@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, TYPE_CHECKING, Iterator, cast
+from typing import Any, Optional, TYPE_CHECKING, Iterator
 
 from wiring.module.errors import (
     DefaultProviderIsNotAProvider,
@@ -15,7 +15,12 @@ from wiring.module.errors import (
     InvalidPrivateModuleAttribute,
     InvalidModuleAttributeName,
 )
-from wiring.resource import ModuleResource, PrivateResource, OverridingResource
+from wiring.resource import (
+    ModuleResource,
+    UnboundResource,
+    ProviderResource,
+    ResourceKind,
+)
 
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType
@@ -84,21 +89,18 @@ class ModuleType(type):
             raise InvalidPrivateModuleAttribute(self, name, candidate)
         elif name == "default_provider":
             raise InvalidModuleAttributeName(self, name, candidate)
-        candidate_type = type(candidate)
-        if candidate_type is ModuleResource:
-            if candidate.is_bound:
-                raise CannotUseExistingModuleResource(self, name, candidate)
-            candidate.bind(name=name, module=self)
-            return cast(ModuleResource[Any], candidate)
-        elif candidate_type is PrivateResource:
+        if isinstance(candidate, UnboundResource):
+            if candidate.kind == ResourceKind.OVERRIDE:
+                raise InvalidOverridingResourceInModule(self, name, candidate.type)
+            elif candidate.kind == ResourceKind.PRIVATE:
+                raise InvalidPrivateResourceInModule(self, name, candidate.type)
+            return ModuleResource(candidate.type, name, self)
+        elif isinstance(candidate, ModuleResource):
+            raise CannotUseExistingModuleResource(self, name, candidate)
+        elif isinstance(candidate, ProviderResource):
             raise InvalidPrivateResourceInModule(self, name, candidate.type)
-        elif candidate_type is OverridingResource:
-            raise InvalidOverridingResourceInModule(self, name, candidate.type)
         elif isinstance(candidate, type):
-            resource: ModuleResource[Any] = ModuleResource.make_bound(
-                t=candidate, name=name, module=self  # pyright: ignore
-            )
-            return resource
+            return ModuleResource[Any](candidate, name, self)
         else:
             raise InvalidModuleAttributeType(self, name, candidate)
 

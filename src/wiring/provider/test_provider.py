@@ -23,7 +23,7 @@ from wiring.provider.errors import (
     OverridingResourceNameDoesntMatchModuleResource,
     ProviderModuleCantBeChanged,
     InvalidProviderAttributeName,
-    ResourceDefinitionCannotReferOtherProvidersResource,
+    ResourceDefinitionCannotReferToExistingResource,
     CannotDependOnResourceFromAnotherProvider,
     ProvidersDontSupportMultipleInheritance,
     ProviderDeclarationMissingModule,
@@ -41,6 +41,7 @@ from wiring.resource import (
     Resource,
     PrivateResource,
     OverridingResource,
+    ResourceKind,
 )
 from wiring.utils_for_tests import TestCaseWithOutputFixtures, validate_output
 
@@ -199,9 +200,8 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         class SomeProvider(Provider, module=SomeModule):
             pass
 
-        fake_resource = ModuleResource.make_bound(
-            t=int, name="fake", module=SomeModule  # pyright: ignore
-        )
+        fake_resource = ModuleResource(int, "fake", SomeModule)
+
         with self.assertRaises(UnknownModuleResource) as ctx:
             SomeProvider[fake_resource]
 
@@ -238,9 +238,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         class SomeProvider(Provider, module=SomeModule):
             pass
 
-        fake_resource = PrivateResource.make_bound(
-            t=int, name="fake", provider=SomeProvider  # pyright: ignore
-        )
+        fake_resource = PrivateResource(int, "fake", SomeProvider)
         with self.assertRaises(UnknownProviderResource) as ctx:
             SomeProvider[fake_resource]
 
@@ -354,7 +352,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
             a = Resource(SomeBaseClass)
 
         class SomeProvider(Provider, module=SomeModule):
-            a = Resource(SomeConcreteClass, override=True)
+            a = Resource(SomeConcreteClass, ResourceKind.OVERRIDE)
 
             def provide_a(self) -> SomeConcreteClass:
                 return SomeConcreteClass()
@@ -721,7 +719,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a = Resource(SomeConcreteClass, override=True)
+                a = Resource(SomeConcreteClass, ResourceKind.OVERRIDE)
 
                 def provide_a(self) -> SomeBaseClass:
                     # this satisfies the module resource but not the override.
@@ -832,7 +830,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a = Resource(int, private=True)
+            a = Resource(int, ResourceKind.PRIVATE)
 
             def provide_a(self) -> int:
                 return 10
@@ -858,7 +856,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
             a = Resource(SomeBaseClass)
 
         class SomeProvider(Provider, module=SomeModule):
-            a = Resource(SomeConcreteClass, override=True)
+            a = Resource(SomeConcreteClass, ResourceKind.OVERRIDE)
 
             def provide_a(self) -> SomeConcreteClass:
                 return SomeConcreteClass()
@@ -879,7 +877,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         class SomeModule(Module):
             a = Resource(int)
 
-        with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
+        with self.assertRaises(ResourceDefinitionCannotReferToExistingResource) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
                 b = SomeModule.a
@@ -904,7 +902,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.type, int)
         return ctx.exception
 
     @validate_output
@@ -927,7 +925,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
-        self.assertEqual(ctx.exception.resource.type, ConcreteClass)
+        self.assertEqual(ctx.exception.type, ConcreteClass)
         return ctx.exception
 
     @validate_output
@@ -940,14 +938,14 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         with self.assertRaises(PrivateResourceCannotOccludeModuleResource) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a = Resource(int, private=True)
+                a = Resource(int, ResourceKind.PRIVATE)
 
                 def provide_a(self) -> int:
                     return 10
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.resource.name, "a")
-        self.assertEqual(ctx.exception.resource.type, int)
+        self.assertEqual(ctx.exception.name, "a")
+        self.assertEqual(ctx.exception.type, int)
         return ctx.exception
 
     def test_provider_refuses_overriding_resource_if_name_doesnt_match_module_resource(
@@ -959,12 +957,15 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         with self.assertRaises(OverridingResourceNameDoesntMatchModuleResource) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a = Resource(int, override=True)
+                a = Resource(int, ResourceKind.OVERRIDE)
+
+                def provide_a(self) -> int:
+                    return 10
 
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.type, int)
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
-        self.assertEqual(ctx.exception.module, SomeModule)
+        self.assertEqual(ctx.exception.provider.module, SomeModule)
 
     @validate_output
     def test_provider_refuses_resource_declaration_that_uses_another_provider_resource(
@@ -974,14 +975,12 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a = Resource(int, private=True)
+            a = Resource(int, ResourceKind.PRIVATE)
 
             def provide_a(self) -> int:
                 return 10
 
-        with self.assertRaises(
-            ResourceDefinitionCannotReferOtherProvidersResource
-        ) as ctx:
+        with self.assertRaises(ResourceDefinitionCannotReferToExistingResource) as ctx:
 
             class AnotherProvider(Provider, module=SomeModule):
                 b = SomeProvider.a

@@ -17,7 +17,7 @@ from wiring.module.errors import (
     InvalidModuleAttributeName,
 )
 from wiring.errors import HelpfulException
-from wiring.resource import Resource
+from wiring.resource import Resource, ModuleResource, ResourceKind
 from wiring.utils_for_tests import validate_output, TestCaseWithOutputFixtures
 
 
@@ -74,8 +74,8 @@ class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.module.__name__, "AnotherModule")
         self.assertEqual(ctx.exception.name, "b")
+        self.assertIsInstance(ctx.exception.resource, ModuleResource)
         self.assertEqual(ctx.exception.resource.type, int)
-        self.assertEqual(ctx.exception.resource.is_bound, True)
         self.assertEqual(ctx.exception.resource.module, SomeModule)
         self.assertEqual(ctx.exception.resource.name, "a")
         return ctx.exception
@@ -87,7 +87,7 @@ class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         with self.assertRaises(InvalidPrivateResourceInModule) as ctx:
 
             class SomeModule(Module):
-                a = Resource(int, private=True)
+                a = Resource(int, ResourceKind.PRIVATE)
 
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")
@@ -101,7 +101,7 @@ class TestModuleResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         with self.assertRaises(InvalidOverridingResourceInModule) as ctx:
 
             class SomeModule(Module):
-                a = Resource(int, override=True)
+                a = Resource(int, ResourceKind.OVERRIDE)
 
         self.assertEqual(ctx.exception.module.__name__, "SomeModule")
         self.assertEqual(ctx.exception.name, "a")

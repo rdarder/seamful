@@ -21,6 +21,9 @@ from wiring.resource import (
     ResourceTypes,
     OverridingResource,
     ProviderResourceTypes,
+    UnboundResource,
+    BoundResource,
+    ResourceKind,
 )
 from wiring.provider.errors import (
     MissingProviderMethod,
@@ -34,7 +37,7 @@ from wiring.provider.errors import (
     ProviderMethodParameterInvalidTypeAnnotation,
     ProviderMethodParameterMatchesResourceNameButNotType,
     ProvidersCannotBeInstantiated,
-    ResourceDefinitionCannotReferOtherProvidersResource,
+    ResourceDefinitionCannotReferToExistingResource,
     CannotDefinePublicResourceInProvider,
     PrivateResourceCannotOccludeModuleResource,
     CannotDependOnResourceFromAnotherProvider,
@@ -280,44 +283,42 @@ class ProviderType(type):
     ) -> ProviderResourceTypes[Any]:
         if name == "module" or name == "resources":
             raise InvalidProviderAttributeName(self, name, candidate)
-        candidate_type = type(candidate)
-        if candidate_type is PrivateResource:
-            if candidate.is_bound:
-                raise ResourceDefinitionCannotReferOtherProvidersResource(
-                    self, name, candidate
-                )
-            candidate.bind(name=name, provider=self)
+        if isinstance(candidate, UnboundResource):
             if name in self._module:
-                raise PrivateResourceCannotOccludeModuleResource(self, candidate)
-            return cast(PrivateResource[Any], candidate)
-        elif candidate_type is OverridingResource:
-            if name not in self._module:
-                raise OverridingResourceNameDoesntMatchModuleResource(
-                    candidate.type, name, self, self._module
+                if candidate.kind == ResourceKind.MODULE:
+                    raise CannotDefinePublicResourceInProvider(
+                        self, name, candidate.type
+                    )
+                elif candidate.kind == ResourceKind.PRIVATE:
+                    raise PrivateResourceCannotOccludeModuleResource(
+                        self, name, candidate.type
+                    )
+                return OverridingResource(
+                    candidate.type, name, self, self._module[name]
                 )
-            candidate.bind(name=name, provider=self, overrides=self._module[name])
-            return cast(OverridingResource[Any], candidate)
-        elif candidate_type is ModuleResource:
-            raise CannotDefinePublicResourceInProvider(self, name, candidate)
+            else:
+                if candidate.kind == ResourceKind.OVERRIDE:
+                    raise OverridingResourceNameDoesntMatchModuleResource(
+                        self, name, candidate.type
+                    )
+                if candidate.kind == ResourceKind.MODULE:
+                    raise CannotDefinePublicResourceInProvider(
+                        self, name, candidate.type
+                    )
+                return PrivateResource(candidate.type, name, self)
+        elif isinstance(candidate, BoundResource):
+            raise ResourceDefinitionCannotReferToExistingResource(self, name, candidate)
         elif isinstance(candidate, type):
             if name in self._module:
                 overrides = self._module[name]
-                overriding_resource: OverridingResource[
-                    Any
-                ] = OverridingResource.make_bound(
-                    t=candidate,  # pyright: ignore
-                    name=name,
-                    provider=self,
-                    overrides=overrides,
+                overriding_resource = OverridingResource[Any](
+                    candidate, name, self, overrides
                 )
                 if not issubclass(candidate, overrides.type):
                     raise OverridingResourceIncompatibleType(overriding_resource)
                 return overriding_resource
             else:
-                private_resource: PrivateResource[Any] = PrivateResource.make_bound(
-                    t=candidate, name=name, provider=self  # pyright: ignore
-                )
-                return private_resource
+                return PrivateResource[Any](candidate, name, self)
         else:
             raise InvalidProviderAttribute(self, name, candidate)
 
