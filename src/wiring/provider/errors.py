@@ -15,9 +15,7 @@ from wiring.module.module_type import ModuleType
 from wiring.resource import (
     ModuleResource,
     PrivateResource,
-    ResourceTypes,
     OverridingResource,
-    ProviderResourceTypes,
     BoundResource,
     ProviderResource,
 )
@@ -29,7 +27,7 @@ fn = Callable[..., Any]
 
 
 class MissingProviderMethod(HelpfulException):
-    def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
+    def __init__(self, resource: BoundResource[Any], provider: ProviderType):
         self.resource = resource
         self.provider = provider
 
@@ -50,7 +48,7 @@ class MissingProviderMethod(HelpfulException):
 
 
 class ProviderMethodNotCallable(HelpfulException):
-    def __init__(self, resource: ResourceTypes[Any], provider: ProviderType):
+    def __init__(self, resource: BoundResource[Any], provider: ProviderType):
         self.resource = resource
         self.provider = provider
 
@@ -161,7 +159,7 @@ class UnknownModuleResource(HelpfulException):
 
 
 class ResourceProviderMismatch(HelpfulException):
-    def __init__(self, provider: ProviderType, resource: ProviderResourceTypes[Any]):
+    def __init__(self, provider: ProviderType, resource: ProviderResource[Any]):
         self.provider = provider
         self.resource = resource
 
@@ -183,7 +181,7 @@ class ResourceProviderMismatch(HelpfulException):
 
 
 class UnknownProviderResource(HelpfulException):
-    def __init__(self, provider: ProviderType, resource: ProviderResourceTypes[Any]):
+    def __init__(self, provider: ProviderType, resource: ProviderResource[Any]):
         self.provider = provider
         self.resource = resource
 
@@ -203,7 +201,7 @@ class UnknownProviderResource(HelpfulException):
 
 
 class ProviderMethodMissingReturnTypeAnnotation(HelpfulException):
-    def __init__(self, provider: ProviderType, resource: ResourceTypes[Any], method: fn):
+    def __init__(self, provider: ProviderType, resource: BoundResource[Any], method: fn):
         self.provider = provider
         self.resource = resource
         self.method = method
@@ -229,7 +227,7 @@ class ProviderMethodReturnTypeMismatch(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
-        resource: ResourceTypes[Any],
+        resource: BoundResource[Any],
         method: fn,
         mismatched_type: Any,
     ):
@@ -267,7 +265,7 @@ class ProviderMethodParameterMissingTypeAnnotation(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ResourceTypes[Any],
+        provides: BoundResource[Any],
         method: fn,
         parameter_name: str,
     ):
@@ -296,7 +294,7 @@ class ProviderMethodParameterUnrelatedName(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ResourceTypes[Any],
+        provides: BoundResource[Any],
         method: fn,
         parameter_name: str,
         parameter_type: type,
@@ -334,7 +332,7 @@ class ProviderMethodParameterInvalidTypeAnnotation(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ResourceTypes[Any],
+        provides: BoundResource[Any],
         method: fn,
         parameter_name: str,
         mismatched_type: Any,
@@ -375,9 +373,9 @@ class ProviderMethodParameterMatchesResourceNameButNotType(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
-        provides: ResourceTypes[Any],
+        provides: BoundResource[Any],
         parameter_name: str,
-        refers_to: ResourceTypes[Any],
+        refers_to: BoundResource[Any],
         mismatched_type: type,
     ):
         self.provider = provider
@@ -516,16 +514,84 @@ class PrivateResourceCannotOccludeModuleResource(HelpfulException):
         return "A private provider resource is occluding its module resource with the same name"
 
 
-class CannotDependOnResourceFromAnotherProvider(Exception):
+class CannotDependOnResourceFromAnotherProvider(HelpfulException):
     def __init__(
         self,
-        target: ResourceTypes[Any],
-        parameter_resource: PrivateResource[Any],
+        provider: ProviderType,
+        provides: BoundResource[Any],
+        parameter_resource: ProviderResource[Any],
         parameter_name: str,
     ):
-        self.target = target
+        self.provider = provider
+        self.provides = provides
         self.parameter_resource = parameter_resource
         self.parameter_name = parameter_name
+
+    def explanation(self) -> str:
+        t = Text("In provider method")
+        resource = self.parameter_resource
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}: {sname(resource.provider)}.{resource.name}, "
+                f"...) -> {sname(self.provides.type)}"
+            )
+        t.newline(f"Parameter '{self.parameter_name}' refers to a resource from another provider")
+        t.indented_line(f"{rdef(resource)}")
+        t.blank()
+        t.newline(
+            "provider methods can only depend on other module resources, "
+            "or its own provider resources."
+        )
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A provider method cannot depend on another provider's resources."
+
+
+class CannotDependOnParentProviderResource(HelpfulException):
+    def __init__(
+        self,
+        provider: ProviderType,
+        provides: BoundResource[Any],
+        parameter_resource: ProviderResource[Any],
+        parameter_name: str,
+    ):
+        self.provider = provider
+        self.provides = provides
+        self.parameter_resource = parameter_resource
+        self.parameter_name = parameter_name
+
+    def explanation(self) -> str:
+        t = Text("In provider method")
+        resource = self.parameter_resource
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}: {sname(resource.provider)}.{resource.name}, "
+                f"...) -> {sname(self.provides.type)}"
+            )
+        t.newline(f"Parameter '{self.parameter_name}' is a resource from a base")
+        t.sentence(f"provider {sname(resource.provider)}")
+        with t.indented_block():
+            t.newline(f"{rdef(resource)}")
+        t.newline("Referring providers of a parent provider is not supported.")
+        t.sentence(
+            f"It's likely that you intended to refer to {sname(self.provider)}.{resource.name}."
+        )
+        t.sentence("If that's the case, you should write it as:")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.provide_{self.provides.name}"
+                f"(..., {self.parameter_name}: {sname(resource.type)}, "
+                f"...) -> {sname(self.provides.type)}"
+            )
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "A provider method cannot depend on another provider's resources."
 
 
 class OverridingResourceIncompatibleType(Exception):
@@ -568,10 +634,10 @@ class IncompatibleResourceTypeForInheritedResource(Exception):
     def __init__(
         self,
         provider: ProviderType,
-        resource: ProviderResourceTypes[T],
+        resource: ProviderResource[T],
         *,
         base_provider: ProviderType,
-        base_resource: ProviderResourceTypes[T],
+        base_resource: ProviderResource[T],
     ) -> None:
         self.provider = provider
         self.resource = resource

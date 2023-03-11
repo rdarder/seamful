@@ -4,4 +4,4 @@ In provider method
 
 Parameter 'b' does not refer to any resource from 'SomeProvider'
 
-SomeProvider: src/wiring/provider/test_provider.py:624
+SomeProvider: src/wiring/provider/test_provider.py:673

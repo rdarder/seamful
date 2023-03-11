@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from enum import Enum
-from typing import TypeVar, Generic, Type, TYPE_CHECKING, Union
+from typing import TypeVar, Generic, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
@@ -40,11 +40,24 @@ class ModuleResource(BoundResource[T]):
     def __repr__(self) -> str:
         return f"ModuleResource('{self.name}', {self.type.__name__}, {self.module.__name__})"
 
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, ModuleResource)
+            and type(other) is ModuleResource
+            and self.name == other.name
+            and self.type == other.type
+            and self.module is other.module
+        )
+
 
 class ProviderResource(BoundResource[T], ABC):
     def __init__(self, t: Type[T], name: str, provider: ProviderType):
         super().__init__(t, name, provider.module)
         self.provider = provider
+
+    @abstractmethod
+    def bound_to_sub_provider(self, provider: ProviderType) -> ProviderResource[T]:
+        raise NotImplementedError()
 
 
 class PrivateResource(ProviderResource[T]):
@@ -56,6 +69,15 @@ class PrivateResource(ProviderResource[T]):
 
     def __repr__(self) -> str:
         return f"PrivateResource('{self.name}', {self.type.__name__}, {self.provider.__name__})"
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, PrivateResource)
+            and type(other) is PrivateResource
+            and self.type == other.type
+            and self.name == other.name
+            and self.provider is other.provider
+        )
 
 
 class OverridingResource(ProviderResource[T]):
@@ -76,10 +98,15 @@ class OverridingResource(ProviderResource[T]):
             f"{self.provider.__name__}, {self.overrides})"
         )
 
-
-ResourceTypes = Union[ModuleResource[T], PrivateResource[T], OverridingResource[T]]
-RESOURCE_TYPES = (ModuleResource, PrivateResource, OverridingResource)
-ProviderResourceTypes = Union[PrivateResource[T], OverridingResource[T]]
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, OverridingResource)
+            and type(other) is OverridingResource
+            and self.type == other.type
+            and self.name == other.name
+            and self.provider is other.provider
+            and self.overrides == other.overrides
+        )
 
 
 def Resource(t: Type[T], kind: ResourceKind = ResourceKind.MODULE) -> Type[T]:

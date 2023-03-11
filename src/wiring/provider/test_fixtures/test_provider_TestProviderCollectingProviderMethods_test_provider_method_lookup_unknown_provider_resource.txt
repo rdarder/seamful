@@ -5,4 +5,4 @@ Requested 'SomeProvider' provider method for
 Which appears to be a resource of 'SomeProvider', But that resource was not
 found.
 
-SomeProvider: src/wiring/provider/test_provider.py:239
+SomeProvider: src/wiring/provider/test_provider.py:240

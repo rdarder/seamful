@@ -34,6 +34,7 @@ from wiring.provider.errors import (
     UnknownModuleResource,
     UnknownProviderResource,
     ResourceProviderMismatch,
+    CannotDependOnParentProviderResource,
 )
 from wiring.provider.provider_type import ProviderType
 from wiring.resource import (
@@ -415,7 +416,8 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
 
         self.assertEqual(SomeProvider.module, SomeModule)
 
-    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> None:
+    @validate_output
+    def test_provider_method_cannot_depend_on_another_providers_resource(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -439,7 +441,54 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
         self.assertEqual(ctx.exception.parameter_name, "b")
-        self.assertEqual(ctx.exception.target, AnotherModule.c)
+        self.assertEqual(ctx.exception.provides, AnotherModule.c)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_method_cannot_depend_on_parent_providers_resource(self) -> HelpfulException:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider, module=SomeModule):
+            b: TypeAlias = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        with self.assertRaises(CannotDependOnParentProviderResource) as ctx:
+
+            class AnotherProvider(SomeProvider, module=SomeModule):
+                def provide_a(self, b: SomeProvider.b) -> int:
+                    return b + 1
+
+        self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
+        self.assertEqual(ctx.exception.parameter_name, "b")
+        self.assertEqual(ctx.exception.provides, SomeModule.a)
+        return ctx.exception
+
+    def test_provider_method_can_depend_on_inherited_private_resource_by_name(self) -> None:
+        class SomeModule(Module):
+            a = int
+
+        class SomeProvider(Provider, module=SomeModule):
+            b: TypeAlias = int
+
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+            def provide_b(self) -> int:
+                return 10
+
+        class AnotherProvider(SomeProvider, module=SomeModule):
+            def provide_a(self, b: int) -> int:
+                return b + 1
+
+        inherited_resources = list(AnotherProvider.resources)
+        self.assertEqual(len(inherited_resources), 1)
+        self.assertEqual(inherited_resources[0], PrivateResource(int, "b", AnotherProvider))
 
 
 class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):

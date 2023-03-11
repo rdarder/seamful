@@ -11,9 +11,9 @@ from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
 from wiring.resource import (
     ModuleResource,
-    ResourceTypes,
     PrivateResource,
     OverridingResource,
+    BoundResource,
 )
 
 
@@ -60,19 +60,19 @@ class ModuleGraphSolver:
                     self._needed_modules_without_providers.add(dependency.module)
 
     def _fail_on_circular_dependencies(self) -> None:
-        solved: set[ResourceTypes[Any]] = set()
+        solved: set[BoundResource[Any]] = set()
         for module in self._registered_modules:
             for resource in module:
-                stack: set[ResourceTypes[Any]] = set()
+                stack: set[BoundResource[Any]] = set()
                 loop = self._find_circular_dependency(resource, in_stack=stack, solved=solved)
                 if loop is not None:
                     raise CircularDependency(loop)
 
     def _find_circular_dependency(
         self,
-        target: ResourceTypes[Any],
-        in_stack: set[ResourceTypes[Any]],
-        solved: set[ResourceTypes[Any]],
+        target: BoundResource[Any],
+        in_stack: set[BoundResource[Any]],
+        solved: set[BoundResource[Any]],
     ) -> Optional[list[ResolutionStep]]:
         if target in solved:
             return None
@@ -95,7 +95,7 @@ class ModuleGraphSolver:
         solved.add(target)
         return None
 
-    def _get_provider_for_resource(self, resource: ResourceTypes[Any]) -> ProviderType:
+    def _get_provider_for_resource(self, resource: BoundResource[Any]) -> ProviderType:
         if isinstance(resource, (PrivateResource, OverridingResource)):
             return cast(PrivateResource[Any], resource).provider
         elif isinstance(resource, ModuleResource):

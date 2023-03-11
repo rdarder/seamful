@@ -10,4 +10,4 @@ But the method's return type annotation 'SomeBaseClass' is not compatible with
 'SomeConcreteClass'
 So the return type must be compatible with 'SomeConcreteClass'
 
-SomeProvider: src/wiring/provider/test_provider.py:720
+SomeProvider: src/wiring/provider/test_provider.py:769

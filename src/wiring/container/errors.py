@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Union, Any, Type, cast, TYPE_CHECKING
 
 from wiring.module.module_type import ModuleType
-from wiring.resource import ModuleResource, ResourceTypes, ProviderResourceTypes
+from wiring.resource import ModuleResource, ProviderResource, BoundResource
 from wiring.provider.provider_type import ProviderType, ProviderMethod
 
 if TYPE_CHECKING:
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class ModuleNotRegisteredForResource(Exception):
     def __init__(
         self,
-        resource: ResourceTypes[Any],
+        resource: BoundResource[Any],
         registered_modules: set[ModuleType],
         known_modules: set[ModuleType],
     ):
@@ -68,10 +68,10 @@ class CannotProvideRawType(Exception):
 
 @dataclass(frozen=True)
 class ResolutionStep:
-    target: ResourceTypes[Any]
+    target: BoundResource[Any]
     provider_method: ProviderMethod[Any]
     parameter_name: str
-    depends_on: ResourceTypes[Any]
+    depends_on: BoundResource[Any]
 
     @classmethod
     def from_types(
@@ -82,7 +82,7 @@ class ResolutionStep:
         depends_on: Type[Any],
     ) -> ResolutionStep:
         return ResolutionStep(
-            target=cast(ResourceTypes[Any], target),
+            target=cast(BoundResource[Any], target),
             provider_method=provider_method,
             parameter_name=parameter_name,
             depends_on=cast(ModuleResource[Any], depends_on),
@@ -101,7 +101,7 @@ class InvalidProviderInstanceAccess(Exception):
 class ProviderMethodsCantAccessProviderInstance(Exception):
     def __init__(
         self,
-        resource: ResourceTypes[Any],
+        resource: BoundResource[Any],
         provider_method: ProviderMethod[Any],
     ):
         self.resource = resource
@@ -129,6 +129,6 @@ class RegisteredProvidersNotUsed(Exception):
 
 
 class ProviderNotProvidingForModule(Exception):
-    def __init__(self, resource: ProviderResourceTypes[Any], provider_in_use: ProviderType):
+    def __init__(self, resource: ProviderResource[Any], provider_in_use: ProviderType):
         self.resource = resource
         self.provider_in_use = provider_in_use

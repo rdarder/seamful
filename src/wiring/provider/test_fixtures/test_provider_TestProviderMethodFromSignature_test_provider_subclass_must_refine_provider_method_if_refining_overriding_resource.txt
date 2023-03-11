@@ -10,4 +10,4 @@ But the method's return type annotation 'ConcreteClass' is not compatible with
 'MoreConcreteClass'
 So the return type must be compatible with 'MoreConcreteClass'
 
-AnotherProvider: src/wiring/provider/test_provider.py:505
+AnotherProvider: src/wiring/provider/test_provider.py:554

@@ -7,7 +7,7 @@ from textwrap import wrap
 from typing import Optional, Any, Iterator, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from wiring.resource import ResourceTypes
+    from wiring.resource import BoundResource
 
 
 class Text:
@@ -88,7 +88,7 @@ def qname(value: Any) -> str:
     return f"'{sname(value)}'"
 
 
-def rdef(resource: "ResourceTypes[Any]") -> str:
+def rdef(resource: "BoundResource[Any]") -> str:
     from wiring.resource import ModuleResource, OverridingResource, PrivateResource
 
     if isinstance(resource, ModuleResource):
