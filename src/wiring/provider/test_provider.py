@@ -997,9 +997,10 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.type, int)
         return ctx.exception
 
+    @validate_output
     def test_provider_refuses_overriding_resource_if_name_doesnt_match_module_resource(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1015,6 +1016,7 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.type, int)
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.provider.module, SomeModule)
+        return ctx.exception
 
     @validate_output
     def test_provider_refuses_resource_declaration_that_uses_another_provider_resource(

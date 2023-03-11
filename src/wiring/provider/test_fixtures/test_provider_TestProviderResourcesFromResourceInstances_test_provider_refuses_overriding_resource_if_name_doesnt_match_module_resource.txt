@@ -1,0 +1,5 @@
+Provider 'SomeProvider' defines a resource 'a as:
+
+    SomeProvider.a = Resource(int, ResourceKind.OVERRIDE)
+
+But its module 'SomeModule' doesn't have a resource named 'a'

@@ -621,11 +621,32 @@ class OverridingResourceIncompatibleType(HelpfulException):
         return "Attempted to override a module resource with an incompatible type."
 
 
-class OverridingResourceNameDoesntMatchModuleResource(Exception):
+class OverridingResourceNameDoesntMatchModuleResource(HelpfulException):
     def __init__(self, provider: ProviderType, name: str, t: type):
         self.provider = provider
         self.name = name
         self.type = t
+
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} defines a resource '{self.name} as:")
+        with t.indented_block():
+            t.newline(
+                f"{sname(self.provider)}.{self.name} = Resource({sname(self.type)}, "
+                f"ResourceKind.OVERRIDE)"
+            )
+
+        t.newline(
+            f"But its module {qname(self.provider.module)} doesn't have a "
+            f"resource named '{self.name}'"
+        )
+
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "Provider defined a resource override but there's no resource with the same "
+            "name in its module."
+        )
 
 
 class ProvidersDontSupportMultipleInheritance(Exception):
