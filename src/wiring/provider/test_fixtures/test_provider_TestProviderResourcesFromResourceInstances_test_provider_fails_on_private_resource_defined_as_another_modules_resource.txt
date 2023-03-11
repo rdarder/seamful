@@ -10,4 +10,4 @@ be:
 
     b = Resource(int)
 
-SomeProvider: src/wiring/provider/test_provider.py:930
+SomeProvider: src/wiring/provider/test_provider.py:931

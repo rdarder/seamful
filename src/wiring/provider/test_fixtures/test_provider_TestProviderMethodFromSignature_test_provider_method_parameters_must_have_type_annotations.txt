@@ -4,4 +4,4 @@ The provider method
 
 is missing a type annotation for parameter b.
 
-SomeProvider: src/wiring/provider/test_provider.py:622
+SomeProvider: src/wiring/provider/test_provider.py:621

@@ -594,9 +594,31 @@ class CannotDependOnParentProviderResource(HelpfulException):
         return "A provider method cannot depend on another provider's resources."
 
 
-class OverridingResourceIncompatibleType(Exception):
-    def __init__(self, resource: OverridingResource[Any]):
+class OverridingResourceIncompatibleType(HelpfulException):
+    def __init__(self, resource: OverridingResource[Any], overrides: ModuleResource[Any]):
         self.resource = resource
+        self.overrides = overrides
+
+    def explanation(self) -> str:
+        provider = self.resource.provider
+        resource = self.resource
+        overrides = self.overrides
+        t = Text(f"Provider {qname(provider)} defines resource '{resource.name}' as an override:")
+        t.blank()
+        t.indented_line(rdef(resource))
+        t.blank()
+        t.newline("But this overrides the resource")
+        t.blank()
+        t.indented_line(rdef(overrides))
+        t.blank()
+        t.newline(f"{qname(resource.type)} is not compatible with {qname(overrides.type)}.")
+        t.blank()
+        t.newline(point_to_definition(overrides.module))
+        t.newline(point_to_definition(resource.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to override a module resource with an incompatible type."
 
 
 class OverridingResourceNameDoesntMatchModuleResource(Exception):

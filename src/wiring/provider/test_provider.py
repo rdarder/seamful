@@ -1,5 +1,4 @@
 from typing import TypeAlias, cast, Any
-from unittest import TestCase
 
 from wiring.container import Container
 from wiring.errors import HelpfulException
@@ -778,7 +777,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         return ctx.exception
 
 
-class TestProviderResourcesTypeAliases(TestCase):
+class TestProviderResourcesTypeAliases(TestCaseWithOutputFixtures):
     def test_provider_collects_private_resources_from_implicit_type_aliases(
         self,
     ) -> None:
@@ -828,9 +827,10 @@ class TestProviderResourcesTypeAliases(TestCase):
         self.assertEqual(resource.provider, SomeProvider)
         self.assertEqual(resource.overrides, SomeModule.a)
 
+    @validate_output
     def test_provider_refuses_overriding_resources_from_type_alias_if_type_not_satisfied(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeBaseClass:
             pass
 
@@ -852,6 +852,7 @@ class TestProviderResourcesTypeAliases(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.overrides, SomeModule.a)
         self.assertEqual(resource.name, "a")
+        return ctx.exception
 
     def test_provider_collects_resources_from_explicit_type_aliases(self) -> None:
         class SomeModule(Module):

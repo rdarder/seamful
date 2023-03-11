@@ -32,6 +32,22 @@ class BoundResource(Generic[T], ABC):
         self.name = name
         self.module = module
 
+    def is_subtype_of(self, of: Type[T]) -> bool:
+        if not isinstance(self.type, type) or not isinstance(of, type):
+            # Typing constructs such as Sequence, Union[], are not types, so when
+            # we have resources that are bound to something other than types, we just allow them
+            # through.
+            return True
+        return issubclass(self.type, of)
+
+    def is_supertype_of(self, of: Type[T]) -> bool:
+        if not isinstance(self.type, type) or not isinstance(of, type):
+            # Typing constructs such as Sequence, Union[], are not types, so when
+            # we have resources that are bound to something other than types, we just allow them
+            # through.
+            return True
+        return issubclass(of, self.type)
+
 
 class ModuleResource(BoundResource[T]):
     def __hash__(self) -> int:

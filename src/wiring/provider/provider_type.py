@@ -12,6 +12,8 @@ from typing import (
     TYPE_CHECKING,
     Optional,
     Iterator,
+    cast,
+    Type,
 )
 
 from wiring.resource import (
@@ -160,7 +162,7 @@ class ProviderType(type):
         signature = inspect.signature(method)
         if signature.return_annotation is signature.empty:
             raise ProviderMethodMissingReturnTypeAnnotation(self, resource, method)
-        if not issubclass(signature.return_annotation, resource.type):
+        if not resource.is_supertype_of(signature.return_annotation):
             raise ProviderMethodReturnTypeMismatch(
                 self, resource, method, mismatched_type=signature.return_annotation
             )
@@ -199,7 +201,7 @@ class ProviderType(type):
         target: BoundResource[Any],
         method: Any,
     ) -> BoundResource[Any]:
-        parameter_type = parameter.annotation
+        parameter_type: Any = parameter.annotation
         if parameter_type is inspect.Signature.empty:
             raise ProviderMethodParameterMissingTypeAnnotation(
                 self, target, method, parameter_name=name
@@ -244,7 +246,7 @@ class ProviderType(type):
         target: BoundResource[Any],
         parameter_name: str,
     ) -> None:
-        if not issubclass(resource.type, parameter_type):
+        if not resource.is_subtype_of(cast(Type[Any], parameter_type)):
             raise ProviderMethodParameterMatchesResourceNameButNotType(
                 self,
                 target,
@@ -267,7 +269,7 @@ class ProviderType(type):
         for base_resource in base_provider.resources:
             existing = self._resources_by_name.get(base_resource.name)
             if existing is not None:
-                if not issubclass(existing.type, base_resource.type):
+                if not existing.is_subtype_of(base_resource.type):
                     raise IncompatibleResourceTypeForInheritedResource(
                         self,
                         existing,
@@ -301,8 +303,8 @@ class ProviderType(type):
             if name in self._module:
                 overrides = self._module[name]
                 overriding_resource = OverridingResource[Any](candidate, name, self, overrides)
-                if not issubclass(candidate, overrides.type):
-                    raise OverridingResourceIncompatibleType(overriding_resource)
+                if not overriding_resource.is_subtype_of(overrides.type):
+                    raise OverridingResourceIncompatibleType(overriding_resource, overrides)
                 return overriding_resource
             else:
                 return PrivateResource[Any](candidate, name, self)

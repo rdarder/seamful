@@ -7,4 +7,4 @@ Parameter 'b' has an invalid type annotation: True.
 Perhaps you meant 'int', referring to
     SomeModule.b = Resource(int)
 
-SomeProvider: src/wiring/provider/test_provider.py:740
+SomeProvider: src/wiring/provider/test_provider.py:739
