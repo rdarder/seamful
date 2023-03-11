@@ -5,4 +5,4 @@ Provider 'SomeProvider' defines resource a as
 But 'SomeProvider' provides for 'SomeModule', which also has a resource named
 'a'. Private resource names cannot occlude its module resources.
 
-SomeProvider: src/wiring/provider/test_provider.py:993
+SomeProvider: src/wiring/provider/test_provider.py:1000

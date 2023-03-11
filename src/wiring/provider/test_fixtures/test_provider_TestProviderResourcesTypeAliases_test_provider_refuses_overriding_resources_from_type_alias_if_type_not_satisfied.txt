@@ -8,5 +8,5 @@ But this overrides the resource
 
 'int' is not compatible with 'SomeBaseClass'.
 
-SomeModule: src/wiring/provider/test_provider.py:844
-SomeProvider: src/wiring/provider/test_provider.py:849
+SomeModule: src/wiring/provider/test_provider.py:851
+SomeProvider: src/wiring/provider/test_provider.py:856

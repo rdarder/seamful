@@ -7,4 +7,4 @@ override a module resource, you could do:
 
     a = Resource(ConcreteClass, ResourceKind.OVERRIDE)
 
-SomeProvider: src/wiring/provider/test_provider.py:976
+SomeProvider: src/wiring/provider/test_provider.py:983

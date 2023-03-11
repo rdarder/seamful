@@ -9,4 +9,4 @@ inherit from Module
     class SomeClass(Module):
         ...
 
-SomeClass: src/wiring/provider/test_provider.py:378
+SomeClass: src/wiring/provider/test_provider.py:385

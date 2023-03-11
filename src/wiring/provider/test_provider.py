@@ -34,6 +34,7 @@ from wiring.provider.errors import (
     UnknownProviderResource,
     ResourceProviderMismatch,
     CannotDependOnParentProviderResource,
+    IncompatibleResourceTypeForInheritedResource,
 )
 from wiring.provider.provider_type import ProviderType
 from wiring.resource import (
@@ -77,7 +78,8 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider, SomeProvider)
         return ctx.exception
 
-    def test_providers_module_cannot_be_manually_set(self) -> None:
+    @validate_output
+    def test_providers_module_cannot_be_manually_set(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -93,6 +95,7 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.assigned_to, AnotherModule)
         self.assertEqual(SomeProvider.module, SomeModule)
+        return ctx.exception
 
     @validate_output
     def test_providers_dont_support_multiple_inheritance(self) -> HelpfulException:
@@ -123,7 +126,8 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         return ctx.exception
 
-    def test_providers_must_inherit_from_provider_or_subclass(self) -> None:
+    @validate_output
+    def test_providers_must_inherit_from_provider_or_subclass(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -138,10 +142,12 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.inherits_from, SomeClass)
+        return ctx.exception
 
+    @validate_output
     def test_provider_attributes_can_only_be_resources_or_provider_methods(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -153,6 +159,7 @@ class TestProviderClassBehavior(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
         self.assertEqual(ctx.exception.value, 10)
+        return ctx.exception
 
 
 class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
@@ -1124,7 +1131,8 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         self.assertEqual(len(list(AnotherProvider.resources)), 2)
         self.assertEqual(len(list(AnotherProvider)), 2)
 
-    def test_provider_attribute_cannot_be_named_module(self) -> None:
+    @validate_output
+    def test_provider_attribute_cannot_be_named_module(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1136,8 +1144,10 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "module")
         self.assertEqual(ctx.exception.assigned_to, int)
+        return ctx.exception
 
-    def test_provider_attribute_cannot_be_named_resources(self) -> None:
+    @validate_output
+    def test_provider_attribute_cannot_be_named_resources(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -1149,6 +1159,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "resources")
         self.assertEqual(ctx.exception.assigned_to, int)
+        return ctx.exception
 
     @validate_output
     def test_provider_subclass_must_provide_for_the_same_module_as_base(self) -> HelpfulException:
@@ -1169,4 +1180,34 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
         self.assertEqual(ctx.exception.base, SomeProvider)
         self.assertEqual(ctx.exception.module, AnotherModule)
+        return ctx.exception
+
+    @validate_output
+    def test_provider_subclass_overriding_resource_must_be_subtypes_of_base_providers_resource(
+        self,
+    ) -> HelpfulException:
+        class SomeClass:
+            pass
+
+        class ConcreteClass(SomeClass):
+            pass
+
+        class SomeModule(Module):
+            some: TypeAlias = SomeClass
+
+        class SomeProvider(Provider, module=SomeModule):
+            some: TypeAlias = ConcreteClass
+
+            def provide_some(self) -> ConcreteClass:
+                return ConcreteClass()
+
+        with self.assertRaises(IncompatibleResourceTypeForInheritedResource) as ctx:
+
+            class AnotherProvider(SomeProvider):
+                some: TypeAlias = SomeClass  # pyright: ignore
+
+        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
+        self.assertEqual(ctx.exception.resource.type, SomeClass)
+        self.assertEqual(ctx.exception.base_provider, SomeProvider)
+        self.assertEqual(ctx.exception.base_resource, SomeProvider.some)
         return ctx.exception

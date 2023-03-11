@@ -4,4 +4,4 @@ Provider 'SomeProvider' provides for '10'
         ...
 
 but '10' is not a Module.
-SomeProvider: src/wiring/provider/test_provider.py:396
+SomeProvider: src/wiring/provider/test_provider.py:403

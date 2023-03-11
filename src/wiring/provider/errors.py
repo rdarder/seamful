@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Iterable
 
 from wiring.errors import (
     HelpfulException,
@@ -720,13 +720,26 @@ class BaseProviderProvidesFromADifferentModule(HelpfulException):
         return "Provider inherits from another provider, but they provide for different modules."
 
 
-class ProvidersMustInheritFromProviderClass(Exception):
+class ProvidersMustInheritFromProviderClass(HelpfulException):
     def __init__(self, provider: ProviderType, inherits_from: type):
         self.provider = provider
         self.inherits_from = inherits_from
 
+    def explanation(self) -> str:
+        t = Text(f"Provider {qname(self.provider)} inherits from {qname(self.inherits_from)}:")
+        with t.indented_block():
+            t.newline(f"class {sname(self.provider)}({sname(self.inherits_from)}, module=...):")
+            t.indented_line("...")
+        t.newline("But providers must inherit from Provider.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
 
-class IncompatibleResourceTypeForInheritedResource(Exception):
+    def failsafe_explanation(self) -> str:
+        return "Provider inherits from a class that isn't Provider."
+
+
+class IncompatibleResourceTypeForInheritedResource(HelpfulException):
     def __init__(
         self,
         provider: ProviderType,
@@ -740,22 +753,87 @@ class IncompatibleResourceTypeForInheritedResource(Exception):
         self.base_provider = base_provider
         self.base_resource = base_resource
 
+    def explanation(self) -> str:
+        t = Text(
+            f"Provider {qname(self.provider)} defines a resource '{self.resource.name}' "
+            f"of type {qname(self.resource.type)}:"
+        )
+        with t.indented_block():
+            t.newline(rdef(self.resource))
 
-class ProviderModuleCantBeChanged(Exception):
+        t.newline(
+            f"But its base provider {qname(self.base_provider)} defines a "
+            f"resource '{self.base_resource.name}' of type {qname(self.base_resource.type)}:"
+        )
+        with t.indented_block():
+            t.newline(rdef(self.base_resource))
+
+        t.newline(f"{sname(self.provider)}.{self.resource.name} must have the same type as")
+        t.sentence(f"{sname(self.base_provider)}.{self.base_resource.name} or a subtype of it.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        t.newline(point_to_definition(self.base_provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Provider inherits from another provider, but they provide for different modules."
+
+
+class ProviderModuleCantBeChanged(HelpfulException):
     def __init__(self, provider: ProviderType, assigned_to: Any):
         self.provider = provider
         self.assigned_to = assigned_to
 
+    def explanation(self) -> str:
+        t = Text(f"Attempted to change the module of provider {qname(self.provider)}.")
+        t.newline(f"It's currently {qname(self.provider.module)},")
+        t.sentence(f"but it was assigned to {qname(self.assigned_to)}.")
+        t.sentence("Provider modules can't be changed.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
 
-class InvalidProviderAttributeName(Exception):
-    def __init__(self, provider: ProviderType, name: str, assigned_to: Any):
+    def failsafe_explanation(self) -> str:
+        return "Provider module can't be changed."
+
+
+class InvalidProviderAttributeName(HelpfulException):
+    def __init__(
+        self, provider: ProviderType, name: str, assigned_to: Any, reserved_names: Iterable[str]
+    ):
         self.provider = provider
         self.name = name
         self.assigned_to = assigned_to
+        self.reserved_names = reserved_names
+
+    def explanation(self) -> str:
+        t = Text(f"Attempted to set an invalid attribute name on provider {qname(self.provider)}.")
+        t.newline(f"Attempted to set '{self.name}', but it's reserved and can't be set.")
+        t.blank()
+        t.newline("Reserved names are:")
+        with t.indented_block(blank_before=False):
+            for name in self.reserved_names:
+                t.newline(f"- {name}")
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Provider attribute name is invalid."
 
 
-class InvalidProviderAttribute(Exception):
+class InvalidProviderAttribute(HelpfulException):
     def __init__(self, provider: ProviderType, name: str, value: Any) -> None:
         self.provider = provider
         self.name = name
         self.value = value
+
+    def explanation(self) -> str:
+        t = Text(f"Attempted to set an invalid attribute on provider {qname(self.provider)}.")
+        t.newline(f"Attempted to set {sname(self.provider)}.{self.name} = {repr(self.value)},")
+        t.sentence("but it's neither a resource nor a type.")
+        t.blank()
+        t.newline(point_to_definition(self.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Provider attribute is not a resource or a type."

@@ -4,5 +4,5 @@ Requested 'SomeProvider' provider method for
 
 But 'SomeProvider' provides for 'SomeModule', not 'AnotherModule'
 
-SomeProvider: src/wiring/provider/test_provider.py:222
-AnotherModule: src/wiring/provider/test_provider.py:228
+SomeProvider: src/wiring/provider/test_provider.py:229
+AnotherModule: src/wiring/provider/test_provider.py:235

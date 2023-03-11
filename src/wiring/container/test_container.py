@@ -23,7 +23,6 @@ from wiring.container.errors import (
     ProviderNotProvidingForModule,
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
-from wiring.provider.errors import IncompatibleResourceTypeForInheritedResource
 from wiring.resource import Resource, ModuleResource
 
 
@@ -888,37 +887,6 @@ class TestProviderSubclasses(TestCase):
         container.register(SomeModule, AnotherProvider)
         container.close_registrations(allow_provider_resources=True)
         self.assertEqual(container.provide(AnotherProvider.some).param, 11)
-
-    def test_provider_subclass_overriding_resource_must_be_subtypes_of_base_providers_resource(
-        self,
-    ) -> None:
-        class SomeClass:
-            pass
-
-        class ConcreteClass(SomeClass):
-            pass
-
-        class MoreConcreteClass(ConcreteClass):
-            pass
-
-        class SomeModule(Module):
-            some: TypeAlias = SomeClass
-
-        class SomeProvider(Provider, module=SomeModule):
-            some: TypeAlias = ConcreteClass
-
-            def provide_some(self) -> ConcreteClass:
-                return ConcreteClass()
-
-        with self.assertRaises(IncompatibleResourceTypeForInheritedResource) as ctx:
-
-            class AnotherProvider(SomeProvider):
-                some: TypeAlias = SomeClass  # pyright: ignore
-
-        self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
-        self.assertEqual(ctx.exception.resource.type, SomeClass)
-        self.assertEqual(ctx.exception.base_provider, SomeProvider)
-        self.assertEqual(ctx.exception.base_resource, SomeProvider.some)
 
 
 class TestCircularDependencies(TestCase):

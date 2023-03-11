@@ -63,6 +63,8 @@ T = TypeVar("T")
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
 
+RESERVED_PROVIDER_ATTRIBUTES = ("module", "resources")
+
 
 class ProviderType(type):
     _resources_by_name: dict[str, ProviderResource[Any]]
@@ -280,8 +282,8 @@ class ProviderType(type):
                 self._add_resource(base_resource.bound_to_sub_provider(self))
 
     def _collect_resource(self, name: str, candidate: Any) -> ProviderResource[Any]:
-        if name == "module" or name == "resources":
-            raise InvalidProviderAttributeName(self, name, candidate)
+        if name in RESERVED_PROVIDER_ATTRIBUTES:
+            raise InvalidProviderAttributeName(self, name, candidate, RESERVED_PROVIDER_ATTRIBUTES)
         if isinstance(candidate, UnboundResource):
             if name in self._module:
                 if candidate.kind == ResourceKind.MODULE:

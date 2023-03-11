@@ -7,5 +7,5 @@ But it's base provider 'SomeProvider' provides for 'SomeModule', which is
 different from 'AnotherModule'. An extended provider must provide for the same
 module as it's base.
 
-SomeProvider: src/wiring/provider/test_provider.py:1158
-AnotherProvider: src/wiring/provider/test_provider.py:1166
+SomeProvider: src/wiring/provider/test_provider.py:1169
+AnotherProvider: src/wiring/provider/test_provider.py:1177
