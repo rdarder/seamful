@@ -1,0 +1,9 @@
+Attempted to register provider 'AnotherProvider' which provides for
+'SomeModule', but 'SomeProvider' was already registered as its provider.
+
+Overriding providers is not allowed. You can override a provider after the
+container closed registrations by reopening it as follows:
+    container.reopen_registrations(allow_overriding_providers=True)
+
+Keep in mind that overriding providers is mostly meant for testing and
+alternative running scenarios.

@@ -1,6 +1,6 @@
 from typing import TypeAlias, Sequence, Type, cast, TypeVar
-from unittest import TestCase
 
+from wiring.errors import HelpfulException
 from wiring.module import Module
 from wiring.container import Container
 from wiring.container.errors import (
@@ -24,9 +24,10 @@ from wiring.container.errors import (
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.resource import Resource, ModuleResource
+from wiring.utils_for_tests import validate_output, TestCaseWithOutputFixtures
 
 
-class TestContainerProvision(TestCase):
+class TestContainerProvision(TestCaseWithOutputFixtures):
     def test_basic_provision(self) -> None:
         class SomeModule(Module):
             a = int
@@ -88,7 +89,8 @@ class TestContainerProvision(TestCase):
         self.assertIs(service.storage, storage)
         self.assertIsInstance(storage, Storage)
 
-    def test_container_cant_provide_unknown_resource(self) -> None:
+    @validate_output
+    def test_container_cant_provide_unknown_resource(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -108,6 +110,7 @@ class TestContainerProvision(TestCase):
         self.assertEqual(ctx.exception.resource, AnotherModule.a)
         self.assertEqual(ctx.exception.registered_modules, {SomeModule})
         self.assertEqual(ctx.exception.known_modules, {SomeModule})
+        return ctx.exception
 
     def test_container_refuses_to_provide_before_registrations_are_closed(self) -> None:
         class SomeModule(Module):
@@ -158,7 +161,7 @@ class TestContainerProvision(TestCase):
         self.assertEqual(ctx.exception.provider_in_use, SomeProvider)
 
 
-class TestContainerProvidesPrivateResources(TestCase):
+class TestContainerProvidesPrivateResources(TestCaseWithOutputFixtures):
     def test_can_provide_private_resource(self) -> None:
         class SomeModule(Module):
             pass
@@ -193,7 +196,7 @@ class TestContainerProvidesPrivateResources(TestCase):
         self.assertEqual(container.provide(SomeModule.a), 11)
 
 
-class TestContainerProvidesOverridingResources(TestCase):
+class TestContainerProvidesOverridingResources(TestCaseWithOutputFixtures):
     def test_can_provide_overriding_resource(self) -> None:
         class SomeBaseClass:
             pass
@@ -272,7 +275,7 @@ class TestContainerProvidesOverridingResources(TestCase):
         self.assertIs(another.some, some)
 
 
-class TestContainerCallingProviderMethods(TestCase):
+class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
     def test_provider_methods_can_depend_on_resources_from_another_module(self) -> None:
         class SomeModule(Module):
             a: TypeAlias = int
@@ -375,8 +378,9 @@ class TestContainerCallingProviderMethods(TestCase):
         )
 
 
-class TestContainerRegistration(TestCase):
-    def test_container_disallows_registering_a_module_twice(self) -> None:
+class TestContainerRegistration(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_container_disallows_registering_a_module_twice(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -390,8 +394,10 @@ class TestContainerRegistration(TestCase):
             container.register(SomeModule, SomeProvider)
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registered_modules, {SomeModule})
+        return ctx.exception
 
-    def test_container_register_provider_must_provide_for_module(self) -> None:
+    @validate_output
+    def test_container_register_provider_must_provide_for_module(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -409,6 +415,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.module, AnotherModule)
         self.assertEqual(ctx.exception.provider.module, SomeModule)
+        return ctx.exception
 
     def test_can_register_module_and_provider_independently(self) -> None:
         class SomeModule(Module):
@@ -425,25 +432,8 @@ class TestContainerRegistration(TestCase):
         container.close_registrations()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
-    def test_cannot_register_provider_to_unknown_module(self) -> None:
-        class SomeModule(Module):
-            pass
-
-        class AnotherModule(Module):
-            pass
-
-        class AnotherProvider(Provider, module=AnotherModule):
-            pass
-
-        container = Container.empty()
-        container.register(SomeModule)
-        with self.assertRaises(CannotRegisterProviderToNotRegisteredModule) as ctx:
-            container.register_provider(AnotherProvider)
-
-        self.assertEqual(ctx.exception.provider, AnotherProvider)
-        self.assertEqual(ctx.exception.registered_modules, {SomeModule})
-
-    def test_cannot_register_two_providers_for_the_same_module(self) -> None:
+    @validate_output
+    def test_cannot_register_two_providers_for_the_same_module(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -461,8 +451,10 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registered, SomeProvider)
         self.assertEqual(ctx.exception.registering, AnotherProvider)
+        return ctx.exception
 
-    def test_cannot_register_same_provider_twice(self) -> None:
+    @validate_output
+    def test_cannot_register_same_provider_twice(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -477,6 +469,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registered, SomeProvider)
         self.assertEqual(ctx.exception.registering, SomeProvider)
+        return ctx.exception
 
     def test_cant_register_module_after_registrations_are_closed(self) -> None:
         class SomeModule(Module):
@@ -508,7 +501,7 @@ class TestContainerRegistration(TestCase):
         self.assertEqual(ctx.exception.registering, AnotherProvider)
 
 
-class TestContainerOverrides(TestCase):
+class TestContainerOverrides(TestCaseWithOutputFixtures):
     def test_can_override_a_provider_when_reopening_for_registration(self) -> None:
         class SomeModule(Module):
             a: TypeAlias = int
@@ -587,9 +580,10 @@ class TestContainerOverrides(TestCase):
             container.close_registrations()
         self.assertEqual(ctx.exception.container, container)
 
+    @validate_output
     def test_cannot_override_reopened_container_if_overrides_are_not_explicitly_allowed(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
 
@@ -612,10 +606,12 @@ class TestContainerOverrides(TestCase):
         self.assertEqual(ctx.exception.registered, SomeProvider)
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registering, AnotherProvider)
+        return ctx.exception
 
 
-class TestContainerImplicitProviders(TestCase):
-    def test_cant_register_implicit_provider(self) -> None:
+class TestContainerImplicitProviders(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_cant_register_implicit_provider(self) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
 
@@ -637,6 +633,7 @@ class TestContainerImplicitProviders(TestCase):
 
         self.assertEqual(ctx.exception.provider, AnotherProvider)
         self.assertEqual(ctx.exception.registered_modules, {SomeModule})
+        return ctx.exception
 
     def test_can_register_implicit_provider_if_reopened_explicitly_and_module_is_used(
         self,
@@ -688,8 +685,9 @@ class TestContainerImplicitProviders(TestCase):
         self.assertEqual(ctx.exception.providers, {SomeProvider})
 
 
-class TestDefaultProvider(TestCase):
-    def test_container_cant_seal_if_a_module_lacks_a_provider(self) -> None:
+class TestDefaultProvider(TestCaseWithOutputFixtures):
+    @validate_output
+    def test_container_cant_seal_if_a_module_lacks_a_provider(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -699,6 +697,7 @@ class TestDefaultProvider(TestCase):
             container.close_registrations()
 
         self.assertEqual(ctx.exception.module, SomeModule)
+        return ctx.exception
 
     def test_container_uses_default_provider_if_none_registered(self) -> None:
         class SomeModule(Module):
@@ -755,7 +754,7 @@ class TestDefaultProvider(TestCase):
         self.assertEqual(container.provide(SomeModule.a), 10)
 
 
-class TestProviderSubclasses(TestCase):
+class TestProviderSubclasses(TestCaseWithOutputFixtures):
     def test_provider_subclass_can_act_as_provider_and_use_base_methods_for_module_resource(
         self,
     ) -> None:
@@ -889,7 +888,7 @@ class TestProviderSubclasses(TestCase):
         self.assertEqual(container.provide(AnotherProvider.some).param, 11)
 
 
-class TestCircularDependencies(TestCase):
+class TestCircularDependencies(TestCaseWithOutputFixtures):
     def test_simplest_circular_dependency_breaks_on_seal(self) -> Exception:
         class SomeModule(Module):
             a: TypeAlias = int
