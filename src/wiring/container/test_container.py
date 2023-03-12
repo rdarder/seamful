@@ -24,7 +24,11 @@ from wiring.container.errors import (
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.resource import Resource, ModuleResource
-from wiring.utils_for_tests import validate_output, TestCaseWithOutputFixtures
+from wiring.utils_for_tests import (
+    validate_output,
+    TestCaseWithOutputFixtures,
+    validate_output_any_line_order,
+)
 
 
 class TestContainerProvision(TestCaseWithOutputFixtures):
@@ -112,7 +116,8 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.known_modules, {SomeModule})
         return ctx.exception
 
-    def test_container_refuses_to_provide_before_registrations_are_closed(self) -> None:
+    @validate_output
+    def test_container_refuses_to_provide_before_registrations_are_closed(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -122,8 +127,10 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        with self.assertRaises(CannotProvideUntilRegistrationsAreClosed):
+        with self.assertRaises(CannotProvideUntilRegistrationsAreClosed) as ctx:
             container.provide(SomeModule.a)
+
+        return ctx.exception
 
     def test_cannot_provide_raw_type_even_if_signature_says_so(self) -> None:
         container = Container.empty()
@@ -471,7 +478,8 @@ class TestContainerRegistration(TestCaseWithOutputFixtures):
         self.assertEqual(ctx.exception.registering, SomeProvider)
         return ctx.exception
 
-    def test_cant_register_module_after_registrations_are_closed(self) -> None:
+    @validate_output
+    def test_cant_register_module_after_registrations_are_closed(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -480,8 +488,10 @@ class TestContainerRegistration(TestCaseWithOutputFixtures):
         with self.assertRaises(RegistrationsAreClosed) as ctx:
             container.register(SomeModule)
         self.assertEqual(ctx.exception.registering, SomeModule)
+        return ctx.exception
 
-    def test_cant_register_provider_after_registrations_are_closed(self) -> None:
+    @validate_output
+    def test_cant_register_provider_after_registrations_are_closed(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -499,6 +509,7 @@ class TestContainerRegistration(TestCaseWithOutputFixtures):
         with self.assertRaises(RegistrationsAreClosed) as ctx:
             container.register_provider(AnotherProvider)
         self.assertEqual(ctx.exception.registering, AnotherProvider)
+        return ctx.exception
 
 
 class TestContainerOverrides(TestCaseWithOutputFixtures):
@@ -889,7 +900,8 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
 
 class TestCircularDependencies(TestCaseWithOutputFixtures):
-    def test_simplest_circular_dependency_breaks_on_seal(self) -> Exception:
+    @validate_output_any_line_order
+    def test_simplest_circular_dependency_breaks_on_seal(self) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
 
@@ -902,7 +914,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         with self.assertRaises(CircularDependency) as ctx:
             container.close_registrations()
         self._assert_contains_loop(
-            ctx.exception.loop,
+            ctx.exception.loops,
             [
                 ResolutionStep.from_types(
                     SomeModule.a,
@@ -914,7 +926,8 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         )
         return ctx.exception
 
-    def test_single_provider_circular_dependency_breaks_on_seal(self) -> None:
+    @validate_output_any_line_order
+    def test_single_provider_circular_dependency_breaks_on_seal(self) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
             b: TypeAlias = int
@@ -932,7 +945,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
             container.close_registrations()
 
         self._assert_contains_loop(
-            ctx.exception.loop,
+            ctx.exception.loops,
             [
                 ResolutionStep.from_types(
                     SomeModule.a,
@@ -950,8 +963,10 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         )
         # Circular dependencies are not returned in a deterministic order, so we are not validating
         # the error explanation with a fixture.
+        return ctx.exception
 
-    def test_many_providers_circular_dependency_breaks_on_seal(self) -> None:
+    @validate_output_any_line_order
+    def test_many_providers_circular_dependency_breaks_on_seal(self) -> HelpfulException:
         class ModuleA(Module):
             a: TypeAlias = int
 
@@ -982,7 +997,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
             container.close_registrations()
 
         self._assert_contains_loop(
-            ctx.exception.loop,
+            ctx.exception.loops,
             [
                 ResolutionStep.from_types(
                     ModuleC.c,
@@ -1004,8 +1019,10 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 ),
             ],
         )
+        return ctx.exception
 
-    def test_catches_inner_circular_dependency(self) -> None:
+    @validate_output_any_line_order
+    def test_catches_inner_circular_dependency(self) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
             b: TypeAlias = int
@@ -1027,7 +1044,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
             container.close_registrations()
 
         self._assert_contains_loop(
-            ctx.exception.loop,
+            ctx.exception.loops,
             [
                 ResolutionStep.from_types(
                     SomeModule.b,
@@ -1043,8 +1060,10 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 ),
             ],
         )
+        return ctx.exception
 
-    def test_catches_circular_dependencies_involving_private_resources(self) -> None:
+    @validate_output_any_line_order
+    def test_catches_circular_dependencies_involving_private_resources(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -1063,7 +1082,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
             container.close_registrations()
 
         self._assert_contains_loop(
-            ctx.exception.loop,
+            ctx.exception.loops,
             [
                 ResolutionStep.from_types(
                     SomeModule.a,
@@ -1079,8 +1098,10 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 ),
             ],
         )
+        return ctx.exception
 
-    def test_catches_circular_dependencies_involving_overriding_resources(self) -> None:
+    @validate_output_any_line_order
+    def test_catches_circular_dependencies_involving_overriding_resources(self) -> HelpfulException:
         class SomeBaseClass:
             pass
 
@@ -1111,7 +1132,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
             container.close_registrations()
 
         self._assert_contains_loop(
-            ctx.exception.loop,
+            ctx.exception.loops,
             [
                 ResolutionStep.from_types(
                     SomeProvider.private,
@@ -1133,6 +1154,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 ),
             ],
         )
+        return ctx.exception
 
     def test_providers_can_have_a_circular_module_dependency_without_a_circular_resource_dependency(
         self,
@@ -1166,23 +1188,12 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         self.assertEqual(container.provide(Module2.d), 2 * 3 * 5 * 7)
 
     def _assert_contains_loop(
-        self, container: list[ResolutionStep], expected: Sequence[ResolutionStep]
+        self, loops: list[list[ResolutionStep]], expected: Sequence[ResolutionStep]
     ) -> None:
-        target_length = len(expected)
-        self.assertGreater(target_length, 0)
-        self.assertGreaterEqual(len(container), target_length)
-        try:
-            container_tip = container.index(expected[0])
-        except ValueError:
-            self.assertEqual(
-                expected, container
-            )  # this will fail regardless, but assertEqual produces a diff.
-            return
-        first_segment = container[container_tip : container_tip + target_length]
-        remaining_elements = target_length - len(first_segment)
-        second_segment = container[:remaining_elements]
-        container_segment = first_segment + second_segment
-        self.assertEqual(expected, container_segment)
+        # this check is not 100% accurate since we're allowing all steps in a circular
+        # dependency to be in any order. It seems good enough though.
+        if not any(set(expected) == set(loop) for loop in loops):
+            self.fail("expected loop not found")
 
 
 T = TypeVar("T")

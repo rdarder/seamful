@@ -55,18 +55,21 @@ class ModuleGraphSolver:
 
     def _add_modules_needed_by_provider(self, provider: ProviderType) -> None:
         for provider_method in provider:
-            for parameter_name, dependency in provider_method.dependencies.items():
+            for parameter_name, dependency in provider_method.dependencies:
                 if dependency.module not in self._providers_by_module:
                     self._needed_modules_without_providers.add(dependency.module)
 
     def _fail_on_circular_dependencies(self) -> None:
         solved: set[BoundResource[Any]] = set()
+        loops: list[list[ResolutionStep]] = []
         for module in self._registered_modules:
             for resource in module:
                 stack: set[BoundResource[Any]] = set()
                 loop = self._find_circular_dependency(resource, in_stack=stack, solved=solved)
                 if loop is not None:
-                    raise CircularDependency(loop)
+                    loops.append(loop)
+        if len(loops) > 0:
+            raise CircularDependency(loops)
 
     def _find_circular_dependency(
         self,
@@ -81,7 +84,7 @@ class ModuleGraphSolver:
         in_stack.add(target)
         if isinstance(target, OverridingResource):
             in_stack.add(target.overrides)
-        for parameter_name, depends_on in provider_method.dependencies.items():
+        for parameter_name, depends_on in provider_method.dependencies:
             if depends_on in in_stack:
                 return [ResolutionStep(target, provider_method, parameter_name, depends_on)]
             loop = self._find_circular_dependency(depends_on, in_stack, solved)

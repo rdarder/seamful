@@ -103,7 +103,9 @@ class ProviderType(type):
 
     def __getitem__(self, resource: BoundResource[T]) -> ProviderMethod[T]:
         self._ensure_related_resource(resource)
-        target_resource = resource.overrides if type(resource) is OverridingResource else resource
+        target_resource = (
+            resource.overrides if isinstance(resource, OverridingResource) else resource
+        )
         provider_method = self._provider_methods_by_resource[target_resource]
         return provider_method
 
@@ -168,7 +170,7 @@ class ProviderType(type):
             raise ProviderMethodReturnTypeMismatch(
                 self, resource, method, mismatched_type=signature.return_annotation
             )
-        method_dependencies = self._get_parameter_resources(signature, resource, method)
+        method_dependencies = tuple(self._get_parameter_resources(signature, resource, method))
 
         bound_resource = (
             resource.overrides if isinstance(resource, OverridingResource) else resource
@@ -185,16 +187,10 @@ class ProviderType(type):
         signature: inspect.Signature,
         target: BoundResource[Any],
         method: Any,
-    ) -> dict[str, BoundResource[Any]]:
-        method_dependencies: dict[str, BoundResource[Any]] = {}
-
+    ) -> Iterable[tuple[str, BoundResource[Any]]]:
         # exclude first parameter (self)
         for name, parameter in islice(signature.parameters.items(), 1, None):
-            method_dependencies[name] = self._get_parameter_resource(
-                name, parameter, target, method
-            )
-
-        return method_dependencies
+            yield name, self._get_parameter_resource(name, parameter, target, method)
 
     def _get_parameter_resource(
         self,
@@ -336,12 +332,12 @@ class ProviderType(type):
             raise TypeError()
 
 
-@dataclass
+@dataclass(frozen=True)
 class ProviderMethod(Generic[T]):
     method: Callable[..., T]
     provider: ProviderType
     resource: BoundResource[Any]
-    dependencies: dict[str, BoundResource[Any]]
+    dependencies: Iterable[tuple[str, BoundResource[Any]]]
 
 
 M = TypeVar("M")

@@ -35,7 +35,17 @@ class TestCaseWithOutputFixtures(TestCase):
 T = TypeVar("T", bound=TestCaseWithOutputFixtures)
 
 
+def validate_output_any_line_order(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
+    return _validate_output(test_method, line_order_matters=False)
+
+
 def validate_output(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
+    return _validate_output(test_method, line_order_matters=True)
+
+
+def _validate_output(
+    test_method: Callable[[T], Any], line_order_matters: bool = True
+) -> Callable[[T], Any]:
     @wraps(test_method)
     def validating_test_method(test: TestCaseWithOutputFixtures) -> None:
         if not hasattr(test, "fixture_location"):
@@ -43,7 +53,7 @@ def validate_output(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
                 "Missing fixture location. TestCase class probably not set up for fixture tests."
             )
         if test.regenerate_fixtures:
-            return _generate_text_fixture_for_test_method(test, test_method)
+            return _generate_text_fixture_for_test_method(test, test_method, line_order_matters)
 
         test_returns = _run_test_and_ensure_returns_something(test, test_method)
         fixture_path = _get_fixture_path(test.__class__, test_method)
@@ -51,7 +61,12 @@ def validate_output(test_method: Callable[[T], Any]) -> Callable[[T], Any]:
             test.fail(f"Fixture {fixture_path} does not exist.")
         with open(fixture_path, "r") as fixture_file:
             loaded_fixture = fixture_file.read()
-        test.assertEqual(loaded_fixture, str(test_returns))
+        if line_order_matters:
+            test.assertEqual(loaded_fixture, str(test_returns))
+        else:
+            test.assertSetEqual(
+                set(loaded_fixture.splitlines()), set(str(test_returns).splitlines())
+            )
 
     setattr(validating_test_method, "uses_fixtures", True)
     return validating_test_method
@@ -84,7 +99,7 @@ def _get_fixture_location(test: Type[TestCase]) -> tuple[Path, str]:
 
 
 def _generate_text_fixture_for_test_method(
-    test: TestCaseWithOutputFixtures, test_method: Callable[..., Any]
+    test: TestCaseWithOutputFixtures, test_method: Callable[..., Any], line_order_matters: bool
 ) -> None:
     test_output = str(_run_test_and_ensure_returns_something(test, test_method))
     fixture_path = _get_fixture_path(test.__class__, test_method)
@@ -93,11 +108,14 @@ def _generate_text_fixture_for_test_method(
     if fixture_path.exists():
         with open(fixture_path, "r") as existing_fixture:
             contents = existing_fixture.read()
-            if test_output == contents:
-                return
+            if line_order_matters:
+                if test_output == contents:
+                    return
             else:
-                logging.getLogger().warning(f"Regenerating test fixture for {test.id()}")
-
-    logging.getLogger().warning(f"Adding new test fixture for {test.id()}")
+                if set(test_output.splitlines()) == set(contents.splitlines()):
+                    return
+            logging.getLogger().warning(f"Regenerating test fixture for {test.id()}")
+    else:
+        logging.getLogger().warning(f"Adding new test fixture for {test.id()}")
     with open(fixture_path, "w") as fixture_file:
         fixture_file.write(str(test_output))

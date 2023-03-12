@@ -11,12 +11,14 @@ if TYPE_CHECKING:
 
 
 class Text:
-    def __init__(self, title: str):
+    def __init__(self, title: Optional[str] = None, wrap: bool = True) -> None:
         self._lines: list[str] = []
         self._current_paragraph: list[str] = []
         self._add_blank = False
+        self._wrap = wrap
         self._indent = 0
-        self.newline(title)
+        if title is not None:
+            self.newline(title)
 
     def sentence(self, content: str) -> None:
         self._current_paragraph.append(content)
@@ -36,8 +38,11 @@ class Text:
         if self._add_blank:
             self._lines.append("")
             self._add_blank = False
-        wrapped = wrap(" ".join(self._current_paragraph), 80 - self._indent)
-        self._lines.extend([" " * self._indent + line for line in wrapped])
+        if len(self._current_paragraph) == 0:
+            return
+        paragraph = " ".join(self._current_paragraph)
+        lines = wrap(paragraph, 80 - self._indent) if self._wrap else [paragraph]
+        self._lines.extend([" " * self._indent + line for line in lines])
         self._current_paragraph = []
 
     def indented_line(self, content: str) -> None:
@@ -91,6 +96,17 @@ class HelpfulException(Exception, ABC):
 
 def qname(value: Any) -> str:
     return f"'{sname(value)}'"
+
+
+def rname(resource: "BoundResource[Any]") -> str:
+    from wiring.resource import ModuleResource, ProviderResource
+
+    if isinstance(resource, ModuleResource):
+        return f"{sname(resource.module)}.{resource.name}"
+    elif isinstance(resource, ProviderResource):
+        return f"{sname(resource.provider)}.{resource.name}"
+    else:
+        raise TypeError()
 
 
 def rdef(resource: "BoundResource[Any]") -> str:

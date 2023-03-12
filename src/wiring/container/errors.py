@@ -1,8 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from itertools import chain
 from typing import Union, Any, Type, cast, TYPE_CHECKING
 
-from wiring.errors import HelpfulException, Text, qname, sname, rdef, point_to_definition
+from wiring.errors import HelpfulException, Text, qname, sname, rdef, point_to_definition, rname
 from wiring.module.module_type import ModuleType
 from wiring.resource import ModuleResource, ProviderResource, BoundResource
 from wiring.provider.provider_type import ProviderType, ProviderMethod
@@ -157,13 +158,39 @@ class ModuleWithoutRegisteredOrDefaultProvider(HelpfulException):
         return "A registered module has no registered or default provider."
 
 
-class CannotProvideUntilRegistrationsAreClosed(Exception):
-    pass
+class CannotProvideUntilRegistrationsAreClosed(HelpfulException):
+    def explanation(self) -> str:
+        t = Text(
+            "Attempted to provide a resource before registrations were closed. "
+            "You can close registrations by calling:"
+        )
+        t.indented_line("container.close_registrations()")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to provide a resource before registrations were closed."
 
 
-class RegistrationsAreClosed(Exception):
+class RegistrationsAreClosed(HelpfulException):
     def __init__(self, registering: Union[ModuleType, ProviderType]):
         self.registering = registering
+
+    def explanation(self) -> str:
+        from wiring.module.module_type import ModuleType
+        from wiring.provider.provider_type import ProviderType
+
+        if isinstance(self.registering, ModuleType):
+            t = Text(f"Attempted to register module {qname(self.registering)}")
+        elif isinstance(self.registering, ProviderType):
+            t = Text(f"Attempted to register provider {qname(self.registering)}")
+        else:
+            raise TypeError()
+        t.sentence("after registrations were closed.")
+        t.blank()
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to register a module or provider after registrations were closed."
 
 
 class CannotProvideRawType(Exception):
@@ -193,10 +220,45 @@ class ResolutionStep:
             depends_on=cast(ModuleResource[Any], depends_on),
         )
 
+    def __str__(self) -> str:
+        m = self.provider_method
+        return (
+            f"{rname(self.target)} -> "
+            f"{m.provider.__name__}.provide_{self.target.name}"
+            f"(..., {self.parameter_name}: {rname(self.depends_on)})"
+        )
 
-class CircularDependency(Exception):
-    def __init__(self, loop: list[ResolutionStep]):
-        self.loop = loop
+
+class CircularDependency(HelpfulException):
+    def __init__(self, loops: list[list[ResolutionStep]]):
+        self.loops = loops
+
+    def explanation(self) -> str:
+        t = Text(wrap=False)
+        if len(self.loops) == 1:
+            t.newline("Circular dependency detected:")
+            self.add_loop(t, self.loops[0])
+        else:
+            t.newline(f"Circular dependencies detected ({len(self.loops)}):")
+            for i, loop in enumerate(self.loops):
+                t.newline(f"{i + 1}:")
+                self.add_loop(t, loop)
+
+        providers = {step.provider_method.provider for step in chain(*self.loops)}
+        t.blank()
+        t.newline("Providers involved:")
+        with t.indented_block(blank_before=False):
+            for provider in providers:
+                t.newline(f"- {point_to_definition(provider)}")
+        return str(t)
+
+    def add_loop(self, t: Text, loop: list[ResolutionStep]) -> None:
+        with t.indented_block(blank_before=False):
+            for step in loop:
+                t.newline(str(step))
+
+    def failsafe_explanation(self) -> str:
+        return "Circular dependency detected."
 
 
 class InvalidProviderInstanceAccess(Exception):

@@ -1,0 +1,1 @@
+Attempted to register module 'SomeModule' after registrations were closed.

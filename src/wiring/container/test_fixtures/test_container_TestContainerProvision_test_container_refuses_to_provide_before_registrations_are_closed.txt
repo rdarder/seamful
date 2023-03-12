@@ -1,0 +1,3 @@
+Attempted to provide a resource before registrations were closed. You can close
+registrations by calling:
+    container.close_registrations()

@@ -299,7 +299,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         self.assertEqual(method.provider, SomeProvider)
         self.assertEqual(method.method, SomeProvider.provide_a)
         self.assertEqual(method.resource, SomeProvider.a)
-        self.assertEqual(method.dependencies, {})
+        self.assertEqual(method.dependencies, tuple())
 
     @validate_output
     def test_missing_provider_method_for_private_provider_resource(
@@ -376,7 +376,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         self.assertEqual(method.provider, SomeProvider)
         self.assertEqual(method.method, SomeProvider.provide_a)
         self.assertEqual(method.resource, SomeModule.a)
-        self.assertEqual(method.dependencies, {})
+        self.assertEqual(method.dependencies, tuple())
 
 
 class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
@@ -652,7 +652,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
                 return 10
 
         provider_method = SomeProvider[SomeModule.a]  # type: ignore
-        self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
+        self.assertEqual(dict(provider_method.dependencies), dict(b=SomeModule.b))
 
     def test_provider_method_parameters_can_refer_to_own_module_resources_by_name(
         self,
@@ -669,7 +669,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
                 return 10
 
         provider_method = SomeProvider[SomeModule.a]  # type: ignore
-        self.assertEqual(provider_method.dependencies, dict(b=SomeModule.b))
+        self.assertEqual(dict(provider_method.dependencies), dict(b=SomeModule.b))
 
     @validate_output
     def test_provider_method_must_either_match_by_resource_or_by_name(
@@ -735,7 +735,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
                 return SomeConcreteClass()
 
         provide_a = SomeProvider[SomeModule.a]  # type: ignore
-        self.assertEqual(provide_a.dependencies, dict(b=SomeModule.b))
+        self.assertEqual(dict(provide_a.dependencies), dict(b=SomeModule.b))
 
     @validate_output
     def test_provider_method_parameter_annotation_must_be_a_type(
