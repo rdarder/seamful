@@ -161,10 +161,10 @@ class ModuleWithoutRegisteredOrDefaultProvider(HelpfulException):
 class CannotProvideUntilRegistrationsAreClosed(HelpfulException):
     def explanation(self) -> str:
         t = Text(
-            "Attempted to provide a resource before registrations were closed. "
-            "You can close registrations by calling:"
+            "Attempted to provide a resource before container is ready for providing. "
+            "You can make the container ready by calling:"
         )
-        t.indented_line("container.close_registrations()")
+        t.indented_line("container.ready_for_providing()")
         return str(t)
 
     def failsafe_explanation(self) -> str:
@@ -185,12 +185,12 @@ class RegistrationsAreClosed(HelpfulException):
             t = Text(f"Attempted to register provider {qname(self.registering)}")
         else:
             raise TypeError()
-        t.sentence("after registrations were closed.")
+        t.sentence(", but registrations are closed since the container is ready for providing.")
         t.blank()
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Attempted to register a module or provider after registrations were closed."
+        return "Attempted to register a module or provider after being ready for providing."
 
 
 class CannotProvideRawType(Exception):
@@ -294,27 +294,97 @@ class ProviderMethodsCantAccessProviderInstance(HelpfulException):
         )
 
 
-class RegistrationMustBeClosedBeforeReopeningThem(Exception):
+class RegistrationsMustBeClosedBeforeReopeningThem(HelpfulException):
     def __init__(self, container: Container) -> None:
         self.container = container
 
+    def explanation(self) -> str:
+        t = Text("Attempted to reopen registrations in a container, but they weren't closed.")
+        t.newline(
+            "Registrations on a container are open until the container is ready for providing."
+        )
+        t.sentence("Only once the container is ready for providing, it can be reopened.")
+        t.sentence(
+            "Keep in mind that reopening a container is meant for testing or alternative scenarios"
+        )
+        return str(t)
 
-class ContainerAlreadyReadyForProvisioning(Exception):
+    def failsafe_explanation(self) -> str:
+        return "Attempted to reopen registrations in a container, but they weren't closed."
+
+
+class ContainerAlreadyReadyForProvisioning(HelpfulException):
     def __init__(self, container: Container):
         self.container = container
 
+    def explanation(self) -> str:
+        return "Attempted to make a container ready for providing, but it's already ready."
 
-class CannotReopenRegistrationsAfterHavingProvidedResources(Exception):
+    def failsafe_explanation(self) -> str:
+        return "Attempted to make a container ready for providing, but it's already ready."
+
+
+class CannotReopenRegistrationsAfterHavingProvidedResources(HelpfulException):
     def __init__(self, container: Container):
         self.container = container
 
+    def explanation(self) -> str:
+        t = Text(
+            "Attempted to reopen registrations in a container, "
+            "but it has already provided resources."
+        )
+        t.newline("A container can only be reopened before it has provided any resources.")
+        return str(t)
 
-class RegisteredProvidersNotUsed(Exception):
+    def failsafe_explanation(self) -> str:
+        return (
+            "Attempted to reopen registrations in a container, "
+            "but it has already provided resources."
+        )
+
+
+class RegisteredProvidersNotUsed(HelpfulException):
     def __init__(self, providers: set[ProviderType]):
         self.providers = providers
 
+    def explanation(self) -> str:
+        t = Text("The following providers were registered, but not used:")
+        with t.indented_block():
+            for provider in self.providers:
+                t.newline(f"- {point_to_definition(provider)}")
 
-class ProviderNotProvidingForModule(Exception):
+        t.newline(
+            "Those providers were explicitly registered, "
+            "but the modules they provide for were not, "
+            "and those modules are also not part "
+            "of the dependency graph of any other used provider"
+        )
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Some registered providers were not used."
+
+
+class ProviderResourceOfUnregisteredProvider(HelpfulException):
     def __init__(self, resource: ProviderResource[Any], provider_in_use: ProviderType):
         self.resource = resource
         self.provider_in_use = provider_in_use
+
+    def explanation(self) -> str:
+        provider = self.resource.provider
+        t = Text(
+            f"Requested to provide {rname(self.resource)}, "
+            f"but {qname(provider)} was not registered."
+        )
+
+        t.blank()
+        t.newline(f"{qname(provider)} provides for {qname(provider.module)},")
+        t.sentence(f"but that module is being provided by {qname(self.provider_in_use)}.")
+        t.blank()
+        t.newline(point_to_definition(provider))
+        t.newline(point_to_definition(provider.module))
+        t.newline(point_to_definition(self.provider_in_use))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Requested to provide a resource of an unregistered provider."

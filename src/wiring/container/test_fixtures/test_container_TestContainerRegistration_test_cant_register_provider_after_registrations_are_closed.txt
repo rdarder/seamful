@@ -1,2 +1,2 @@
-Attempted to register provider 'AnotherProvider' after registrations were
-closed.
+Attempted to register provider 'AnotherProvider' , but registrations are closed
+since the container is ready for providing.

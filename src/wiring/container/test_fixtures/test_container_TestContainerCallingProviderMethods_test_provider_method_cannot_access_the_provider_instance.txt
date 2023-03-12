@@ -5,4 +5,4 @@ Provider method:
 Attempted to access the provider instance 'self'. Provider methods can only
 access their parameters, but not the provider instance
 
-ProviderAssumingInstanceIsAvailable: src/wiring/container/test_container.py:370
+ProviderAssumingInstanceIsAvailable: src/wiring/container/test_container.py:372

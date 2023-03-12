@@ -1,5 +1,5 @@
 Attempted to register(AnotherModule, provider=SomeProvider) but 'SomeProvider'
 provides for module 'SomeModule' instead.
 
-SomeProvider: src/wiring/container/test_container.py:413
-AnotherModule: src/wiring/container/test_container.py:417
+SomeProvider: src/wiring/container/test_container.py:415
+AnotherModule: src/wiring/container/test_container.py:419

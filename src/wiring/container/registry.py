@@ -38,7 +38,7 @@ class Registry:
             )
         self._explicit_providers[module] = provider
 
-    def close_registration(self, allow_provider_resources: bool) -> ModuleGraphProvider:
+    def solve_graph(self, allow_provider_resources: bool) -> ModuleGraphProvider:
         return ModuleGraphSolver(self._explicit_modules, self._explicit_providers).solve(
             allow_provider_resources
         )

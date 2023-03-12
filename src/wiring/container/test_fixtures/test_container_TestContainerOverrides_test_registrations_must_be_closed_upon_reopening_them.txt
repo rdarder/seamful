@@ -1,0 +1,5 @@
+Attempted to reopen registrations in a container, but they weren't closed.
+Registrations on a container are open until the container is ready for
+providing. Only once the container is ready for providing, it can be reopened.
+Keep in mind that reopening a container is meant for testing or alternative
+scenarios

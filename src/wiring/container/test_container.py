@@ -18,9 +18,9 @@ from wiring.container.errors import (
     ProviderMethodsCantAccessProviderInstance,
     CannotReopenRegistrationsAfterHavingProvidedResources,
     RegisteredProvidersNotUsed,
-    RegistrationMustBeClosedBeforeReopeningThem,
+    RegistrationsMustBeClosedBeforeReopeningThem,
     ContainerAlreadyReadyForProvisioning,
-    ProviderNotProvidingForModule,
+    ProviderResourceOfUnregisteredProvider,
 )
 from wiring.provider.provider_type import Provider, ProviderType, ProviderMethod
 from wiring.resource import Resource, ModuleResource
@@ -42,7 +42,7 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
     def test_container_provides_singletons_per_resource(self) -> None:
@@ -58,7 +58,7 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         first = container.provide(SomeModule.a)
         second = container.provide(SomeModule.a)
         self.assertIs(first, second)
@@ -87,7 +87,7 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         service = container.provide(SomeModule.service)
         storage = container.provide(SomeModule.storage)
         self.assertIs(service.storage, storage)
@@ -107,7 +107,7 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         with self.assertRaises(ModuleNotRegisteredForResource) as ctx:
             container.provide(AnotherModule.a)
 
@@ -134,7 +134,7 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
     def test_cannot_provide_raw_type_even_if_signature_says_so(self) -> None:
         container = Container.empty()
-        container.close_registrations()
+        container.ready_for_providing()
 
         class SomeClass:
             pass
@@ -143,9 +143,10 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
             container.provide(SomeClass)
         self.assertEqual(ctx.exception.type, SomeClass)
 
+    @validate_output
     def test_refuses_to_provide_resource_not_defined_on_the_original_provider(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -160,12 +161,13 @@ class TestContainerProvision(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
 
-        with self.assertRaises(ProviderNotProvidingForModule) as ctx:
+        with self.assertRaises(ProviderResourceOfUnregisteredProvider) as ctx:
             container.provide(AnotherProvider.b)
         self.assertEqual(ctx.exception.resource.provider, AnotherProvider)
         self.assertEqual(ctx.exception.provider_in_use, SomeProvider)
+        return ctx.exception
 
 
 class TestContainerProvidesPrivateResources(TestCaseWithOutputFixtures):
@@ -181,7 +183,7 @@ class TestContainerProvidesPrivateResources(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
         self.assertEqual(container.provide(SomeProvider.a), 10)
 
     def test_provider_method_can_depend_on_private_resource(self) -> None:
@@ -199,7 +201,7 @@ class TestContainerProvidesPrivateResources(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
 
@@ -222,7 +224,7 @@ class TestContainerProvidesOverridingResources(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
 
         from_overriden = container.provide(SomeProvider.a)
         self.assertIsInstance(from_overriden, SomeConcreteClass)
@@ -244,7 +246,7 @@ class TestContainerProvidesOverridingResources(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     def test_provider_method_can_depend_on_overriding_resource(self) -> None:
@@ -273,7 +275,7 @@ class TestContainerProvidesOverridingResources(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
 
         another = container.provide(SomeModule.another)
         self.assertIsInstance(another, AnotherClass)
@@ -301,7 +303,7 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
         container.register(AnotherModule, AnotherProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(AnotherModule.b), 11)
 
     def test_provider_methods_can_depend_on_resources_from_the_same_module(
@@ -320,7 +322,7 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     def test_provider_methods_can_depend_on_resources_from_the_same_module_via_annotation(
@@ -339,7 +341,7 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     def test_provider_methods_can_depend_on_resources_declared_as_resource_instances(
@@ -359,7 +361,7 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     @validate_output
@@ -375,7 +377,7 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, ProviderAssumingInstanceIsAvailable)
-        container.close_registrations()
+        container.ready_for_providing()
         with self.assertRaises(ProviderMethodsCantAccessProviderInstance) as ctx:
             container.provide(SomeModule.a)
 
@@ -438,7 +440,7 @@ class TestContainerRegistration(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(SomeModule)
         container.register_provider(SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
     @validate_output
@@ -486,7 +488,7 @@ class TestContainerRegistration(TestCaseWithOutputFixtures):
             pass
 
         container = Container.empty()
-        container.close_registrations()
+        container.ready_for_providing()
         with self.assertRaises(RegistrationsAreClosed) as ctx:
             container.register(SomeModule)
         self.assertEqual(ctx.exception.registering, SomeModule)
@@ -507,7 +509,7 @@ class TestContainerRegistration(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule)
-        container.close_registrations()
+        container.ready_for_providing()
         with self.assertRaises(RegistrationsAreClosed) as ctx:
             container.register_provider(AnotherProvider)
         self.assertEqual(ctx.exception.registering, AnotherProvider)
@@ -525,7 +527,7 @@ class TestContainerOverrides(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         container.reopen_registrations(allow_overrides=True)
 
         class AnotherProvider(Provider, module=SomeModule):
@@ -533,7 +535,7 @@ class TestContainerOverrides(TestCaseWithOutputFixtures):
                 return 11
 
         container.register_provider(AnotherProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     def test_can_override_a_default_provider_when_reopening_for_registration(
@@ -550,7 +552,7 @@ class TestContainerOverrides(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule)
-        container.close_registrations()
+        container.ready_for_providing()
         container.reopen_registrations(allow_overrides=True)
 
         class AnotherProvider(Provider, module=SomeModule):
@@ -558,12 +560,13 @@ class TestContainerOverrides(TestCaseWithOutputFixtures):
                 return 11
 
         container.register_provider(AnotherProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
+    @validate_output
     def test_cannot_reopen_for_registration_once_a_resource_has_been_provided(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
 
@@ -573,25 +576,30 @@ class TestContainerOverrides(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         container.provide(SomeModule.a)
         with self.assertRaises(CannotReopenRegistrationsAfterHavingProvidedResources) as ctx:
             container.reopen_registrations()
 
         self.assertEqual(ctx.exception.container, container)
+        return ctx.exception
 
-    def test_registrations_must_be_closed_upon_reopening_them(self) -> None:
+    @validate_output
+    def test_registrations_must_be_closed_upon_reopening_them(self) -> HelpfulException:
         container = Container()
-        with self.assertRaises(RegistrationMustBeClosedBeforeReopeningThem) as ctx:
+        with self.assertRaises(RegistrationsMustBeClosedBeforeReopeningThem) as ctx:
             container.reopen_registrations()
         self.assertEqual(ctx.exception.container, container)
+        return ctx.exception
 
-    def test_registrations_must_be_open_upon_closing_them(self) -> None:
+    @validate_output
+    def test_registrations_must_be_open_upon_closing_them(self) -> HelpfulException:
         container = Container()
-        container.close_registrations()
+        container.ready_for_providing()
         with self.assertRaises(ContainerAlreadyReadyForProvisioning) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
         self.assertEqual(ctx.exception.container, container)
+        return ctx.exception
 
     @validate_output
     def test_cannot_override_reopened_container_if_overrides_are_not_explicitly_allowed(
@@ -606,7 +614,7 @@ class TestContainerOverrides(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         container.reopen_registrations()
 
         class AnotherProvider(Provider, module=SomeModule):
@@ -673,15 +681,16 @@ class TestContainerImplicitProviders(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(Module1, Provider1)
-        container.close_registrations()
+        container.ready_for_providing()
         container.reopen_registrations(allow_overrides=True, allow_implicit_modules=True)
         container.register_provider(AnotherProvider2)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(Module1.a), 12)
 
+    @validate_output
     def test_container_fails_on_closing_registration_if_any_implicit_provider_is_unused(
         self,
-    ) -> None:
+    ) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
 
@@ -690,12 +699,13 @@ class TestContainerImplicitProviders(TestCaseWithOutputFixtures):
                 return 10
 
         container = Container.empty()
-        container.close_registrations()
+        container.ready_for_providing()
         container.reopen_registrations(allow_overrides=True, allow_implicit_modules=True)
         container.register_provider(SomeProvider)
         with self.assertRaises(RegisteredProvidersNotUsed) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
         self.assertEqual(ctx.exception.providers, {SomeProvider})
+        return ctx.exception
 
 
 class TestDefaultProvider(TestCaseWithOutputFixtures):
@@ -707,7 +717,7 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(SomeModule)
         with self.assertRaises(ModuleWithoutRegisteredOrDefaultProvider) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
 
         self.assertEqual(ctx.exception.module, SomeModule)
         return ctx.exception
@@ -723,7 +733,7 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
         SomeModule.default_provider = SomeProvider
         container = Container.empty()
         container.register(SomeModule)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
     def test_container_uses_registered_provider_over_default_provider(self) -> None:
@@ -742,7 +752,7 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     def test_setting_default_container_after_sealing_has_no_effect(self) -> None:
@@ -761,7 +771,7 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule)
-        container.close_registrations()
+        container.ready_for_providing()
 
         SomeModule.default_provider = AnotherProvider
         self.assertEqual(container.provide(SomeModule.a), 10)
@@ -783,7 +793,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 10)
 
     def test_provider_subclass_can_act_as_provider_and_use_base_method_for_overriding_resource(
@@ -809,7 +819,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
         self.assertIsInstance(container.provide(SomeModule.some), ConcreteClass)
 
     def test_provider_subclass_can_act_as_provider_and_use_base_method_for_private_resource(
@@ -829,7 +839,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
         self.assertEqual(container.provide(AnotherProvider.a), 10)
 
     def test_provider_subclass_can_act_as_provider_and_override_methods_for_module_resource(
@@ -848,7 +858,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
     def test_provider_subclass_can_act_as_provider_and_override_methods_for_private_resource(
@@ -869,7 +879,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
         self.assertEqual(container.provide(AnotherProvider.a), 11)
 
     def test_provider_subclass_can_act_as_provider_and_override_methods_for_overriding_resource(
@@ -897,7 +907,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
 
         container = Container()
         container.register(SomeModule, AnotherProvider)
-        container.close_registrations(allow_provider_resources=True)
+        container.ready_for_providing(allow_provider_resources=True)
         self.assertEqual(container.provide(AnotherProvider.some).param, 11)
 
 
@@ -914,7 +924,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
         self._assert_contains_loop(
             ctx.exception.loops,
             [
@@ -944,7 +954,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
 
         self._assert_contains_loop(
             ctx.exception.loops,
@@ -996,7 +1006,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container.register(ModuleC, ProviderC)
 
         with self.assertRaises(CircularDependency) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
 
         self._assert_contains_loop(
             ctx.exception.loops,
@@ -1043,7 +1053,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
 
         self._assert_contains_loop(
             ctx.exception.loops,
@@ -1081,7 +1091,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container = Container()
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
 
         self._assert_contains_loop(
             ctx.exception.loops,
@@ -1131,7 +1141,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container = Container()
         container.register(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
-            container.close_registrations()
+            container.ready_for_providing()
 
         self._assert_contains_loop(
             ctx.exception.loops,
@@ -1186,7 +1196,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         container = Container.empty()
         container.register(Module1, Provider1)
         container.register(Module2, Provider2)
-        container.close_registrations()
+        container.ready_for_providing()
         self.assertEqual(container.provide(Module2.d), 2 * 3 * 5 * 7)
 
     def _assert_contains_loop(

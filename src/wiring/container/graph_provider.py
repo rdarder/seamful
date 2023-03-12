@@ -4,7 +4,7 @@ from wiring.container.errors import (
     ModuleNotRegisteredForResource,
     InvalidProviderInstanceAccess,
     ProviderMethodsCantAccessProviderInstance,
-    ProviderNotProvidingForModule,
+    ProviderResourceOfUnregisteredProvider,
 )
 from wiring.module.module_type import ModuleType
 from wiring.provider.provider_type import ProviderType
@@ -44,7 +44,7 @@ class ModuleGraphProvider:
             if not self._allow_provider_resources:
                 raise ProviderResourcesNotAllowed(resource)
             if resource.provider is not self._providers[resource.provider.module]:
-                raise ProviderNotProvidingForModule(
+                raise ProviderResourceOfUnregisteredProvider(
                     resource, self._providers[resource.provider.module]
                 )
             return self._provide(cast(ProviderResource[T], resource))

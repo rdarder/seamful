@@ -11,7 +11,7 @@ from wiring.container.errors import (
     RegistrationsAreClosed,
     CannotProvideRawType,
     CannotProvideUntilRegistrationsAreClosed,
-    RegistrationMustBeClosedBeforeReopeningThem,
+    RegistrationsMustBeClosedBeforeReopeningThem,
     ContainerAlreadyReadyForProvisioning,
     CannotReopenRegistrationsAfterHavingProvidedResources,
 )
@@ -52,10 +52,10 @@ class Container:
             allow_implicit_module=self._allow_implicit_modules,
         )
 
-    def close_registrations(self, allow_provider_resources: bool = False) -> None:
+    def ready_for_providing(self, allow_provider_resources: bool = False) -> None:
         if not self._is_registering:
             raise ContainerAlreadyReadyForProvisioning(self)
-        self._provider = self._registry.close_registration(allow_provider_resources)
+        self._provider = self._registry.solve_graph(allow_provider_resources)
         self._is_registering = False
 
     def provide(self, resource: Type[T]) -> T:
@@ -81,7 +81,7 @@ class Container:
         if self._is_providing:
             raise CannotReopenRegistrationsAfterHavingProvidedResources(self)
         if self._is_registering:
-            raise RegistrationMustBeClosedBeforeReopeningThem(self)
+            raise RegistrationsMustBeClosedBeforeReopeningThem(self)
         self._is_registering = True
         self._allow_overrides = allow_overrides
         self._allow_implicit_modules = allow_implicit_modules
