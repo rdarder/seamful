@@ -262,10 +262,11 @@ class CircularDependency(HelpfulException):
 
 
 class InvalidProviderInstanceAccess(Exception):
+    # internal, see ProviderMethodsCantAccessProviderInstance
     pass
 
 
-class ProviderMethodsCantAccessProviderInstance(Exception):
+class ProviderMethodsCantAccessProviderInstance(HelpfulException):
     def __init__(
         self,
         resource: BoundResource[Any],
@@ -273,6 +274,24 @@ class ProviderMethodsCantAccessProviderInstance(Exception):
     ):
         self.resource = resource
         self.provider_method = provider_method
+
+    def explanation(self) -> str:
+        t = Text("Provider method:")
+        with t.indented_block():
+            t.newline(f"{sname(self.provider_method.provider)}.provide_{self.resource.name}()")
+        t.newline("Attempted to access the provider instance 'self'.")
+        t.sentence(
+            "Provider methods can only access their parameters, " "but not the provider instance"
+        )
+        t.blank()
+        t.newline(point_to_definition(self.provider_method.provider))
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "Provider method attempted to access the provider instance 'self', "
+            "which is not allowed."
+        )
 
 
 class RegistrationMustBeClosedBeforeReopeningThem(Exception):

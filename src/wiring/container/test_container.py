@@ -362,7 +362,8 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
         container.close_registrations()
         self.assertEqual(container.provide(SomeModule.a), 11)
 
-    def test_provider_method_cannot_access_the_provider_instance(self) -> None:
+    @validate_output
+    def test_provider_method_cannot_access_the_provider_instance(self) -> HelpfulException:
         class SomeModule(Module):
             a: TypeAlias = int
 
@@ -383,6 +384,7 @@ class TestContainerCallingProviderMethods(TestCaseWithOutputFixtures):
             ctx.exception.provider_method,
             get_provider_method(ProviderAssumingInstanceIsAvailable, SomeModule.a),
         )
+        return ctx.exception
 
 
 class TestContainerRegistration(TestCaseWithOutputFixtures):

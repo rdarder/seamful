@@ -16,6 +16,6 @@ Circular dependencies detected (3):
 
 
 Providers involved:
-    - ProviderA: src/wiring/container/test_container.py:979
-    - ProviderC: src/wiring/container/test_container.py:987
-    - ProviderB: src/wiring/container/test_container.py:983
+    - ProviderA: src/wiring/container/test_container.py:981
+    - ProviderC: src/wiring/container/test_container.py:989
+    - ProviderB: src/wiring/container/test_container.py:985

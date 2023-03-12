@@ -5,13 +5,13 @@ Circular dependencies detected (3):
     SomeModule.c -> SomeProvider.provide_c(..., b: SomeModule.b)
 
 2:
-    SomeModule.c -> SomeProvider.provide_c(..., b: SomeModule.b)
     SomeModule.b -> SomeProvider.provide_b(..., c: SomeModule.c)
+    SomeModule.c -> SomeProvider.provide_c(..., b: SomeModule.b)
 
 3:
-    SomeModule.b -> SomeProvider.provide_b(..., c: SomeModule.c)
     SomeModule.c -> SomeProvider.provide_c(..., b: SomeModule.b)
+    SomeModule.b -> SomeProvider.provide_b(..., c: SomeModule.c)
 
 
 Providers involved:
-    - SomeProvider: src/wiring/container/test_container.py:1031
+    - SomeProvider: src/wiring/container/test_container.py:1033
