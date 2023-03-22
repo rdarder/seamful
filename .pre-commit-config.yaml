@@ -25,8 +25,30 @@ repos:
 -   repo: local
     hooks:
       - id: unittest
-        name: python tests
+        name: python tests py3.8
         entry: env WIRING_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
-        language: system
+        language: python
+        language_version: python3.8
+        pass_filenames: false
+        stages: [ commit ]
+      - id: unittest
+        name: python tests py3.9
+        entry: env WIRING_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        language: python
+        language_version: python3.9
+        pass_filenames: false
+        stages: [ commit ]
+      - id: unittest
+        name: python tests py3.10
+        entry: env WIRING_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        language: python
+        language_version: python3.10
+        pass_filenames: false
+        stages: [ commit ]
+      - id: unittest
+        name: python tests py3.11
+        entry: env WIRING_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        language: python
+        language_version: python3.11
         pass_filenames: false
         stages: [ commit ]
