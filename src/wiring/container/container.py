@@ -11,9 +11,11 @@ from wiring.container.errors import (
     RegistrationsAreClosed,
     CannotProvideRawType,
     CannotProvideUntilRegistrationsAreClosed,
-    RegistrationsMustBeClosedBeforeReopeningThem,
-    ContainerAlreadyReadyForProvisioning,
-    CannotReopenRegistrationsAfterHavingProvidedResources,
+    CannotTamperUntilContainerIsReady,
+    ContainerAlreadyReady,
+    CannotTamperAfterHavingProvidedResources,
+    CannotTamperWithContainerTwice,
+    ContainerWasNotTamperedWith,
 )
 
 T = TypeVar("T")
@@ -24,7 +26,8 @@ class Container:
         self._is_registering = True
         self._is_providing = False
 
-        self._registry: Registry = Registry()
+        self._checkpoint: Optional[tuple[Registry, ModuleGraphProvider]] = None
+        self._registry: Registry = Registry.empty()
         self._provider: Optional[ModuleGraphProvider] = None
 
         self._allow_overrides = False
@@ -52,9 +55,9 @@ class Container:
             allow_implicit_module=self._allow_implicit_modules,
         )
 
-    def ready_for_providing(self, allow_provider_resources: bool = False) -> None:
+    def ready(self, allow_provider_resources: bool = False) -> None:
         if not self._is_registering:
-            raise ContainerAlreadyReadyForProvisioning(self)
+            raise ContainerAlreadyReady(self)
         self._provider = self._registry.solve_graph(allow_provider_resources)
         self._is_registering = False
 
@@ -72,19 +75,32 @@ class Container:
         else:
             raise NotImplementedError()
 
-    def reopen_registrations(
+    def tamper(
         self,
         *,
         allow_overrides: bool = False,
         allow_implicit_modules: bool = False,
     ) -> None:
         if self._is_providing:
-            raise CannotReopenRegistrationsAfterHavingProvidedResources(self)
+            raise CannotTamperAfterHavingProvidedResources(self)
         if self._is_registering:
-            raise RegistrationsMustBeClosedBeforeReopeningThem(self)
+            raise CannotTamperUntilContainerIsReady(self)
+        if self._checkpoint is not None:
+            raise CannotTamperWithContainerTwice(self)
+        self._checkpoint = (self._registry, cast(ModuleGraphProvider, self._provider))
+        self._registry = self._registry.copy()
+        self._provider = None
         self._is_registering = True
         self._allow_overrides = allow_overrides
         self._allow_implicit_modules = allow_implicit_modules
+
+    def restore(self) -> None:
+        if self._checkpoint is None:
+            raise ContainerWasNotTamperedWith(self)
+        self._registry, self._provider = self._checkpoint
+        self._checkpoint = None
+        self._is_registering = False
+        self._is_providing = False
 
     @classmethod
     def empty(cls) -> Container:

@@ -9,4 +9,4 @@ Circular dependencies detected (2):
 
 
 Providers involved:
-    - SomeProvider: src/wiring/container/test_container.py:947
+    - SomeProvider: src/wiring/container/test_container.py:1052

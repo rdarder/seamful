@@ -92,9 +92,9 @@ class CannotRegisterProviderToNotRegisteredModule(HelpfulException):
                 t.newline(f"- {sname(module)}")
         t.newline(
             "Registering providers for implicit modules is only meant to be used for "
-            "testing and secondary scenarios, and can be enabled by calling:"
+            "testing and secondary scenarios, and can be enabled by tampering with the container:"
         )
-        t.indented_line("container.reopen_registrations(allow_implicit_modules=True)")
+        t.indented_line("container.tamper(allow_implicit_modules=True)")
         t.blank()
         t.newline(
             "If instead, the container is expected to provide resources for "
@@ -128,10 +128,10 @@ class CannotOverrideRegisteredProvider(HelpfulException):
             t.blank()
 
             t.newline(
-                "Overriding providers is not allowed. You can override a provider "
-                "after the container closed registrations by reopening it as follows:"
+                "Overriding providers is not allowed. You can enable overriding a provider "
+                "after the container is ready tampering with it:"
             )
-            t.indented_line("container.reopen_registrations(allow_overriding_providers=True)")
+            t.indented_line("container.tamper(allow_overrides=True)")
             t.blank()
             t.newline(
                 "Keep in mind that overriding providers is mostly meant for testing "
@@ -294,53 +294,51 @@ class ProviderMethodsCantAccessProviderInstance(HelpfulException):
         )
 
 
-class RegistrationsMustBeClosedBeforeReopeningThem(HelpfulException):
+class CannotTamperUntilContainerIsReady(HelpfulException):
     def __init__(self, container: Container) -> None:
         self.container = container
 
     def explanation(self) -> str:
-        t = Text("Attempted to reopen registrations in a container, but they weren't closed.")
+        t = Text("Attempted to tamper with a container, but it's not ready yet.")
         t.newline(
             "Registrations on a container are open until the container is ready for providing."
         )
-        t.sentence("Only once the container is ready for providing, it can be reopened.")
-        t.sentence(
-            "Keep in mind that reopening a container is meant for testing or alternative scenarios"
+        t.sentence("Only once the container is ready for providing, registrations will be closed,")
+        t.sentence("and then they can only be enabled again by calling container.tamper().")
+        t.newline(
+            "Keep in mind that reopening a container is meant "
+            "for testing or alternative scenarios"
         )
-        return str(t)
-
-    def failsafe_explanation(self) -> str:
-        return "Attempted to reopen registrations in a container, but they weren't closed."
-
-
-class ContainerAlreadyReadyForProvisioning(HelpfulException):
-    def __init__(self, container: Container):
-        self.container = container
-
-    def explanation(self) -> str:
-        return "Attempted to make a container ready for providing, but it's already ready."
-
-    def failsafe_explanation(self) -> str:
-        return "Attempted to make a container ready for providing, but it's already ready."
-
-
-class CannotReopenRegistrationsAfterHavingProvidedResources(HelpfulException):
-    def __init__(self, container: Container):
-        self.container = container
-
-    def explanation(self) -> str:
-        t = Text(
-            "Attempted to reopen registrations in a container, "
-            "but it has already provided resources."
-        )
-        t.newline("A container can only be reopened before it has provided any resources.")
         return str(t)
 
     def failsafe_explanation(self) -> str:
         return (
-            "Attempted to reopen registrations in a container, "
-            "but it has already provided resources."
+            "Attempted to tamper with a container, but the container isn't ready for providing yet."
         )
+
+
+class ContainerAlreadyReady(HelpfulException):
+    def __init__(self, container: Container):
+        self.container = container
+
+    def explanation(self) -> str:
+        return "Attempted to make a container ready for providing, but it's already ready."
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to make a container ready for providing, but it's already ready."
+
+
+class CannotTamperAfterHavingProvidedResources(HelpfulException):
+    def __init__(self, container: Container):
+        self.container = container
+
+    def explanation(self) -> str:
+        t = Text("Attempted to tamper with a container, " "but it has already provided resources.")
+        t.newline("A container can only be tampered with before it has provided any resources.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted tamper with a container, but it has already provided resources."
 
 
 class RegisteredProvidersNotUsed(HelpfulException):
@@ -388,3 +386,34 @@ class ProviderResourceOfUnregisteredProvider(HelpfulException):
 
     def failsafe_explanation(self) -> str:
         return "Requested to provide a resource of an unregistered provider."
+
+
+class CannotTamperWithContainerTwice(HelpfulException):
+    def __init__(self, container: Container):
+        self.container = container
+
+    def explanation(self) -> str:
+        t = Text("Attempted to tamper with a container twice.")
+        t.newline("A container can be tampered once and used to provide resources,")
+        t.sentence("but it needs to be restore()'d before it can be tampered with again.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return "Attempted to tamper with a container twice before restoring it."
+
+
+class ContainerWasNotTamperedWith(HelpfulException):
+    def __init__(self, container: Container):
+        self.container = container
+
+    def explanation(self) -> str:
+        t = Text("Attempted to restore a container that was not tampered with,")
+        t.sentence("or one that was already restored")
+        t.newline("A container can only be restored if it was tampered with before.")
+        return str(t)
+
+    def failsafe_explanation(self) -> str:
+        return (
+            "Attempted to restore a container that was not tampered with, "
+            "or one that was already restored"
+        )

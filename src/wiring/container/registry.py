@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TypeVar
 
 from wiring.container.errors import (
@@ -14,9 +15,11 @@ T = TypeVar("T")
 
 
 class Registry:
-    def __init__(self) -> None:
-        self._explicit_modules: set[ModuleType] = set()
-        self._explicit_providers: dict[ModuleType, ProviderType] = {}
+    def __init__(
+        self, explicit_modules: set[ModuleType], explicit_providers: dict[ModuleType, ProviderType]
+    ) -> None:
+        self._explicit_modules = explicit_modules
+        self._explicit_providers = explicit_providers
 
     def register_module(self, module: ModuleType) -> None:
         if module in self._explicit_modules:
@@ -42,3 +45,10 @@ class Registry:
         return ModuleGraphSolver(self._explicit_modules, self._explicit_providers).solve(
             allow_provider_resources
         )
+
+    def copy(self) -> Registry:
+        return Registry(self._explicit_modules.copy(), self._explicit_providers.copy())
+
+    @classmethod
+    def empty(cls) -> Registry:
+        return cls(set(), dict())

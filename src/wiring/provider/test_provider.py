@@ -615,7 +615,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
 
         container = Container.empty()
         container.register(SomeModule, SomeProvider)
-        container.ready_for_providing()
+        container.ready()
         got = container.provide(SomeModule.a)
         self.assertIsInstance(got, SomeBaseClass)
         self.assertIsInstance(got, SpecificClass)
