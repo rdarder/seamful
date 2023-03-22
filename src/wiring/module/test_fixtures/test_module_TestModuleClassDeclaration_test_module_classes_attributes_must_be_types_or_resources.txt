@@ -4,4 +4,4 @@ Module 'SomeModule' defines an attribute 'a'
         a = 10
 
 But 10 is not a valid resource type.
-SomeModule: src/wiring/module/test_module.py:187
+SomeModule: "src/wiring/module/test_module.py"

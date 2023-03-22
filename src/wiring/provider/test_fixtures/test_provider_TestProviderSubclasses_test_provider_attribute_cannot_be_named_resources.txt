@@ -5,4 +5,4 @@ Reserved names are:
     - module
     - resources
 
-SomeProvider: src/wiring/provider/test_provider.py:1156
+SomeProvider: "src/wiring/provider/test_provider.py"

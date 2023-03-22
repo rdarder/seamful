@@ -9,4 +9,4 @@ provides for
 But the method's return type annotation 'str' is not compatible with 'int'
 So the return type must be compatible with 'int'
 
-SomeProvider: src/wiring/provider/test_provider.py:530
+SomeProvider: "src/wiring/provider/test_provider.py"

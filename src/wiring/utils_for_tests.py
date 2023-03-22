@@ -3,11 +3,12 @@ import logging
 import os
 from functools import wraps
 from pathlib import Path
-from typing import Callable, Any, Type, TypeVar
+from typing import Callable, Any, Type, TypeVar, Tuple
 from unittest import TestCase
 
 
 class TestCaseWithOutputFixtures(TestCase):
+    maxDiff = 10_000
     regenerate_fixtures: bool
     fixture_location: Path
     fixture_prefix: str
@@ -91,7 +92,7 @@ def _get_fixture_path(
     return fixture_path
 
 
-def _get_fixture_location(test: Type[TestCase]) -> tuple[Path, str]:
+def _get_fixture_location(test: Type[TestCase]) -> Tuple[Path, str]:
     base = Path(inspect.getfile(test))
     location = base.parent.joinpath("test_fixtures")
     prefix = f"{base.stem}_{test.__name__}"

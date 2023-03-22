@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from typing import Any, TYPE_CHECKING, Iterable
 
@@ -23,7 +24,10 @@ from wiring.resource import (
 if TYPE_CHECKING:
     from wiring.provider.provider_type import ProviderType, T
 
-fn = Callable[..., Any]
+if sys.version_info >= (3, 9):
+    fn = Callable[..., Any]
+else:
+    fn = Callable
 
 
 class MissingProviderMethod(HelpfulException):

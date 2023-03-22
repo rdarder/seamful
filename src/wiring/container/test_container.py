@@ -1,4 +1,4 @@
-from typing import Sequence, Type, cast, TypeVar
+from typing import Sequence, Type, cast, TypeVar, List
 
 from wiring.errors import HelpfulException
 from wiring.module import Module
@@ -1305,7 +1305,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
         self.assertEqual(container.provide(Module2.d), 2 * 3 * 5 * 7)
 
     def _assert_contains_loop(
-        self, loops: list[list[ResolutionStep]], expected: Sequence[ResolutionStep]
+        self, loops: List[List[ResolutionStep]], expected: Sequence[ResolutionStep]
     ) -> None:
         # this check is not 100% accurate since we're allowing all steps in a circular
         # dependency to be in any order. It seems good enough though.

@@ -1,4 +1,4 @@
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, Dict, Set, List
 
 from wiring.container.errors import (
     ModuleWithoutRegisteredOrDefaultProvider,
@@ -20,13 +20,13 @@ from wiring.resource import (
 class ModuleGraphSolver:
     def __init__(
         self,
-        registered_modules: set[ModuleType],
-        registered_providers: dict[ModuleType, ProviderType],
+        registered_modules: Set[ModuleType],
+        registered_providers: Dict[ModuleType, ProviderType],
     ):
         self._registered_modules = registered_modules
 
-        self._providers_by_module: dict[ModuleType, ProviderType] = {}
-        self._needed_modules_without_providers: set[ModuleType] = registered_modules.copy()
+        self._providers_by_module: Dict[ModuleType, ProviderType] = {}
+        self._needed_modules_without_providers: Set[ModuleType] = registered_modules.copy()
         self._unused_providers_by_module = registered_providers.copy()
 
     def solve(self, allow_provider_resources: bool) -> ModuleGraphProvider:
@@ -74,9 +74,9 @@ class ModuleGraphSolver:
     def _find_circular_dependency(
         self,
         target: BoundResource[Any],
-        in_stack: set[BoundResource[Any]],
-        solved: set[BoundResource[Any]],
-    ) -> Optional[list[ResolutionStep]]:
+        in_stack: Set[BoundResource[Any]],
+        solved: Set[BoundResource[Any]],
+    ) -> Optional[List[ResolutionStep]]:
         if target in solved:
             return None
         provider = self._get_provider_for_resource(target)

@@ -1,4 +1,4 @@
-from typing import Any, cast, TypeVar
+from typing import Any, cast, TypeVar, Set, Dict
 
 from wiring.container.errors import (
     ModuleNotRegisteredForResource,
@@ -26,13 +26,13 @@ class ProviderResourcesNotAllowed(Exception):
 class ModuleGraphProvider:
     def __init__(
         self,
-        registered_modules: set[ModuleType],
-        providers_by_module: dict[ModuleType, ProviderType],
+        registered_modules: Set[ModuleType],
+        providers_by_module: Dict[ModuleType, ProviderType],
         allow_provider_resources: bool,
     ):
         self._registered_modules = registered_modules
         self._providers = providers_by_module
-        self._instances_by_resource: dict[BoundResource[Any], Any] = {}
+        self._instances_by_resource: Dict[BoundResource[Any], Any] = {}
         self._fake_provider_instance = UnusableProviderInstance()
         self._allow_provider_resources = allow_provider_resources
 

@@ -4,4 +4,4 @@ Provider 'SomeProvider' inherits from multiple bases:
 
 But multiple inheritance is not supported on providers.
 
-SomeProvider: src/wiring/provider/test_provider.py:110
+SomeProvider: "src/wiring/provider/test_provider.py"

@@ -4,4 +4,4 @@ Module 'SomeModule' defines an overriding Resource.
         a = Resource(int, ResourceKind.OVERRIDE)
 
 But overriding resources are only meant for providers, not modules.
-SomeModule: src/wiring/module/test_module.py:106
+SomeModule: "src/wiring/module/test_module.py"

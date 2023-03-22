@@ -4,4 +4,4 @@ Module 'SomeModule' defines an attribute '_something'
         _something = ...
 
 But private attributes (starting with '_') are not supported.
-SomeModule: src/wiring/module/test_module.py:159
+SomeModule: "src/wiring/module/test_module.py"

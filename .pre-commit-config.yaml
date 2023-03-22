@@ -26,7 +26,7 @@ repos:
     hooks:
       - id: unittest
         name: python tests
-        entry: python -m unittest discover src
+        entry: env WIRING_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
         language: system
         pass_filenames: false
         stages: [ commit ]

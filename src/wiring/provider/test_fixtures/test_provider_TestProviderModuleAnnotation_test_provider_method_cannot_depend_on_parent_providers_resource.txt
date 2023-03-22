@@ -12,4 +12,4 @@ as:
 
     AnotherProvider.provide_a(..., b: int, ...) -> int
 
-AnotherProvider: src/wiring/provider/test_provider.py:473
+AnotherProvider: "src/wiring/provider/test_provider.py"

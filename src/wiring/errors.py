@@ -1,5 +1,6 @@
 import inspect
 import os
+import sys
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
@@ -142,6 +143,14 @@ def fname(value: Any) -> str:
         return str(value)
 
 
+if sys.version_info < (3, 9):
+    INCLUDE_DEFINITION_LINE = False
+elif os.environ.get("WIRING_DISABLE_ERROR_DEFINITION_LINE") == "1":
+    INCLUDE_DEFINITION_LINE = False
+else:
+    INCLUDE_DEFINITION_LINE = True
+
+
 def location(value: type) -> Optional[str]:
     root = Path(os.getcwd())
     module_filename = inspect.getsourcefile(value)
@@ -149,10 +158,13 @@ def location(value: type) -> Optional[str]:
         return None
     path = Path(module_filename)
     relative = path.relative_to(root)
-    lineno = inspect.getsourcelines(value)[1]
-    return f"{relative}:{lineno}"
+    if INCLUDE_DEFINITION_LINE:
+        lineno = inspect.getsourcelines(value)[1]
+        return f"{relative}:{lineno}"
+    else:
+        return str(relative)
 
 
 def point_to_definition(value: type) -> Optional[str]:
     definition = location(value)
-    return f"{sname(value)}: {definition}" if definition is not None else None
+    return f'{sname(value)}: "{definition}"' if definition is not None else None

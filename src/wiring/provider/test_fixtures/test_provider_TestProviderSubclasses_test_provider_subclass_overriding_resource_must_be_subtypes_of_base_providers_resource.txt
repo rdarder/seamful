@@ -10,5 +10,5 @@ But its base provider 'SomeProvider' defines a resource 'some' of type
 AnotherProvider.some must have the same type as SomeProvider.some or a subtype
 of it.
 
-AnotherProvider: src/wiring/provider/test_provider.py:1206
-SomeProvider: src/wiring/provider/test_provider.py:1198
+AnotherProvider: "src/wiring/provider/test_provider.py"
+SomeProvider: "src/wiring/provider/test_provider.py"

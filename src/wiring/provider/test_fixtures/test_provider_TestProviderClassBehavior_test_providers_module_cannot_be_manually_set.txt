@@ -2,4 +2,4 @@ Attempted to change the module of provider 'SomeProvider'.
 It's currently 'SomeModule', but it was assigned to 'AnotherModule'. Provider
 modules can't be changed.
 
-SomeProvider: src/wiring/provider/test_provider.py:89
+SomeProvider: "src/wiring/provider/test_provider.py"

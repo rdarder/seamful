@@ -4,5 +4,5 @@ Requested 'SomeProvider' provider method for
 
 Which belongs to 'AnotherProvider', not 'SomeProvider'.
 
-AnotherProvider: src/wiring/provider/test_provider.py:272
-SomeProvider: src/wiring/provider/test_provider.py:266
+AnotherProvider: "src/wiring/provider/test_provider.py"
+SomeProvider: "src/wiring/provider/test_provider.py"

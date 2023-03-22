@@ -4,4 +4,4 @@ Circular dependency detected:
 
 
 Providers involved:
-    - SomeProvider: src/wiring/container/test_container.py:1187
+    - SomeProvider: "src/wiring/container/test_container.py"

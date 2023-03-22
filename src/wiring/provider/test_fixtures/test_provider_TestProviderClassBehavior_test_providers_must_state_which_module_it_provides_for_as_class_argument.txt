@@ -9,4 +9,4 @@ It's missing the keyword argument module. It should look like:
     class SomeProvider(Provider, module=<A Module>):
         ...
 
-SomeProvider: src/wiring/provider/test_provider.py:123
+SomeProvider: "src/wiring/provider/test_provider.py"
