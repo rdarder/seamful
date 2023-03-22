@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import TypeVar, Generic, Type, TYPE_CHECKING
+from typing import TypeVar, Generic, Type, TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from wiring.module.module_type import ModuleType
@@ -18,7 +18,7 @@ class ResourceKind(Enum):
 
 
 class UnboundResource(Generic[T]):
-    def __init__(self, t: Type[T], kind: ResourceKind):
+    def __init__(self, t: Type[T], kind: Optional[ResourceKind]):
         self.type = t
         self.kind = kind
 
@@ -125,5 +125,5 @@ class OverridingResource(ProviderResource[T]):
         )
 
 
-def Resource(t: Type[T], kind: ResourceKind = ResourceKind.MODULE) -> Type[T]:
+def Resource(t: Type[T], kind: Optional[ResourceKind] = None) -> Type[T]:
     return UnboundResource(t, kind)  # type: ignore

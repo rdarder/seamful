@@ -9,4 +9,4 @@ likely that you indented:
     class AnotherModule(Module):
         b = Resource(int)
 
-AnotherModule: src/wiring/module/test_module.py:72
+AnotherModule: src/wiring/module/test_module.py:75

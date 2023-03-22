@@ -38,7 +38,7 @@ from wiring.provider.errors import (
     ProviderMethodParameterMatchesResourceNameButNotType,
     ProvidersCannotBeInstantiated,
     ResourceDefinitionCannotReferToExistingResource,
-    CannotDefinePublicResourceInProvider,
+    CannotDefineModuleResourceInProvider,
     PrivateResourceCannotOccludeModuleResource,
     CannotDependOnResourceFromAnotherProvider,
     OverridingResourceIncompatibleType,
@@ -283,7 +283,7 @@ class ProviderType(type):
         if isinstance(candidate, UnboundResource):
             if name in self._module:
                 if candidate.kind == ResourceKind.MODULE:
-                    raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
+                    raise CannotDefineModuleResourceInProvider(self, name, candidate.type)
                 elif candidate.kind == ResourceKind.PRIVATE:
                     raise PrivateResourceCannotOccludeModuleResource(self, name, candidate.type)
                 return OverridingResource(candidate.type, name, self, self._module[name])
@@ -293,7 +293,7 @@ class ProviderType(type):
                         self, name, candidate.type
                     )
                 if candidate.kind == ResourceKind.MODULE:
-                    raise CannotDefinePublicResourceInProvider(self, name, candidate.type)
+                    raise CannotDefineModuleResourceInProvider(self, name, candidate.type)
                 return PrivateResource(candidate.type, name, self)
         elif isinstance(candidate, BoundResource):
             raise ResourceDefinitionCannotReferToExistingResource(self, name, candidate)

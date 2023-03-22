@@ -1,5 +1,5 @@
-from typing import TypeAlias
-from unittest import TestCase
+import sys
+from unittest import TestCase, skipIf
 
 from wiring.provider import Provider
 from wiring.module import Module
@@ -34,7 +34,10 @@ class TestModuleResourcesFromTypeAlias(TestCase):
         self.assertEqual(resource.type, int)
         self.assertEqual(resource.module, SomeModule)
 
+    @skipIf(sys.version_info < (3, 10), "Type aliases are not supported")
     def test_module_collects_resources_from_explicit_type_aliases(self) -> None:
+        from typing import TypeAlias
+
         class SomeModule(Module):
             a: TypeAlias = int
 

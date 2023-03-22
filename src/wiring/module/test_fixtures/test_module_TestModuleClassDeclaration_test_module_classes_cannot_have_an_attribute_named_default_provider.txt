@@ -5,4 +5,4 @@ Module 'SomeModule' defines an attribute 'default_provider'
 
 But the name 'default_provider' is reserved and cannot be used for defining a
 module resource.
-SomeModule: src/wiring/module/test_module.py:170
+SomeModule: src/wiring/module/test_module.py:173

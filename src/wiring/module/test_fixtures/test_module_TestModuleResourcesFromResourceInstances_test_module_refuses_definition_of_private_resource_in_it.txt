@@ -4,4 +4,4 @@ Module 'SomeModule' defines a private Resource.
         a = Resource(int, ResourceKind.PRIVATE)
 
 But private resources are only meant for providers, not modules.
-SomeModule: src/wiring/module/test_module.py:89
+SomeModule: src/wiring/module/test_module.py:92

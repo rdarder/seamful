@@ -464,16 +464,16 @@ class ResourceDefinitionCannotReferToExistingResource(HelpfulException):
         return "A Provider's Resource cannot be defined as another provider's Resource."
 
 
-class CannotDefinePublicResourceInProvider(HelpfulException):
+class CannotDefineModuleResourceInProvider(HelpfulException):
     def __init__(self, provider: ProviderType, name: str, t: type):
         self.provider = provider
         self.name = name
         self.type = t
 
     def explanation(self) -> str:
-        t = Text(f"Provider {qname(self.provider)} defines resource {self.name} as")
+        t = Text(f"Provider {qname(self.provider)} defines resource '{self.name}' as")
         with t.indented_block():
-            t.newline(f"{self.name} = Resource({sname(self.type)})")
+            t.newline(f"{self.name} = Resource({sname(self.type)}, kind=ResourceKind.MODULE)")
 
         t.newline("But providers can only have overriding or private resources.")
         if self.name in self.provider.module:

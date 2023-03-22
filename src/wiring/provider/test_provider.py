@@ -1,4 +1,4 @@
-from typing import TypeAlias, cast, Any
+from typing import cast, Any
 
 from wiring.container import Container
 from wiring.errors import HelpfulException
@@ -16,7 +16,7 @@ from wiring.provider.errors import (
     ProviderMethodParameterMatchesResourceNameButNotType,
     ProviderMethodParameterInvalidTypeAnnotation,
     ProvidersCannotBeInstantiated,
-    CannotDefinePublicResourceInProvider,
+    CannotDefineModuleResourceInProvider,
     PrivateResourceCannotOccludeModuleResource,
     OverridingResourceIncompatibleType,
     OverridingResourceNameDoesntMatchModuleResource,
@@ -287,7 +287,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a: TypeAlias = int
+            a = Resource(int)
 
             def provide_a(self) -> int:
                 return 10
@@ -311,7 +311,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
         with self.assertRaises(MissingProviderMethod) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a: TypeAlias = int
+                a = Resource(int)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         resource = ctx.exception.resource
@@ -331,12 +331,12 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
             pass
 
         class SomeModule(Module):
-            a: TypeAlias = BaseClass
+            a = Resource(BaseClass)
 
         with self.assertRaises(MissingProviderMethod) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a: TypeAlias = ConcreteClass
+                a = Resource(ConcreteClass)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         resource = ctx.exception.resource
@@ -432,7 +432,7 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
             a = int
 
         class SomeProvider(Provider, module=SomeModule):
-            b: TypeAlias = int
+            b = Resource(int)
 
             def provide_a(self, b: int) -> int:
                 return b + 1
@@ -446,7 +446,7 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
         with self.assertRaises(CannotDependOnResourceFromAnotherProvider) as ctx:
 
             class AnotherProvider(Provider, module=AnotherModule):
-                def provide_c(self, b: SomeProvider.b) -> int:
+                def provide_c(self, b: SomeProvider.b) -> int:  # type: ignore
                     return b + 1
 
         self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
@@ -460,7 +460,7 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
             a = int
 
         class SomeProvider(Provider, module=SomeModule):
-            b: TypeAlias = int
+            b = Resource(int)
 
             def provide_a(self, b: int) -> int:
                 return b + 1
@@ -471,7 +471,7 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
         with self.assertRaises(CannotDependOnParentProviderResource) as ctx:
 
             class AnotherProvider(SomeProvider, module=SomeModule):
-                def provide_a(self, b: SomeProvider.b) -> int:
+                def provide_a(self, b: SomeProvider.b) -> int:  # type: ignore
                     return b + 1
 
         self.assertEqual(ctx.exception.parameter_resource, SomeProvider.b)
@@ -484,7 +484,7 @@ class TestProviderModuleAnnotation(TestCaseWithOutputFixtures):
             a = int
 
         class SomeProvider(Provider, module=SomeModule):
-            b: TypeAlias = int
+            b = Resource(int)
 
             def provide_a(self, b: int) -> int:
                 return b + 1
@@ -551,10 +551,10 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
             pass
 
         class SomeModule(Module):
-            some: TypeAlias = SomeClass
+            some = Resource(SomeClass)
 
         class SomeProvider(Provider, module=SomeModule):
-            some: TypeAlias = ConcreteClass
+            some = Resource(ConcreteClass)
 
             def provide_some(self) -> ConcreteClass:
                 return ConcreteClass()
@@ -562,7 +562,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
 
             class AnotherProvider(SomeProvider):
-                some: TypeAlias = MoreConcreteClass
+                some = Resource(MoreConcreteClass)
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
         self.assertEqual(ctx.exception.resource.type, MoreConcreteClass)
@@ -583,7 +583,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            some: TypeAlias = SomeClass
+            some = Resource(SomeClass)
 
             def provide_some(self) -> SomeClass:
                 return SomeClass()
@@ -591,7 +591,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
         with self.assertRaises(ProviderMethodReturnTypeMismatch) as ctx:
 
             class AnotherProvider(SomeProvider):
-                some: TypeAlias = ConcreteClass
+                some = Resource(ConcreteClass)
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
         self.assertEqual(ctx.exception.resource.type, ConcreteClass)
@@ -641,11 +641,11 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
 
     def test_provider_method_parameters_can_refer_to_module_resources(self) -> None:
         class SomeModule(Module):
-            a: TypeAlias = int
-            b: TypeAlias = int
+            a = Resource(int)
+            b = Resource(int)
 
         class SomeProvider(Provider, module=SomeModule):
-            def provide_a(self, b: SomeModule.b) -> int:
+            def provide_a(self, b: SomeModule.b) -> int:  # type: ignore
                 return b + 1
 
             def provide_b(self) -> int:
@@ -870,7 +870,7 @@ class TestProviderResourcesTypeAliases(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a: TypeAlias = int
+            a = Resource(int)
 
             def provide_a(self) -> int:
                 return 10
@@ -949,16 +949,16 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         return ctx.exception
 
     @validate_output
-    def test_provider_refuses_public_resource_looking_like_private(
+    def test_provider_refuses_module_resource(
         self,
     ) -> HelpfulException:
         class SomeModule(Module):
             pass
 
-        with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
+        with self.assertRaises(CannotDefineModuleResourceInProvider) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a = Resource(int)
+                a = Resource(int, kind=ResourceKind.MODULE)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
@@ -976,12 +976,12 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
             pass
 
         class SomeModule(Module):
-            a: TypeAlias = BaseClass
+            a = Resource(BaseClass)
 
-        with self.assertRaises(CannotDefinePublicResourceInProvider) as ctx:
+        with self.assertRaises(CannotDefineModuleResourceInProvider) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                a = Resource(ConcreteClass)
+                a = Resource(ConcreteClass, kind=ResourceKind.MODULE)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "a")
@@ -1075,7 +1075,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a: TypeAlias = int
+            a = Resource(int)
 
             def provide_a(self) -> int:
                 return 10
@@ -1096,7 +1096,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a: TypeAlias = int
+            a = Resource(int)
 
             def provide_a(self) -> int:
                 return 10
@@ -1117,13 +1117,13 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         class SomeProvider(Provider, module=SomeModule):
-            a: TypeAlias = int
+            a = Resource(int)
 
             def provide_a(self) -> int:
                 return 10
 
         class AnotherProvider(SomeProvider):
-            b: TypeAlias = int
+            b = Resource(int)
 
             def provide_b(self) -> int:
                 return 11
@@ -1139,11 +1139,11 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         with self.assertRaises(InvalidProviderAttributeName) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                module: TypeAlias = int
+                module = Resource(int)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "module")
-        self.assertEqual(ctx.exception.assigned_to, int)
+        self.assertEqual(ctx.exception.assigned_to.type, int)
         return ctx.exception
 
     @validate_output
@@ -1154,11 +1154,11 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         with self.assertRaises(InvalidProviderAttributeName) as ctx:
 
             class SomeProvider(Provider, module=SomeModule):
-                resources: TypeAlias = int
+                resources = Resource(int)
 
         self.assertEqual(ctx.exception.provider.__name__, "SomeProvider")
         self.assertEqual(ctx.exception.name, "resources")
-        self.assertEqual(ctx.exception.assigned_to, int)
+        self.assertEqual(ctx.exception.assigned_to.type, int)
         return ctx.exception
 
     @validate_output
@@ -1193,10 +1193,10 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         class SomeModule(Module):
-            some: TypeAlias = SomeClass
+            some = Resource(SomeClass)
 
         class SomeProvider(Provider, module=SomeModule):
-            some: TypeAlias = ConcreteClass
+            some = Resource(ConcreteClass)
 
             def provide_some(self) -> ConcreteClass:
                 return ConcreteClass()
@@ -1204,7 +1204,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
         with self.assertRaises(IncompatibleResourceTypeForInheritedResource) as ctx:
 
             class AnotherProvider(SomeProvider):
-                some: TypeAlias = SomeClass  # pyright: ignore
+                some = Resource(SomeClass)  # type: ignore
 
         self.assertEqual(ctx.exception.provider.__name__, "AnotherProvider")
         self.assertEqual(ctx.exception.resource.type, SomeClass)
