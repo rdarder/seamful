@@ -1,4 +1,5 @@
-from typing import cast, Any
+from typing import cast, Any, Union, List
+from unittest import TestCase
 
 from wiring.container import Container
 from wiring.errors import HelpfulException
@@ -1053,6 +1054,88 @@ class TestProviderResourcesFromResourceInstances(TestCaseWithOutputFixtures):
         self.assertEqual(cast(ProviderResource[Any], ctx.exception.resource).provider, SomeProvider)
         self.assertEqual(ctx.exception.resource.name, "a")
         return ctx.exception
+
+
+class TestProviderMethodsForSpecialTypes(TestCase):
+    def test_provider_and_module_allow_generic_types(self) -> None:
+        class SomeModule(Module):
+            a = Resource(List[int])
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> List[int]:
+                return [1, 2, 3]
+
+        SomeModule.default_provider = SomeProvider
+
+        resources = list(SomeModule)
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertEqual(resource.type, List[int])
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.module, SomeModule)
+
+    def test_provider_and_module_allow_union_type_aliases(self) -> None:
+        class SomeModule(Module):
+            a = Resource(Union[int, str])  # type: ignore
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> int:
+                return 10
+
+        SomeModule.default_provider = SomeProvider
+
+        class AnotherProvider(Provider, module=SomeModule):
+            def provide_a(self) -> str:
+                return "test"
+
+        class YetAnotherProvider(Provider, module=SomeModule):
+            def provide_a(self) -> Union[str, int]:
+                return 10
+
+        resources = list(SomeModule)
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertEqual(resource.type, Union[int, str])
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.module, SomeModule)
+
+    def test_resource_of_generic_type_is_not_type_checked(self) -> None:
+        """This is not a feature, only test to document a limitation on signature checks."""
+
+        class SomeModule(Module):
+            a = Resource(List[int])
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> str:
+                return "test"
+
+        SomeModule.default_provider = SomeProvider
+
+        resources = list(SomeModule)
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertEqual(resource.type, List[int])
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.module, SomeModule)
+
+    def test_resource_of_union_type_is_not_type_checked(self) -> None:
+        """This is not a feature, only test to document a limitation on signature checks."""
+
+        class SomeModule(Module):
+            a = Resource(Union[str, int])  # type: ignore #Union is not a type in 3.9
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> float:
+                return 1.0
+
+        SomeModule.default_provider = SomeProvider
+
+        resources = list(SomeModule)
+        self.assertEqual(len(resources), 1)
+        resource = resources[0]
+        self.assertEqual(resource.type, Union[str, int])
+        self.assertEqual(resource.name, "a")
+        self.assertEqual(resource.module, SomeModule)
 
 
 class TestProviderSubclasses(TestCaseWithOutputFixtures):

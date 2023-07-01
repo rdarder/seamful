@@ -46,7 +46,14 @@ class BoundResource(Generic[T], ABC):
             # we have resources that are bound to something other than types, we just allow them
             # through.
             return True
-        return issubclass(of, self.type)
+        try:
+            return issubclass(of, self.type)
+        except TypeError:
+            # For types that cannot check whether they're a subclass of another type, we just
+            # give up and allow that type.
+            # Going through all the possible combinations, plus considering covariant and
+            # contravariant types is outside the scope of wiring.
+            return True
 
 
 class ModuleResource(BoundResource[T]):
