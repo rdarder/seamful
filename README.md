@@ -57,29 +57,29 @@ Also, declaring a provider also need to follow a few rules:
 - it must state which module it provides for via the module= parameter
 - it must have a method for each resource in the module, with the name get_<name_of_the_resource>
 
-Once you have at least one Module and one Provider, you can wire them together in a Application. A container is the entry point for both registering modules and providers and for finally requesting module resources.
+Once you have at least one Module and one Provider, you can wire them together in a Application. A application is the entry point for both registering modules and providers and for finally requesting module resources.
 
 They're built as follows:
 
 ```python
 from modular import Application
 
-container = Application.empty()
-container.install_module(PaymentsModule, PaymentsProvider)
-container.ready()
+application = Application.empty()
+application.install_module(PaymentsModule, PaymentsProvider)
+application.ready()
 ```
 
-Once a container registered some modules and providers, it can become ready for providing resources. `container.ready()` checks that the module resources can be built by following the dependency graphs of the providers, which usually become more complex than the example above.
+Once a application registered some modules and providers, it can become ready for providing resources. `application.ready()` checks that the module resources can be built by following the dependency graphs of the providers, which usually become more complex than the example above.
 
-The container can be built and registered as a pubilc, global variable in your application. Then, in the entry points of your application you can import that container and ask for any of the registered modules resources. For example:
+The application can be built and registered as a pubilc, global variable in your application. Then, in the entry points of your application you can import that application and ask for any of the registered modules resources. For example:
 
 ```python
 
-from .container import container
+from .application import application
 
-class MyCommandLineApplication:
+class Main:
     def __init__(self):
-        self.service = container.provide(PaymentsModule.service)
+        self.service = application.provide(PaymentsModule.service)
 
     def run(self):
         service.do_something()
@@ -87,9 +87,9 @@ class MyCommandLineApplication:
 
 ```
 
-You can actually use the container anywhere in your application, but it's recommended to use it only in the entry points. Every class that explicitly uses a container will be harder to use in a different use case.
+You can actually use the application anywhere in your application, but it's recommended to use it only in the entry points. Every class that explicitly uses a application will be harder to use in a different use case.
 
-This application can run as-is in production, but it can also be used in integration tests, where the container can be configured to provide a different implementation of some of those resources. Let's imagine that the `PaymentsRepository` uses a database that we wish not to use in our integration tests. We can create a test_double:
+This application can run as-is in production, but it can also be used in integration tests, where the application can be configured to provide a different implementation of some of those resources. Let's imagine that the `PaymentsRepository` uses a database that we wish not to use in our integration tests. We can create a test_double:
 
 ```python
 class InMemoryPaymentsRepository(PaymentsRepository):
@@ -107,13 +107,13 @@ class InMemoryPaymentsRepository(PaymentsRepository):
         return self._payments[:]
 ```
 
-And then we can configure the container to provide that implementation instead of the real one:
+And then we can configure the application to provide that implementation instead of the real one:
 
 ```python
 
 
 import unittest
-from .container import container
+from .application import application
 
 
 class PaymentProviderForTests(PaymentsProvider):
@@ -123,15 +123,15 @@ class PaymentProviderForTests(PaymentsProvider):
 
 class TestPayments(unittest.TestCase):
     def setUp(self):
-        container.tamper()
-        container.install_provider(PaymentProviderForTests)
-        container.ready()
+        application.tamper()
+        application.install_provider(PaymentProviderForTests)
+        application.ready()
 
     def tearDown():
-        container.restore()
+        application.restore()
 
     def test_payment_processes_successfully(self):
-        service = container.provide(PaymentsModule.service)
+        service = application.provide(PaymentsModule.service)
         service.process_new_payment(...)
         self.assertEqual(1, len(service.repository.list_payments()))
 ```
@@ -147,9 +147,9 @@ class TestPayments(unittest.TestCase):
     ...
 
     def test_command_line_application():
-        app = MyCommandLineApplication()
-        repository = container.provide(PaymentsModule.repository)
-        app.run(...)
+        main = Main()
+        repository = application.provide(PaymentsModule.repository)
+        main.run(...)
         self.assertEqual(repository.get_payment(0), Payment(...))
 ```
 
