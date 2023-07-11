@@ -1,8 +1,0 @@
-Attempted to set SomeModule.default_provider = NotAProvider, which is not a
-Provider.
-It's likely that you intended 'NotAProvider' to inherit from Provider, like:
-
-    class NotAProvider(Provider):
-        ...
-
-NotAProvider: "src/wiring/module/test_module.py"

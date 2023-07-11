@@ -1,0 +1,9 @@
+Requested to provide AnotherProvider.b, but 'AnotherProvider' was not
+registered.
+
+'AnotherProvider' provides for 'SomeModule', but that module is being provided
+by 'SomeProvider'.
+
+AnotherProvider: "src/modular/container/test_container.py"
+SomeModule: "src/modular/container/test_container.py"
+SomeProvider: "src/modular/container/test_container.py"

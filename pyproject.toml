@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "wiring"
+name = "modular"
 version = "0.1.0"
 description = "Dependency management for python"
 authors = ["Rafael Darder <darder@gmail.com>"]

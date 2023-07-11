@@ -1,8 +1,0 @@
-Provider 'SomeProvider' inherits from 'SomeClass':
-
-    class SomeProvider(SomeClass, module=...):
-        ...
-
-But providers must inherit from Provider.
-
-SomeProvider: "src/wiring/provider/test_provider.py"

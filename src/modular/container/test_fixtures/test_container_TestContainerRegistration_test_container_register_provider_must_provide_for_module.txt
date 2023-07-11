@@ -1,0 +1,5 @@
+Attempted to register(AnotherModule, provider=SomeProvider) but 'SomeProvider'
+provides for module 'SomeModule' instead.
+
+SomeProvider: "src/modular/container/test_container.py"
+AnotherModule: "src/modular/container/test_container.py"

@@ -1,8 +1,8 @@
-Wiring is a dependency injection library for Python.
+Modular is a dependency injection library for Python.
 
 It aims to facilitate writing integration tests that replace the minimum amount of dependencies with test doubles. It incentivizes using _working_ test doubles as opposed inspectable mocks.
 
-Wiring intervenes by instantiating the objects and their dependencies. While typically one would manually instantiate these:
+Modular intervenes by instantiating the objects and their dependencies. While typically one would manually instantiate these:
 
 ```python
 my_service = MyService(MyRepository(...))
@@ -11,15 +11,15 @@ my_service.do_something()
 
 If instantiation happens "close" to the actual working code, it is hard to replace the dependencies with test_doubles.
 
-Wiring introduces a way of declaring which are these classes that are meant to be instantiated, and recipes for how to
+Modular introduces a way of declaring which are these classes that are meant to be instantiated, and recipes for how to
 build them. Moreover it provides a way of configuring those recipes so that, for example, a test environment can depart
 from the production configuration just for a few of those classes.
 
-For declaring which classes are meant to be instantiated, Wiring uses a concept called "Module". A module is a class
+For declaring which classes are meant to be instantiated, Modular uses a concept called "Module". A module is a class
 which contains a list of resources, which are the classes that are meant to be instantiated. For example:
 
 ```python
-from wiring import Module, Resource
+from modular import Module, Resource
 
 
 class PaymentsModule(Module):
@@ -62,7 +62,7 @@ Once you have at least one Module and one Provider, you can wire them together i
 They're built as follows:
 
 ```python
-from wiring import Container
+from modular import Container
 
 container = Container.empty()
 container.register(PaymentsModule, PaymentsProvider)
