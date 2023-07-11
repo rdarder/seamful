@@ -1,2 +1,0 @@
-Attempted to register provider 'AnotherProvider' , but registrations are closed
-since the application is ready for providing.

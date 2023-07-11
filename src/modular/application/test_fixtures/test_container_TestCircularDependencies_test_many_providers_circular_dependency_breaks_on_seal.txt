@@ -16,6 +16,6 @@ Circular dependencies detected (3):
 
 
 Providers involved:
-    - ProviderC: "src/modular/application/test_container.py"
     - ProviderB: "src/modular/application/test_container.py"
     - ProviderA: "src/modular/application/test_container.py"
+    - ProviderC: "src/modular/application/test_container.py"

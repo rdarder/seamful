@@ -42,7 +42,7 @@ class ModuleAlreadyRegistered(HelpfulException):
         self.registered_modules = registered_modules
 
     def explanation(self) -> str:
-        t = Text(f"Attempted to register module {qname(self.module)}")
+        t = Text(f"Attempted to install module {qname(self.module)}")
         t.sentence("which is already registered. Registered modules are:")
         with t.indented_block(blank_before=False):
             for module in self.registered_modules:
@@ -50,7 +50,7 @@ class ModuleAlreadyRegistered(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Attempted to register module that is already registered."
+        return "Attempted to install module that is already registered."
 
 
 class ProviderModuleMismatch(HelpfulException):
@@ -60,7 +60,7 @@ class ProviderModuleMismatch(HelpfulException):
 
     def explanation(self) -> str:
         t = Text(
-            f"Attempted to register({sname(self.module)}, provider={sname(self.provider)}) "
+            f"Attempted to install_module({sname(self.module)}, provider={sname(self.provider)}) "
             f"but {qname(self.provider)} provides for module {qname(self.provider.module)} "
             f"instead."
         )
@@ -71,7 +71,7 @@ class ProviderModuleMismatch(HelpfulException):
 
     def failsafe_explanation(self) -> str:
         return (
-            "Attempted to register a provider alongside a module, "
+            "Attempted to install a provider alongside a module, "
             "but the provider provides for a different module."
         )
 
@@ -82,7 +82,7 @@ class CannotRegisterProviderToNotRegisteredModule(HelpfulException):
         self.registered_modules = registered_modules
 
     def explanation(self) -> str:
-        t = Text(f"Attempted to register provider {qname(self.provider)}")
+        t = Text(f"Attempted to install provider {qname(self.provider)}")
         t.sentence(
             f"which provides for {qname(self.provider.module)}, "
             f"which is not registered. Registered modules are:"
@@ -106,7 +106,7 @@ class CannotRegisterProviderToNotRegisteredModule(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Attempted to register a provider for a module that is not registered."
+        return "Attempted to install a provider for a module that is not registered."
 
 
 class CannotOverrideRegisteredProvider(HelpfulException):
@@ -116,7 +116,7 @@ class CannotOverrideRegisteredProvider(HelpfulException):
         self.registering = registering
 
     def explanation(self) -> str:
-        t = Text(f"Attempted to register provider {qname(self.registering)}")
+        t = Text(f"Attempted to install provider {qname(self.registering)}")
         if self.registered is self.registering:
             t.sentence("which is already registered.")
         else:
@@ -141,7 +141,7 @@ class CannotOverrideRegisteredProvider(HelpfulException):
 
     def failsafe_explanation(self) -> str:
         return (
-            "Attempted to register a provider for a module that already "
+            "Attempted to install a provider for a module that already "
             "has a registered provider."
         )
 
@@ -158,20 +158,20 @@ class ModuleWithoutRegisteredOrDefaultProvider(HelpfulException):
         return "A registered module has no registered or default provider."
 
 
-class CannotProvideUntilRegistrationsAreClosed(HelpfulException):
+class CannotProvideUntilApplicationIsReady(HelpfulException):
     def explanation(self) -> str:
         t = Text(
             "Attempted to provide a resource before application is ready for providing. "
             "You can make the application ready by calling:"
         )
-        t.indented_line("application.ready_for_providing()")
+        t.indented_line("application.ready()")
         return str(t)
 
     def failsafe_explanation(self) -> str:
         return "Attempted to provide a resource before registrations were closed."
 
 
-class RegistrationsAreClosed(HelpfulException):
+class CantInstallWhenReadyToProvide(HelpfulException):
     def __init__(self, registering: Union[ModuleType, ProviderType]):
         self.registering = registering
 
@@ -180,9 +180,9 @@ class RegistrationsAreClosed(HelpfulException):
         from modular.provider.provider_type import ProviderType
 
         if isinstance(self.registering, ModuleType):
-            t = Text(f"Attempted to register module {qname(self.registering)}")
+            t = Text(f"Attempted to install module {qname(self.registering)}")
         elif isinstance(self.registering, ProviderType):
-            t = Text(f"Attempted to register provider {qname(self.registering)}")
+            t = Text(f"Attempted to install provider {qname(self.registering)}")
         else:
             raise TypeError()
         t.sentence(", but registrations are closed since the application is ready for providing.")
@@ -190,7 +190,7 @@ class RegistrationsAreClosed(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Attempted to register a module or provider after being ready for providing."
+        return "Attempted to install a module or provider after being ready for providing."
 
 
 class CannotProvideRawType(Exception):

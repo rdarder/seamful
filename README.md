@@ -65,7 +65,7 @@ They're built as follows:
 from modular import Application
 
 container = Application.empty()
-container.register(PaymentsModule, PaymentsProvider)
+container.install_module(PaymentsModule, PaymentsProvider)
 container.ready()
 ```
 
@@ -115,14 +115,16 @@ And then we can configure the container to provide that implementation instead o
 import unittest
 from .container import container
 
+
 class PaymentProviderForTests(PaymentsProvider):
     def get_repository(self) -> PaymentsRepository:
         return InMemoryPaymentsRepository()
 
+
 class TestPayments(unittest.TestCase):
     def setUp(self):
         container.tamper()
-        container.register_provider(PaymentProviderForTests)
+        container.install_provider(PaymentProviderForTests)
         container.ready()
 
     def tearDown():

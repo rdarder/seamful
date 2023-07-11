@@ -32,7 +32,7 @@ class ModuleGraphSolver:
     def solve(self, allow_provider_resources: bool) -> ModuleGraphProvider:
         while len(self._needed_modules_without_providers) > 0:
             for module in self._needed_modules_without_providers.copy():
-                provider = self._use_provider_for_module(module)
+                provider = self._install_provider_for_module(module)
                 self._providers_by_module[module] = provider
                 self._needed_modules_without_providers.remove(module)
                 self._add_modules_needed_by_provider(provider)
@@ -45,7 +45,7 @@ class ModuleGraphSolver:
             allow_provider_resources,
         )
 
-    def _use_provider_for_module(self, module: ModuleType) -> ProviderType:
+    def _install_provider_for_module(self, module: ModuleType) -> ProviderType:
         if module in self._unused_providers_by_module:
             return self._unused_providers_by_module.pop(module)
         elif module.default_provider is not None:

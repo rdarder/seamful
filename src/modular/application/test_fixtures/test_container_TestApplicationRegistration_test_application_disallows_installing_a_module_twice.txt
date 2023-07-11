@@ -1,0 +1,3 @@
+Attempted to install module 'SomeModule' which is already registered. Registered
+modules are:
+    - SomeModule

@@ -1,3 +1,0 @@
-Attempted to register module 'SomeModule' which is already registered.
-Registered modules are:
-    - SomeModule

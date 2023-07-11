@@ -615,7 +615,7 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
                 return SpecificClass()
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         got = application.provide(SomeModule.a)
         self.assertIsInstance(got, SomeBaseClass)

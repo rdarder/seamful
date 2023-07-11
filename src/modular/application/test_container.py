@@ -10,8 +10,8 @@ from modular.application.errors import (
     CannotRegisterProviderToNotRegisteredModule,
     CannotOverrideRegisteredProvider,
     ModuleWithoutRegisteredOrDefaultProvider,
-    CannotProvideUntilRegistrationsAreClosed,
-    RegistrationsAreClosed,
+    CannotProvideUntilApplicationIsReady,
+    CantInstallWhenReadyToProvide,
     CannotProvideRawType,
     CircularDependency,
     ResolutionStep,
@@ -43,7 +43,7 @@ class TestApplicationProvision(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 10)
 
@@ -59,7 +59,7 @@ class TestApplicationProvision(TestCaseWithOutputFixtures):
                 return SomeClass()
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         first = application.provide(SomeModule.a)
         second = application.provide(SomeModule.a)
@@ -88,7 +88,7 @@ class TestApplicationProvision(TestCaseWithOutputFixtures):
                 return SomeService(storage)
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         service = application.provide(SomeModule.service)
         storage = application.provide(SomeModule.storage)
@@ -108,7 +108,7 @@ class TestApplicationProvision(TestCaseWithOutputFixtures):
             a = int
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         with self.assertRaises(ModuleNotRegisteredForResource) as ctx:
             application.provide(AnotherModule.a)
@@ -130,8 +130,8 @@ class TestApplicationProvision(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
-        with self.assertRaises(CannotProvideUntilRegistrationsAreClosed) as ctx:
+        application.install_module(SomeModule, SomeProvider)
+        with self.assertRaises(CannotProvideUntilApplicationIsReady) as ctx:
             application.provide(SomeModule.a)
 
         return ctx.exception
@@ -164,7 +164,7 @@ class TestApplicationProvision(TestCaseWithOutputFixtures):
                 return 11
 
         application = Application()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready(allow_provider_resources=True)
 
         with self.assertRaises(ProviderResourceOfUnregisteredProvider) as ctx:
@@ -186,7 +186,7 @@ class TestApplicationProvidesPrivateResources(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready(allow_provider_resources=True)
         self.assertEqual(application.provide(SomeProvider.a), 10)
 
@@ -204,7 +204,7 @@ class TestApplicationProvidesPrivateResources(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -227,7 +227,7 @@ class TestApplicationProvidesOverridingResources(TestCaseWithOutputFixtures):
                 return SomeConcreteClass()
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready(allow_provider_resources=True)
 
         from_overriden = application.provide(SomeProvider.a)
@@ -249,7 +249,7 @@ class TestApplicationProvidesOverridingResources(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -278,7 +278,7 @@ class TestApplicationProvidesOverridingResources(TestCaseWithOutputFixtures):
                 return AnotherClass(some)
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
 
         another = application.provide(SomeModule.another)
@@ -305,8 +305,8 @@ class TestApplicationCallingProviderMethods(TestCaseWithOutputFixtures):
                 return a + 1
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
-        application.register(AnotherModule, AnotherProvider)
+        application.install_module(SomeModule, SomeProvider)
+        application.install_module(AnotherModule, AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(AnotherModule.b), 11)
 
@@ -325,7 +325,7 @@ class TestApplicationCallingProviderMethods(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -344,7 +344,7 @@ class TestApplicationCallingProviderMethods(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -364,7 +364,7 @@ class TestApplicationCallingProviderMethods(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -380,7 +380,7 @@ class TestApplicationCallingProviderMethods(TestCaseWithOutputFixtures):
                 return self.cache  # type: ignore
 
         application = Application.empty()
-        application.register(SomeModule, ProviderAssumingInstanceIsAvailable)
+        application.install_module(SomeModule, ProviderAssumingInstanceIsAvailable)
         application.ready()
         with self.assertRaises(ProviderMethodsCantAccessProviderInstance) as ctx:
             application.provide(SomeModule.a)
@@ -395,7 +395,7 @@ class TestApplicationCallingProviderMethods(TestCaseWithOutputFixtures):
 
 class TestApplicationRegistration(TestCaseWithOutputFixtures):
     @validate_output
-    def test_application_disallows_registering_a_module_twice(self) -> HelpfulException:
+    def test_application_disallows_installing_a_module_twice(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -404,15 +404,15 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(ModuleAlreadyRegistered) as ctx:
-            application.register(SomeModule, SomeProvider)
+            application.install_module(SomeModule, SomeProvider)
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registered_modules, {SomeModule})
         return ctx.exception
 
     @validate_output
-    def test_application_register_provider_must_provide_for_module(self) -> HelpfulException:
+    def test_application_install_provider_must_provide_for_module(self) -> HelpfulException:
         class SomeModule(Module):
             a = int
 
@@ -425,14 +425,14 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
 
         application = Application.empty()
         with self.assertRaises(ProviderModuleMismatch) as ctx:
-            application.register(AnotherModule, SomeProvider)
+            application.install_module(AnotherModule, SomeProvider)
 
         self.assertEqual(ctx.exception.provider, SomeProvider)
         self.assertEqual(ctx.exception.module, AnotherModule)
         self.assertEqual(ctx.exception.provider.module, SomeModule)
         return ctx.exception
 
-    def test_can_register_module_and_provider_independently(self) -> None:
+    def test_can_install_module_and_provider_independently(self) -> None:
         class SomeModule(Module):
             a = int
             pass
@@ -442,13 +442,13 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule)
-        application.register_provider(SomeProvider)
+        application.install_module(SomeModule)
+        application.install_provider(SomeProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 10)
 
     @validate_output
-    def test_cannot_register_two_providers_for_the_same_module(self) -> HelpfulException:
+    def test_cannot_install_two_providers_for_the_same_module(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -459,9 +459,9 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
             pass
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CannotOverrideRegisteredProvider) as ctx:
-            application.register_provider(AnotherProvider)
+            application.install_provider(AnotherProvider)
 
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registered, SomeProvider)
@@ -469,7 +469,7 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
         return ctx.exception
 
     @validate_output
-    def test_cannot_register_same_provider_twice(self) -> HelpfulException:
+    def test_cannot_install_same_provider_twice(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -477,9 +477,9 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
             pass
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CannotOverrideRegisteredProvider) as ctx:
-            application.register_provider(SomeProvider)
+            application.install_provider(SomeProvider)
 
         self.assertEqual(ctx.exception.module, SomeModule)
         self.assertEqual(ctx.exception.registered, SomeProvider)
@@ -487,19 +487,19 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
         return ctx.exception
 
     @validate_output
-    def test_cant_register_module_after_registrations_are_closed(self) -> HelpfulException:
+    def test_cant_install_module_after_ready(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
         application = Application.empty()
         application.ready()
-        with self.assertRaises(RegistrationsAreClosed) as ctx:
-            application.register(SomeModule)
+        with self.assertRaises(CantInstallWhenReadyToProvide) as ctx:
+            application.install_module(SomeModule)
         self.assertEqual(ctx.exception.registering, SomeModule)
         return ctx.exception
 
     @validate_output
-    def test_cant_register_provider_after_registrations_are_closed(self) -> HelpfulException:
+    def test_cant_install_provider_after_ready(self) -> HelpfulException:
         class SomeModule(Module):
             pass
 
@@ -512,10 +512,10 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
             pass
 
         application = Application.empty()
-        application.register(SomeModule)
+        application.install_module(SomeModule)
         application.ready()
-        with self.assertRaises(RegistrationsAreClosed) as ctx:
-            application.register_provider(AnotherProvider)
+        with self.assertRaises(CantInstallWhenReadyToProvide) as ctx:
+            application.install_provider(AnotherProvider)
         self.assertEqual(ctx.exception.registering, AnotherProvider)
         return ctx.exception
 
@@ -530,7 +530,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         application.tamper(allow_overrides=True)
 
@@ -538,7 +538,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
             def provide_a(self) -> int:
                 return 11
 
-        application.register_provider(AnotherProvider)
+        application.install_provider(AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -555,7 +555,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
         SomeModule.default_provider = SomeProvider
 
         application = Application.empty()
-        application.register(SomeModule)
+        application.install_module(SomeModule)
         application.ready()
         application.tamper(allow_overrides=True)
 
@@ -563,7 +563,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
             def provide_a(self) -> int:
                 return 11
 
-        application.register_provider(AnotherProvider)
+        application.install_provider(AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -579,7 +579,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         application.provide(SomeModule.a)
         with self.assertRaises(CannotTamperAfterHavingProvidedResources) as ctx:
@@ -617,7 +617,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         application.tamper()
 
@@ -626,7 +626,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 11
 
         with self.assertRaises(CannotOverrideRegisteredProvider) as ctx:
-            application.register_provider(AnotherProvider)
+            application.install_provider(AnotherProvider)
 
         self.assertEqual(ctx.exception.registered, SomeProvider)
         self.assertEqual(ctx.exception.module, SomeModule)
@@ -656,7 +656,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         application.tamper(allow_overrides=True)
 
@@ -664,7 +664,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
             def provide_a(self) -> int:
                 return 11
 
-        application.register_provider(AnotherProvider)
+        application.install_provider(AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
         application.restore()
@@ -680,7 +680,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         application.tamper()
         application.restore()
@@ -689,8 +689,8 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
             def provide_a(self) -> int:
                 return 11
 
-        with self.assertRaises(RegistrationsAreClosed) as ctx:
-            application.register_provider(AnotherProvider)
+        with self.assertRaises(CantInstallWhenReadyToProvide) as ctx:
+            application.install_provider(AnotherProvider)
 
         return ctx.exception
 
@@ -703,7 +703,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         application.ready()
         application.tamper(allow_overrides=True)
 
@@ -711,7 +711,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
             def provide_a(self) -> int:
                 return 11
 
-        application.register_provider(AnotherProvider)
+        application.install_provider(AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
         application.restore()
@@ -721,7 +721,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
                 return 12
 
         application.tamper(allow_overrides=True)
-        application.register_provider(YetAnotherProvider)
+        application.install_provider(YetAnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 12)
 
@@ -741,7 +741,7 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
 
 class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
     @validate_output
-    def test_cant_register_implicit_provider(self) -> HelpfulException:
+    def test_cant_install_implicit_provider(self) -> HelpfulException:
         class SomeModule(Module):
             a = Resource(int)
 
@@ -757,15 +757,15 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
                 return 10
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CannotRegisterProviderToNotRegisteredModule) as ctx:
-            application.register_provider(AnotherProvider)
+            application.install_provider(AnotherProvider)
 
         self.assertEqual(ctx.exception.provider, AnotherProvider)
         self.assertEqual(ctx.exception.registered_modules, {SomeModule})
         return ctx.exception
 
-    def test_can_register_implicit_provider_if_reopened_explicitly_and_module_is_used(
+    def test_can_install_implicit_provider_if_reopened_explicitly_and_module_is_used(
         self,
     ) -> None:
         class Module1(Module):
@@ -789,10 +789,10 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
                 return 11
 
         application = Application.empty()
-        application.register(Module1, Provider1)
+        application.install_module(Module1, Provider1)
         application.ready()
         application.tamper(allow_overrides=True, allow_implicit_modules=True)
-        application.register_provider(AnotherProvider2)
+        application.install_provider(AnotherProvider2)
         application.ready()
         self.assertEqual(application.provide(Module1.a), 12)
 
@@ -810,7 +810,7 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
         application = Application.empty()
         application.ready()
         application.tamper(allow_overrides=True, allow_implicit_modules=True)
-        application.register_provider(SomeProvider)
+        application.install_provider(SomeProvider)
         with self.assertRaises(RegisteredProvidersNotUsed) as ctx:
             application.ready()
         self.assertEqual(ctx.exception.providers, {SomeProvider})
@@ -824,14 +824,14 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
             pass
 
         application = Application.empty()
-        application.register(SomeModule)
+        application.install_module(SomeModule)
         with self.assertRaises(ModuleWithoutRegisteredOrDefaultProvider) as ctx:
             application.ready()
 
         self.assertEqual(ctx.exception.module, SomeModule)
         return ctx.exception
 
-    def test_application_uses_default_provider_if_none_registered(self) -> None:
+    def test_application_uses_default_provider_if_none_installed(self) -> None:
         class SomeModule(Module):
             a = int
 
@@ -841,11 +841,11 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
 
         SomeModule.default_provider = SomeProvider
         application = Application.empty()
-        application.register(SomeModule)
+        application.install_module(SomeModule)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 10)
 
-    def test_application_uses_registered_provider_over_default_provider(self) -> None:
+    def test_application_uses_installed_provider_over_default_provider(self) -> None:
         class SomeModule(Module):
             a = int
 
@@ -860,7 +860,7 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
                 return 11
 
         application = Application.empty()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -879,7 +879,7 @@ class TestDefaultProvider(TestCaseWithOutputFixtures):
                 raise Exception("this provider was set after sealing!")
 
         application = Application.empty()
-        application.register(SomeModule)
+        application.install_module(SomeModule)
         application.ready()
 
         SomeModule.default_provider = AnotherProvider
@@ -901,7 +901,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         application = Application()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 10)
 
@@ -927,7 +927,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         application = Application()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready(allow_provider_resources=True)
         self.assertIsInstance(application.provide(SomeModule.some), ConcreteClass)
 
@@ -947,7 +947,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
             pass
 
         application = Application()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready(allow_provider_resources=True)
         self.assertEqual(application.provide(AnotherProvider.a), 10)
 
@@ -966,7 +966,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
                 return 11
 
         application = Application()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready()
         self.assertEqual(application.provide(SomeModule.a), 11)
 
@@ -987,7 +987,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
                 return 11
 
         application = Application()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready(allow_provider_resources=True)
         self.assertEqual(application.provide(AnotherProvider.a), 11)
 
@@ -1015,7 +1015,7 @@ class TestProviderSubclasses(TestCaseWithOutputFixtures):
                 return ConcreteClass(11)
 
         application = Application()
-        application.register(SomeModule, AnotherProvider)
+        application.install_module(SomeModule, AnotherProvider)
         application.ready(allow_provider_resources=True)
         self.assertEqual(application.provide(AnotherProvider.some).param, 11)
 
@@ -1031,7 +1031,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return a + 1
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
             application.ready()
         self._assert_contains_loop(
@@ -1061,7 +1061,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return a + 1
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
             application.ready()
 
@@ -1110,9 +1110,9 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return param3 + 1
 
         application = Application.empty()
-        application.register(ModuleA, ProviderA)
-        application.register(ModuleB, ProviderB)
-        application.register(ModuleC, ProviderC)
+        application.install_module(ModuleA, ProviderA)
+        application.install_module(ModuleB, ProviderB)
+        application.install_module(ModuleC, ProviderC)
 
         with self.assertRaises(CircularDependency) as ctx:
             application.ready()
@@ -1160,7 +1160,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return b
 
         application = Application.empty()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
             application.ready()
 
@@ -1198,7 +1198,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return a + 1
 
         application = Application()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
             application.ready()
 
@@ -1248,7 +1248,7 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return a + 1
 
         application = Application()
-        application.register(SomeModule, SomeProvider)
+        application.install_module(SomeModule, SomeProvider)
         with self.assertRaises(CircularDependency) as ctx:
             application.ready()
 
@@ -1303,8 +1303,8 @@ class TestCircularDependencies(TestCaseWithOutputFixtures):
                 return c * 7
 
         application = Application.empty()
-        application.register(Module1, Provider1)
-        application.register(Module2, Provider2)
+        application.install_module(Module1, Provider1)
+        application.install_module(Module2, Provider2)
         application.ready()
         self.assertEqual(application.provide(Module2.d), 2 * 3 * 5 * 7)
 

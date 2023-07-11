@@ -1,4 +1,4 @@
-Attempted to register provider 'AnotherProvider' which provides for
+Attempted to install provider 'AnotherProvider' which provides for
 'AnotherModule', which is not registered. Registered modules are:
     - SomeModule
 

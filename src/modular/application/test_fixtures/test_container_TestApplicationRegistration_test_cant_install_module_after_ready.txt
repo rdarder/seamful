@@ -1,0 +1,2 @@
+Attempted to install module 'SomeModule' , but registrations are closed since
+the application is ready for providing.
