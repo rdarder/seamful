@@ -14,4 +14,4 @@ Circular dependencies detected (3):
 
 
 Providers involved:
-    - SomeProvider: "src/modular/container/test_container.py"
+    - SomeProvider: "src/modular/application/test_container.py"

@@ -1,12 +1,12 @@
 from typing import Any, Optional, cast, Dict, Set, List
 
-from modular.container.errors import (
+from modular.application.errors import (
     ModuleWithoutRegisteredOrDefaultProvider,
     CircularDependency,
     ResolutionStep,
     RegisteredProvidersNotUsed,
 )
-from modular.container.graph_provider import ModuleGraphProvider
+from modular.application.graph_provider import ModuleGraphProvider
 from modular.module.module_type import ModuleType
 from modular.provider.provider_type import ProviderType
 from modular.resource import (

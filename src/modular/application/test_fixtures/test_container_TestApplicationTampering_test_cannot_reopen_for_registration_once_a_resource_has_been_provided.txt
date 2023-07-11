@@ -1,0 +1,2 @@
+Attempted to tamper with a application, but it has already provided resources.
+A application can only be tampered with before it has provided any resources.

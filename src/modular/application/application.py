@@ -1,27 +1,27 @@
 from __future__ import annotations
 from typing import TypeVar, Optional, Type, cast
 
-from modular.container.registry import Registry
-from modular.container.graph_provider import ModuleGraphProvider
+from modular.application.registry import Registry
+from modular.application.graph_provider import ModuleGraphProvider
 from modular.resource import BoundResource
 from modular.module.module_type import ModuleType
 from modular.provider.provider_type import ProviderType
-from modular.container.errors import (
+from modular.application.errors import (
     ProviderModuleMismatch,
     RegistrationsAreClosed,
     CannotProvideRawType,
     CannotProvideUntilRegistrationsAreClosed,
-    CannotTamperUntilContainerIsReady,
-    ContainerAlreadyReady,
+    CannotTamperUntilApplicationIsReady,
+    ApplicationAlreadyReady,
     CannotTamperAfterHavingProvidedResources,
-    CannotTamperWithContainerTwice,
-    ContainerWasNotTamperedWith,
+    CannotTamperWithApplicationTwice,
+    ApplicationWasNotTamperedWith,
 )
 
 T = TypeVar("T")
 
 
-class Container:
+class Application:
     def __init__(self) -> None:
         self._is_registering = True
         self._is_providing = False
@@ -57,7 +57,7 @@ class Container:
 
     def ready(self, allow_provider_resources: bool = False) -> None:
         if not self._is_registering:
-            raise ContainerAlreadyReady(self)
+            raise ApplicationAlreadyReady(self)
         self._provider = self._registry.solve_graph(allow_provider_resources)
         self._is_registering = False
 
@@ -84,9 +84,9 @@ class Container:
         if self._is_providing:
             raise CannotTamperAfterHavingProvidedResources(self)
         if self._is_registering:
-            raise CannotTamperUntilContainerIsReady(self)
+            raise CannotTamperUntilApplicationIsReady(self)
         if self._checkpoint is not None:
-            raise CannotTamperWithContainerTwice(self)
+            raise CannotTamperWithApplicationTwice(self)
         self._checkpoint = (self._registry, cast(ModuleGraphProvider, self._provider))
         self._registry = self._registry.copy()
         self._provider = None
@@ -96,12 +96,12 @@ class Container:
 
     def restore(self) -> None:
         if self._checkpoint is None:
-            raise ContainerWasNotTamperedWith(self)
+            raise ApplicationWasNotTamperedWith(self)
         self._registry, self._provider = self._checkpoint
         self._checkpoint = None
         self._is_registering = False
         self._is_providing = False
 
     @classmethod
-    def empty(cls) -> Container:
-        return Container()
+    def empty(cls) -> Application:
+        return Application()

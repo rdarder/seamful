@@ -1,0 +1,11 @@
+Attempted to register provider 'AnotherProvider' which provides for
+'AnotherModule', which is not registered. Registered modules are:
+    - SomeModule
+
+Registering providers for implicit modules is only meant to be used for testing
+and secondary scenarios, and can be enabled by tampering with the application:
+    application.tamper(allow_implicit_modules=True)
+
+If instead, the application is expected to provide resources for
+'AnotherModule', you can register both at once by calling:
+    application.register(AnotherModule, provider=AnotherProvider)

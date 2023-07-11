@@ -57,14 +57,14 @@ Also, declaring a provider also need to follow a few rules:
 - it must state which module it provides for via the module= parameter
 - it must have a method for each resource in the module, with the name get_<name_of_the_resource>
 
-Once you have at least one Module and one Provider, you can wire them together in a Container. A container is the entry point for both registering modules and providers and for finally requesting module resources.
+Once you have at least one Module and one Provider, you can wire them together in a Application. A container is the entry point for both registering modules and providers and for finally requesting module resources.
 
 They're built as follows:
 
 ```python
-from modular import Container
+from modular import Application
 
-container = Container.empty()
+container = Application.empty()
 container.register(PaymentsModule, PaymentsProvider)
 container.ready()
 ```

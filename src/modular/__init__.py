@@ -1,6 +1,6 @@
 from .module import Module
 from .resource import Resource
 from .provider import Provider
-from .container import Container
+from .application import Application
 
-__all__ = ["Module", "Provider", "Container", "Resource"]
+__all__ = ["Module", "Provider", "Application", "Resource"]

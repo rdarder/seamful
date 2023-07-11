@@ -1,13 +1,13 @@
 from __future__ import annotations
 from typing import TypeVar
 
-from modular.container.errors import (
+from modular.application.errors import (
     ModuleAlreadyRegistered,
     CannotRegisterProviderToNotRegisteredModule,
     CannotOverrideRegisteredProvider,
 )
-from modular.container.graph_provider import ModuleGraphProvider
-from modular.container.graph_solver import ModuleGraphSolver
+from modular.application.graph_provider import ModuleGraphProvider
+from modular.application.graph_solver import ModuleGraphSolver
 from modular.module.module_type import ModuleType
 from modular.provider.provider_type import ProviderType
 

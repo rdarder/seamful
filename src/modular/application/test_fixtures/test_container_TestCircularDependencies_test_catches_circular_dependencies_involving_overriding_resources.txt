@@ -1,15 +1,15 @@
 Circular dependencies detected (2):
 1:
-    SomeModule.a -> SomeProvider.provide_a(..., some: SomeProvider.some)
-    SomeProvider.some -> SomeProvider.provide_some(..., private: SomeProvider.private)
-    SomeProvider.private -> SomeProvider.provide_private(..., a: SomeModule.a)
-
-2:
     SomeModule.some -> SomeProvider.provide_some(..., private: SomeProvider.private)
     SomeProvider.private -> SomeProvider.provide_private(..., a: SomeModule.a)
     SomeModule.a -> SomeProvider.provide_a(..., some: SomeProvider.some)
     SomeProvider.some -> SomeProvider.provide_some(..., private: SomeProvider.private)
 
+2:
+    SomeModule.a -> SomeProvider.provide_a(..., some: SomeProvider.some)
+    SomeProvider.some -> SomeProvider.provide_some(..., private: SomeProvider.private)
+    SomeProvider.private -> SomeProvider.provide_private(..., a: SomeModule.a)
+
 
 Providers involved:
-    - SomeProvider: "src/modular/container/test_container.py"
+    - SomeProvider: "src/modular/application/test_container.py"

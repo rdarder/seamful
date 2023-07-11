@@ -5,17 +5,17 @@ Circular dependencies detected (3):
     ModuleC.c -> ProviderC.provide_c(..., param3: ModuleA.a)
 
 2:
-    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
     ModuleC.c -> ProviderC.provide_c(..., param3: ModuleA.a)
     ModuleA.a -> ProviderA.provide_a(..., param1: ModuleB.b)
+    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
 
 3:
+    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
     ModuleC.c -> ProviderC.provide_c(..., param3: ModuleA.a)
     ModuleA.a -> ProviderA.provide_a(..., param1: ModuleB.b)
-    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
 
 
 Providers involved:
-    - ProviderC: "src/modular/container/test_container.py"
-    - ProviderB: "src/modular/container/test_container.py"
-    - ProviderA: "src/modular/container/test_container.py"
+    - ProviderC: "src/modular/application/test_container.py"
+    - ProviderB: "src/modular/application/test_container.py"
+    - ProviderA: "src/modular/application/test_container.py"

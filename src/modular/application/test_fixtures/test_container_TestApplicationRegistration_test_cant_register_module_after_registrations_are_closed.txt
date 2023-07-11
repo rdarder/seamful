@@ -1,2 +1,2 @@
 Attempted to register module 'SomeModule' , but registrations are closed since
-the container is ready for providing.
+the application is ready for providing.

@@ -4,6 +4,6 @@ registered.
 'AnotherProvider' provides for 'SomeModule', but that module is being provided
 by 'SomeProvider'.
 
-AnotherProvider: "src/modular/container/test_container.py"
-SomeModule: "src/modular/container/test_container.py"
-SomeProvider: "src/modular/container/test_container.py"
+AnotherProvider: "src/modular/application/test_container.py"
+SomeModule: "src/modular/application/test_container.py"
+SomeProvider: "src/modular/application/test_container.py"

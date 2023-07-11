@@ -1,6 +1,0 @@
-Attempted to tamper with a container, but it's not ready yet.
-Registrations on a container are open until the container is ready for
-providing. Only once the container is ready for providing, registrations will be
-closed, and then they can only be enabled again by calling container.tamper().
-Keep in mind that reopening a container is meant for testing or alternative
-scenarios

@@ -1,2 +1,0 @@
-Attempted to tamper with a container, but it has already provided resources.
-A container can only be tampered with before it has provided any resources.

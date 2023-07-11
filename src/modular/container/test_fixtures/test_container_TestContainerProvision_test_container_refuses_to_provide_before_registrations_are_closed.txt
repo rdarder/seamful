@@ -1,3 +1,0 @@
-Attempted to provide a resource before container is ready for providing. You can
-make the container ready by calling:
-    container.ready_for_providing()

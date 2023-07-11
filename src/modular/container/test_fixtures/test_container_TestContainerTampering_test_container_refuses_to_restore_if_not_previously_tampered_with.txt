@@ -1,3 +1,0 @@
-Attempted to restore a container that was not tampered with, or one that was
-already restored
-A container can only be restored if it was tampered with before.

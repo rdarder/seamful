@@ -1,6 +1,6 @@
 from typing import Any, cast, TypeVar, Set, Dict
 
-from modular.container.errors import (
+from modular.application.errors import (
     ModuleNotRegisteredForResource,
     InvalidProviderInstanceAccess,
     ProviderMethodsCantAccessProviderInstance,

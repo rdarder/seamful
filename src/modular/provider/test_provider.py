@@ -1,7 +1,7 @@
 from typing import cast, Any, Union, List
 from unittest import TestCase
 
-from modular.container import Container
+from modular.application import Application
 from modular.errors import HelpfulException
 from modular.module import Module
 from modular.provider import Provider
@@ -351,7 +351,7 @@ class TestProviderCollectingProviderMethods(TestCaseWithOutputFixtures):
     ) -> None:
         """
         Also, the provider method is bound to the _module_ resource, not the overriden one.
-        The container will have to dereference overridden resources instead of trying to
+        The application will have to dereference overridden resources instead of trying to
         provide them directly.
         """
 
@@ -614,10 +614,10 @@ class TestProviderMethodFromSignature(TestCaseWithOutputFixtures):
             def provide_a(self) -> SpecificClass:
                 return SpecificClass()
 
-        container = Container.empty()
-        container.register(SomeModule, SomeProvider)
-        container.ready()
-        got = container.provide(SomeModule.a)
+        application = Application.empty()
+        application.register(SomeModule, SomeProvider)
+        application.ready()
+        got = application.provide(SomeModule.a)
         self.assertIsInstance(got, SomeBaseClass)
         self.assertIsInstance(got, SpecificClass)
 
