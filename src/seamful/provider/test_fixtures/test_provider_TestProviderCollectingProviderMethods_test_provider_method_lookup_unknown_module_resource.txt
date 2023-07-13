@@ -1,0 +1,7 @@
+Requested 'SomeProvider' provider method for
+
+    SomeModule.fake = Resource(int)
+
+Which appears to be a resource of 'SomeModule', But that resource was not found.
+
+SomeModule: "src/seamful/provider/test_provider.py"

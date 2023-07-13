@@ -1,0 +1,8 @@
+Module 'SomeModule' defines an attribute 'default_provider'
+
+    class SomeModule(Module):
+        default_provider = ...
+
+But the name 'default_provider' is reserved and cannot be used for defining a
+module resource.
+SomeModule: "src/seamful/module/test_module.py"

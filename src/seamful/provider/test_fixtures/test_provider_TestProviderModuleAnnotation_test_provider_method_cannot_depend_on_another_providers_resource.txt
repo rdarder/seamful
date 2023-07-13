@@ -1,0 +1,10 @@
+In provider method
+
+    AnotherProvider.provide_c(..., b: SomeProvider.b, ...) -> int
+
+Parameter 'b' refers to a resource from another provider
+    SomeProvider.b = Resource(int, ResourceKind.PRIVATE)
+
+provider methods can only depend on other module resources, or its own provider
+resources.
+AnotherProvider: "src/seamful/provider/test_provider.py"

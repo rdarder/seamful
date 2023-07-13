@@ -1,0 +1,8 @@
+Requested 'SomeProvider' provider method for
+
+    AnotherProvider.a = Resource(int, ResourceKind.PRIVATE)
+
+Which belongs to 'AnotherProvider', not 'SomeProvider'.
+
+AnotherProvider: "src/seamful/provider/test_provider.py"
+SomeProvider: "src/seamful/provider/test_provider.py"

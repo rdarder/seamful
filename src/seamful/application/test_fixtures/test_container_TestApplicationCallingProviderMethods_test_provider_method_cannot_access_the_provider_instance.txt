@@ -1,0 +1,8 @@
+Provider method:
+
+    ProviderAssumingInstanceIsAvailable.provide_a()
+
+Attempted to access the provider instance 'self'. Provider methods can only
+access their parameters, but not the provider instance
+
+ProviderAssumingInstanceIsAvailable: "src/seamful/application/test_container.py"

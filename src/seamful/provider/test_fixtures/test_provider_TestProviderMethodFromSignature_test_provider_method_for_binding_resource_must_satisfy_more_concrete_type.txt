@@ -1,0 +1,13 @@
+The provider method
+
+    SomeProvider.provide_a() -> SomeBaseClass
+
+provides for
+
+    SomeProvider.a = Resource(SomeConcreteClass, ResourceKind.OVERRIDE)
+
+But the method's return type annotation 'SomeBaseClass' is not compatible with
+'SomeConcreteClass'
+So the return type must be compatible with 'SomeConcreteClass'
+
+SomeProvider: "src/seamful/provider/test_provider.py"

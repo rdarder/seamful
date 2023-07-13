@@ -1,0 +1,12 @@
+The provider method
+
+    SomeProvider.provide_a() -> str
+
+provides for
+
+    SomeModule.a = Resource(int)
+
+But the method's return type annotation 'str' is not compatible with 'int'
+So the return type must be compatible with 'int'
+
+SomeProvider: "src/seamful/provider/test_provider.py"

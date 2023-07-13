@@ -1,0 +1,13 @@
+The provider method
+
+    AnotherProvider.provide_some() -> ConcreteClass
+
+provides for
+
+    AnotherProvider.some = Resource(MoreConcreteClass, ResourceKind.OVERRIDE)
+
+But the method's return type annotation 'ConcreteClass' is not compatible with
+'MoreConcreteClass'
+So the return type must be compatible with 'MoreConcreteClass'
+
+AnotherProvider: "src/seamful/provider/test_provider.py"

@@ -26,35 +26,35 @@ repos:
     hooks:
       - id: unittest
         name: python tests py3.7
-        entry: env MODULAR_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        entry: env SEAMFUL_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
         language: python
         language_version: python3.7
         pass_filenames: false
         stages: [ commit ]
       - id: unittest
         name: python tests py3.8
-        entry: env MODULAR_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        entry: env SEAMFUL_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
         language: python
         language_version: python3.8
         pass_filenames: false
         stages: [ commit ]
       - id: unittest
         name: python tests py3.9
-        entry: env MODULAR_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        entry: env SEAMFUL_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
         language: python
         language_version: python3.9
         pass_filenames: false
         stages: [ commit ]
       - id: unittest
         name: python tests py3.10
-        entry: env MODULAR_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        entry: env SEAMFUL_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
         language: python
         language_version: python3.10
         pass_filenames: false
         stages: [ commit ]
       - id: unittest
         name: python tests py3.11
-        entry: env MODULAR_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
+        entry: env SEAMFUL_DISABLE_ERROR_DEFINITION_LINE=1 python -m unittest discover src
         language: python
         language_version: python3.11
         pass_filenames: false

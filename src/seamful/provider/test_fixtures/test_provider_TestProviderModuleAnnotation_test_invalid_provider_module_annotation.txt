@@ -1,0 +1,12 @@
+Provider 'SomeProvider' provides for 'SomeClass'
+
+    class SomeProvider(Provider, module=SomeClass)
+        ...
+
+but 'SomeClass' is not a Module. It's likely that you intended 'SomeClass' to
+inherit from Module
+
+    class SomeClass(Module):
+        ...
+
+SomeClass: "src/seamful/provider/test_provider.py"

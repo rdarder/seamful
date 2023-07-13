@@ -1,0 +1,7 @@
+Module 'SomeModule' defines an attribute 'a'
+
+    class SomeModule(Module):
+        a = 10
+
+But 10 is not a valid resource type.
+SomeModule: "src/seamful/module/test_module.py"

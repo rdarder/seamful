@@ -1,0 +1,8 @@
+Requested 'SomeProvider' provider method for
+
+    SomeProvider.fake = Resource(int, ResourceKind.PRIVATE)
+
+Which appears to be a resource of 'SomeProvider', But that resource was not
+found.
+
+SomeProvider: "src/seamful/provider/test_provider.py"

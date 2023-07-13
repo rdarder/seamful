@@ -1,0 +1,12 @@
+Circular dependencies detected (2):
+1:
+    SomeModule.a -> SomeProvider.provide_a(..., b: SomeModule.b)
+    SomeModule.b -> SomeProvider.provide_b(..., a: SomeModule.a)
+
+2:
+    SomeModule.b -> SomeProvider.provide_b(..., a: SomeModule.a)
+    SomeModule.a -> SomeProvider.provide_a(..., b: SomeModule.b)
+
+
+Providers involved:
+    - SomeProvider: "src/seamful/application/test_container.py"

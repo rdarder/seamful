@@ -1,0 +1,7 @@
+In provider method
+
+    SomeProvider.provide_a(..., b: int, ...) -> int
+
+Parameter 'b' does not refer to any resource from 'SomeProvider'
+
+SomeProvider: "src/seamful/provider/test_provider.py"

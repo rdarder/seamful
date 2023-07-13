@@ -1,0 +1,7 @@
+The following providers were registered, but not used:
+
+    - SomeProvider: "src/seamful/application/test_container.py"
+
+Those providers were explicitly registered, but the modules they provide for
+were not, and those modules are also not part of the dependency graph of any
+other used provider

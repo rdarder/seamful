@@ -1,8 +1,0 @@
-Requested 'SomeProvider' provider method for
-
-    AnotherModule.a = Resource(int)
-
-But 'SomeProvider' provides for 'SomeModule', not 'AnotherModule'
-
-SomeProvider: "src/modular/provider/test_provider.py"
-AnotherModule: "src/modular/provider/test_provider.py"

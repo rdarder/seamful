@@ -1,0 +1,8 @@
+Attempted to set an invalid attribute name on provider 'SomeProvider'.
+Attempted to set 'module', but it's reserved and can't be set.
+
+Reserved names are:
+    - module
+    - resources
+
+SomeProvider: "src/seamful/provider/test_provider.py"

@@ -1,0 +1,7 @@
+The provider method
+
+    SomeProvider.provide_a(..., b, ...) -> int
+
+is missing a type annotation for parameter b.
+
+SomeProvider: "src/seamful/provider/test_provider.py"

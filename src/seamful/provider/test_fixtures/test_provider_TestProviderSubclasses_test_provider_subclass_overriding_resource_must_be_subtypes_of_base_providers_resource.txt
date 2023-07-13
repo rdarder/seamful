@@ -1,0 +1,14 @@
+Provider 'AnotherProvider' defines a resource 'some' of type 'SomeClass':
+
+    AnotherProvider.some = Resource(SomeClass, ResourceKind.OVERRIDE)
+
+But its base provider 'SomeProvider' defines a resource 'some' of type
+'ConcreteClass':
+
+    SomeProvider.some = Resource(ConcreteClass, ResourceKind.OVERRIDE)
+
+AnotherProvider.some must have the same type as SomeProvider.some or a subtype
+of it.
+
+AnotherProvider: "src/seamful/provider/test_provider.py"
+SomeProvider: "src/seamful/provider/test_provider.py"

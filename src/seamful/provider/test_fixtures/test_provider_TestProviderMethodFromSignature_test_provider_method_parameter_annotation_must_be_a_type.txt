@@ -1,0 +1,10 @@
+In provider method
+
+    SomeProvider.provide_a(..., b: True, ...) -> int
+
+Parameter 'b' has an invalid type annotation: True.
+
+Perhaps you meant 'int', referring to
+    SomeModule.b = Resource(int)
+
+SomeProvider: "src/seamful/provider/test_provider.py"

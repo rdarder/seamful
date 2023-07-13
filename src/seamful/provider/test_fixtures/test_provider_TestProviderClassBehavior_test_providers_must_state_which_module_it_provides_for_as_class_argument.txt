@@ -1,0 +1,12 @@
+Provider 'SomeProvider' doesn't state which module it provides for.
+In its definition:
+
+    class SomeProvider(Provider):
+        ...
+
+It's missing the keyword argument module. It should look like:
+
+    class SomeProvider(Provider, module=<A Module>):
+        ...
+
+SomeProvider: "src/seamful/provider/test_provider.py"

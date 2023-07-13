@@ -1,0 +1,12 @@
+Provider 'SomeProvider' defines resource 'a' as an override:
+
+    SomeProvider.a = Resource(int, ResourceKind.OVERRIDE)
+
+But this overrides the resource
+
+    SomeModule.a = Resource(SomeBaseClass)
+
+'int' is not compatible with 'SomeBaseClass'.
+
+SomeModule: "src/seamful/provider/test_provider.py"
+SomeProvider: "src/seamful/provider/test_provider.py"

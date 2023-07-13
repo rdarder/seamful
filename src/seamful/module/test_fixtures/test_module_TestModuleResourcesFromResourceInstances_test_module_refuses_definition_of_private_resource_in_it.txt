@@ -1,0 +1,7 @@
+Module 'SomeModule' defines a private Resource.
+
+    class SomeModule(Module):
+        a = Resource(int, ResourceKind.PRIVATE)
+
+But private resources are only meant for providers, not modules.
+SomeModule: "src/seamful/module/test_module.py"

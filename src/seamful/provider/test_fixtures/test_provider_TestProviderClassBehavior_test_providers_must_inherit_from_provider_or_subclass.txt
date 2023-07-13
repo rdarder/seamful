@@ -1,0 +1,8 @@
+Provider 'SomeProvider' inherits from 'SomeClass':
+
+    class SomeProvider(SomeClass, module=...):
+        ...
+
+But providers must inherit from Provider.
+
+SomeProvider: "src/seamful/provider/test_provider.py"

@@ -1,0 +1,11 @@
+Provider 'AnotherProvider' is defined as:
+
+    class AnotherProvider(SomeProvider, module=AnotherModule)
+        ...
+
+But it's base provider 'SomeProvider' provides for 'SomeModule', which is
+different from 'AnotherModule'. An extended provider must provide for the same
+module as it's base.
+
+SomeProvider: "src/seamful/provider/test_provider.py"
+AnotherProvider: "src/seamful/provider/test_provider.py"

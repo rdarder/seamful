@@ -1,0 +1,9 @@
+The provider method SomeProvider.provide_a doesn't have a return type.
+All provider methods must have a return type annotation compatible with the
+resource they provide for. In this case it provides for
+
+    SomeModule.a = Resource(int)
+
+So the return type must be compatible with 'int'
+
+SomeProvider: "src/seamful/provider/test_provider.py"

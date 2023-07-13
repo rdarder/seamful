@@ -1,5 +1,0 @@
-Attempted to install_module(AnotherModule, provider=SomeProvider) but
-'SomeProvider' provides for module 'SomeModule' instead.
-
-SomeProvider: "src/modular/application/test_container.py"
-AnotherModule: "src/modular/application/test_container.py"

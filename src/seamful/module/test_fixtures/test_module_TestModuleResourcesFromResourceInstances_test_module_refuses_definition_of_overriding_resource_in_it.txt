@@ -1,0 +1,7 @@
+Module 'SomeModule' defines an overriding Resource.
+
+    class SomeModule(Module):
+        a = Resource(int, ResourceKind.OVERRIDE)
+
+But overriding resources are only meant for providers, not modules.
+SomeModule: "src/seamful/module/test_module.py"

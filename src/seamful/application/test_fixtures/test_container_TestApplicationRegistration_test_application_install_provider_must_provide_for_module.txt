@@ -1,0 +1,5 @@
+Attempted to install_module(AnotherModule, provider=SomeProvider) but
+'SomeProvider' provides for module 'SomeModule' instead.
+
+SomeProvider: "src/seamful/application/test_container.py"
+AnotherModule: "src/seamful/application/test_container.py"

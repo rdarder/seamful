@@ -1,0 +1,4 @@
+Attempted to set an invalid attribute on provider 'SomeProvider'.
+Attempted to set SomeProvider.a = 10, but it's neither a resource nor a type.
+
+SomeProvider: "src/seamful/provider/test_provider.py"

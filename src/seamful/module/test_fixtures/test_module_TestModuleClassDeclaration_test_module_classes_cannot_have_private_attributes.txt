@@ -1,0 +1,7 @@
+Module 'SomeModule' defines an attribute '_something'
+
+    class SomeModule(Module):
+        _something = ...
+
+But private attributes (starting with '_') are not supported.
+SomeModule: "src/seamful/module/test_module.py"

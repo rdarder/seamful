@@ -1,0 +1,7 @@
+Provider 'SomeProvider' inherits from multiple bases:
+
+    class SomeProvider(Provider, SomeBaseClass, module=...):
+
+But multiple inheritance is not supported on providers.
+
+SomeProvider: "src/seamful/provider/test_provider.py"

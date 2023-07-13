@@ -1,0 +1,21 @@
+Circular dependencies detected (3):
+1:
+    ModuleA.a -> ProviderA.provide_a(..., param1: ModuleB.b)
+    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
+    ModuleC.c -> ProviderC.provide_c(..., param3: ModuleA.a)
+
+2:
+    ModuleC.c -> ProviderC.provide_c(..., param3: ModuleA.a)
+    ModuleA.a -> ProviderA.provide_a(..., param1: ModuleB.b)
+    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
+
+3:
+    ModuleB.b -> ProviderB.provide_b(..., param2: ModuleC.c)
+    ModuleC.c -> ProviderC.provide_c(..., param3: ModuleA.a)
+    ModuleA.a -> ProviderA.provide_a(..., param1: ModuleB.b)
+
+
+Providers involved:
+    - ProviderB: "src/seamful/application/test_container.py"
+    - ProviderA: "src/seamful/application/test_container.py"
+    - ProviderC: "src/seamful/application/test_container.py"

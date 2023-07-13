@@ -1,0 +1,7 @@
+Provider 'SomeProvider' provides for 'Module'
+
+    class SomeProvider(Provider, module=Module)
+        ...
+
+But Module is the base class for all Modules, not an actual module.
+SomeProvider: "src/seamful/provider/test_provider.py"

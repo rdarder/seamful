@@ -1,0 +1,15 @@
+In provider method
+
+    AnotherProvider.provide_a(..., b: SomeProvider.b, ...) -> int
+
+Parameter 'b' is a resource from a base provider SomeProvider
+
+    SomeProvider.b = Resource(int, ResourceKind.PRIVATE)
+
+Referring providers of a parent provider is not supported. It's likely that you
+intended to refer to AnotherProvider.b. If that's the case, you should write it
+as:
+
+    AnotherProvider.provide_a(..., b: int, ...) -> int
+
+AnotherProvider: "src/seamful/provider/test_provider.py"

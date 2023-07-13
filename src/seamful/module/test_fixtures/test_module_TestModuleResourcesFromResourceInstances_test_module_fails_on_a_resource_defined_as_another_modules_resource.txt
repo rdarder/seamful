@@ -1,0 +1,12 @@
+Module 'AnotherModule' defines as an attribute 'b':
+
+    class AnotherModule(Module):
+        b = SomeModule.a
+
+Which refers to another module's resource. Resources cannot be reused. It's
+likely that you indented:
+
+    class AnotherModule(Module):
+        b = Resource(int)
+
+AnotherModule: "src/seamful/module/test_module.py"

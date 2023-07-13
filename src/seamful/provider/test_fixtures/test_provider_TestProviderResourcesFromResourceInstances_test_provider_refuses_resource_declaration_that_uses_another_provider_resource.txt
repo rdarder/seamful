@@ -1,0 +1,13 @@
+Provider 'AnotherProvider' defines resource b as another, existing resource.
+
+    class AnotherProvider(Provider, module=SomeModule):
+        ...
+        b = SomeProvider.a
+
+But it's not a valid resource definition. A Provider's Resource cannot be
+defined as an already existing Resource. An equivalent, valid definition would
+be:
+
+    b = Resource(int, ResourceKind.PRIVATE)
+
+AnotherProvider: "src/seamful/provider/test_provider.py"

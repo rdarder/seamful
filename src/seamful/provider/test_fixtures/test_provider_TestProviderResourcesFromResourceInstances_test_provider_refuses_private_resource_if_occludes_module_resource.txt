@@ -1,0 +1,8 @@
+Provider 'SomeProvider' defines resource a as
+
+    a = Resource(int, ResourceKind.PRIVATE)
+
+But 'SomeProvider' provides for 'SomeModule', which also has a resource named
+'a'. Private resource names cannot occlude its module resources.
+
+SomeProvider: "src/seamful/provider/test_provider.py"

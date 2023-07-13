@@ -1,0 +1,13 @@
+The provider method
+
+    AnotherProvider.provide_some() -> SomeClass
+
+provides for
+
+    AnotherProvider.some = Resource(ConcreteClass, ResourceKind.PRIVATE)
+
+But the method's return type annotation 'SomeClass' is not compatible with
+'ConcreteClass'
+So the return type must be compatible with 'ConcreteClass'
+
+AnotherProvider: "src/seamful/provider/test_provider.py"

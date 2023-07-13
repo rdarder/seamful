@@ -1,0 +1,8 @@
+Requested 'SomeProvider' provider method for
+
+    AnotherModule.a = Resource(int)
+
+But 'SomeProvider' provides for 'SomeModule', not 'AnotherModule'
+
+SomeProvider: "src/seamful/provider/test_provider.py"
+AnotherModule: "src/seamful/provider/test_provider.py"

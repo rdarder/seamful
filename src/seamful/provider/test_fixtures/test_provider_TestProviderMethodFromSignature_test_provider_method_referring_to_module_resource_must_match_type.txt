@@ -1,0 +1,11 @@
+In provider method
+
+    SomeProvider.provide_a(..., b: str, ...) -> int
+
+Parameter 'b' seems to refer to the resource:
+
+    SomeModule.b = Resource(int)
+
+But the parameter type for b: str is not compatible with the resource type: int
+
+SomeProvider: "src/seamful/provider/test_provider.py"

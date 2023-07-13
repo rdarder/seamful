@@ -1,0 +1,10 @@
+Provider 'SomeProvider' defines resource 'a' as
+
+    a = Resource(ConcreteClass, kind=ResourceKind.MODULE)
+
+But providers can only have overriding or private resources. If you meant to
+override a module resource, you could do:
+
+    a = Resource(ConcreteClass, ResourceKind.OVERRIDE)
+
+SomeProvider: "src/seamful/provider/test_provider.py"

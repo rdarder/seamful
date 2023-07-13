@@ -1,0 +1,10 @@
+Provider 'SomeProvider' defines resource 'a' as
+
+    a = Resource(int, kind=ResourceKind.MODULE)
+
+But providers can only have overriding or private resources. If you meant to
+define a private resource, you could do:
+
+    a = Resource(int, ResourceKind.PRIVATE)
+
+SomeProvider: "src/seamful/provider/test_provider.py"

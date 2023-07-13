@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "modular"
+name = "seamful"
 version = "0.1.0"
 description = "Dependency management for python"
 authors = ["Rafael Darder <darder@gmail.com>"]
@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,0 +1,7 @@
+Provider 'SomeProvider' provides for '10'
+
+    class SomeProvider(Provider, module=10)
+        ...
+
+but '10' is not a Module.
+SomeProvider: "src/seamful/provider/test_provider.py"
