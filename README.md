@@ -68,9 +68,9 @@ application.install_module(PaymentsModule, PaymentsProvider)
 application.ready()
 ```
 
-Once a application registered some modules and providers, it can become ready for providing resources. `application.ready()` checks that the module resources can be built by following the dependency graphs of the providers, which usually become more complex than the example above.
+Once a application installed some modules and providers, it can become ready for providing resources. `application.ready()` checks that the module resources can be built by following the dependency graphs of the providers, which usually become more complex than the example above.
 
-The application can be built and registered as a pubilc, global variable in your application. Then, in the entry points of your application you can import that application and ask for any of the registered modules resources. For example:
+The application can be built and configured as a pubilc, global variable in your application. Then, in the entry points of your application you can import that application and ask for any of the registered modules resources. For example:
 
 ```python
 

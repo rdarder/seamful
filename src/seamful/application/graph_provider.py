@@ -1,10 +1,10 @@
 from typing import Any, cast, TypeVar, Set, Dict
 
 from seamful.application.errors import (
-    ModuleNotRegisteredForResource,
+    ModuleNotInstalledForResource,
     InvalidProviderInstanceAccess,
     ProviderMethodsCantAccessProviderInstance,
-    ProviderResourceOfUnregisteredProvider,
+    ProviderResourceOfNotInstalledProvider,
 )
 from seamful.module.module_type import ModuleType
 from seamful.provider.provider_type import ProviderType
@@ -26,11 +26,11 @@ class ProviderResourcesNotAllowed(Exception):
 class ModuleGraphProvider:
     def __init__(
         self,
-        registered_modules: Set[ModuleType],
+        installed_modules: Set[ModuleType],
         providers_by_module: Dict[ModuleType, ProviderType],
         allow_provider_resources: bool,
     ):
-        self._registered_modules = registered_modules
+        self._installed_modules = installed_modules
         self._providers = providers_by_module
         self._instances_by_resource: Dict[BoundResource[Any], Any] = {}
         self._fake_provider_instance = UnusableProviderInstance()
@@ -44,7 +44,7 @@ class ModuleGraphProvider:
             if not self._allow_provider_resources:
                 raise ProviderResourcesNotAllowed(resource)
             if resource.provider is not self._providers[resource.provider.module]:
-                raise ProviderResourceOfUnregisteredProvider(
+                raise ProviderResourceOfNotInstalledProvider(
                     resource, self._providers[resource.provider.module]
                 )
             return self._provide(cast(ProviderResource[T], resource))
@@ -52,10 +52,10 @@ class ModuleGraphProvider:
             raise TypeError()
 
     def _ensure_known_module(self, resource: BoundResource[Any]) -> None:
-        if resource.module not in self._registered_modules:
-            raise ModuleNotRegisteredForResource(
+        if resource.module not in self._installed_modules:
+            raise ModuleNotInstalledForResource(
                 resource,
-                self._registered_modules,
+                self._installed_modules,
                 set(self._providers.keys()),
             )
 

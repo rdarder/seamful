@@ -69,16 +69,16 @@ class Application:
 
         1. If `install_module()` was called with a module _and_ a provider, it uses that one.
         2. If instead the provider was set through `install_provider()`, it uses that one.
-        3. If the provider was not explicitly registered, but it has a default provider
+        3. If the provider was not explicitly installed, but it has a default provider
         (Module.default_provider), it uses that one.
 
-        A module can only be registered once. There's no need to install a module that will not be
+        A module can only be installed once. There's no need to install a module that will not be
         explicitly provided by `provide()`.
 
         The api is rather strict in that it disallows registering modules or providers multiple
         times.
         The intent is to make it very hard to make complex setups.
-        There should be one simple set of modules registered for an application, and a subset of
+        There should be one simple set of modules installed for an application, and a subset of
         those modules having special providers for running in non production scenarios, such as
         testing or local development.
 
@@ -97,15 +97,15 @@ class Application:
     def install_provider(self, provider: ProviderType) -> None:
         """Instruct the application to use the given provider.
 
-        In most cases, modules are registered alongside their providers via
+        In most cases, modules are installed alongside their providers via
         `install_module(module, provider)`
 
         The two main scenarios where `install_provider()` is useful are:
 
-        - A module was registered through `install_module()` without setting its provider, and it
+        - A module was installed through `install_module()` without setting its provider, and it
         doesn't have a default provider (or it's not appropriate for the given application).
 
-        - A module has a provider already registered, but during tests or other alternative
+        - A module has a provider already installed, but during tests or other alternative
         scenarios, the application is `tamper()`ed to override some of those providers.
 
         See `tamper()` for a more subtle third use case.
@@ -119,7 +119,7 @@ class Application:
         )
 
     def ready(self, allow_provider_resources: bool = False) -> None:
-        """Make the application ready to provide resources for the registered modules.
+        """Make the application ready to provide resources for the installed modules.
 
         Calling `ready()` transitions the application from being registering modules to
         being available to provide resources.
@@ -167,7 +167,7 @@ class Application:
         An application builds resources at most once, meaning that two separate calls to
         `provide()` for the same resource will yield the same object.
 
-        The resource's Module must have been registered explicitly via `install_module()`.
+        The resource's Module must have been installed explicitly via `install_module()`.
         Otherwise, it'll raise an error.
         """
         if self._is_registering:

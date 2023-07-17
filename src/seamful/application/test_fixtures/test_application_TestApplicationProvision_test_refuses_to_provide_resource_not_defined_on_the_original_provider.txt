@@ -1,5 +1,4 @@
-Requested to provide AnotherProvider.b, but 'AnotherProvider' was not
-registered.
+Requested to provide AnotherProvider.b, but 'AnotherProvider' was not installed.
 
 'AnotherProvider' provides for 'SomeModule', but that module is being provided
 by 'SomeProvider'.

@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import TypeVar
 
 from seamful.application.errors import (
-    ModuleAlreadyRegistered,
-    CannotOverrideRegisteredProvider,
+    ModuleAlreadyInstalled,
+    CannotOverrideInstalledProvider,
 )
 from seamful.application.graph_provider import ModuleGraphProvider
 from seamful.application.graph_solver import ModuleGraphSolver
@@ -22,16 +22,16 @@ class Registry:
 
     def register_module(self, module: ModuleType) -> None:
         if module in self._explicit_modules:
-            raise ModuleAlreadyRegistered(module, self._explicit_modules)
+            raise ModuleAlreadyInstalled(module, self._explicit_modules)
 
         self._explicit_modules.add(module)
 
     def register_provider(self, provider: ProviderType, allow_override: bool) -> None:
         module = provider.module
         if module in self._explicit_providers and not allow_override:
-            raise CannotOverrideRegisteredProvider(
+            raise CannotOverrideInstalledProvider(
                 module,
-                registered=self._explicit_providers[module],
+                installed=self._explicit_providers[module],
                 registering=provider,
             )
         self._explicit_providers[module] = provider

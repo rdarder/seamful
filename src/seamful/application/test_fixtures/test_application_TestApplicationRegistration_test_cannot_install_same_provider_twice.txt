@@ -1,1 +1,1 @@
-Attempted to install provider 'SomeProvider' which is already registered.
+Attempted to install provider 'SomeProvider' which is already installed.

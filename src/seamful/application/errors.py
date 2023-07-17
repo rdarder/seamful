@@ -12,45 +12,45 @@ if TYPE_CHECKING:
     from seamful.application import Application
 
 
-class ModuleNotRegisteredForResource(HelpfulException):
+class ModuleNotInstalledForResource(HelpfulException):
     def __init__(
         self,
         resource: BoundResource[Any],
-        registered_modules: set[ModuleType],
+        installed_modules: set[ModuleType],
         known_modules: set[ModuleType],
     ):
         self.resource = resource
-        self.registered_modules = registered_modules
+        self.installed_modules = installed_modules
         self.known_modules = known_modules
 
     def explanation(self) -> str:
         t = Text("Attempted to provide for resource:")
         t.indented_line(rdef(self.resource))
-        t.newline("Which doesn't belong to any registered module. Registered modules are:")
+        t.newline("Which doesn't belong to any installed module. Installed modules are:")
         with t.indented_block(blank_before=False):
-            for module in self.registered_modules:
+            for module in self.installed_modules:
                 t.newline(f"- {sname(module)}")
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Attempted to provide for resource that does not belong to any registered module."
+        return "Attempted to provide for resource that does not belong to any installed module."
 
 
-class ModuleAlreadyRegistered(HelpfulException):
-    def __init__(self, module: ModuleType, registered_modules: set[ModuleType]):
+class ModuleAlreadyInstalled(HelpfulException):
+    def __init__(self, module: ModuleType, instaled_modules: set[ModuleType]):
         self.module = module
-        self.registered_modules = registered_modules
+        self.installed_modules = instaled_modules
 
     def explanation(self) -> str:
         t = Text(f"Attempted to install module {qname(self.module)}")
-        t.sentence("which is already registered. Registered modules are:")
+        t.sentence("which is already installed. Installed modules are:")
         with t.indented_block(blank_before=False):
-            for module in self.registered_modules:
+            for module in self.installed_modules:
                 t.newline(f"- {sname(module)}")
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Attempted to install module that is already registered."
+        return "Attempted to install module that is already installed."
 
 
 class ProviderModuleMismatch(HelpfulException):
@@ -76,20 +76,20 @@ class ProviderModuleMismatch(HelpfulException):
         )
 
 
-class CannotOverrideRegisteredProvider(HelpfulException):
-    def __init__(self, module: ModuleType, *, registered: ProviderType, registering: ProviderType):
+class CannotOverrideInstalledProvider(HelpfulException):
+    def __init__(self, module: ModuleType, *, installed: ProviderType, registering: ProviderType):
         self.module = module
-        self.registered = registered
+        self.installed = installed
         self.registering = registering
 
     def explanation(self) -> str:
         t = Text(f"Attempted to install provider {qname(self.registering)}")
-        if self.registered is self.registering:
-            t.sentence("which is already registered.")
+        if self.installed is self.registering:
+            t.sentence("which is already installed.")
         else:
             t.sentence(
                 f"which provides for {qname(self.module)}, "
-                f"but {qname(self.registered)} was already registered as its provider."
+                f"but {qname(self.installed)} was already installed as its provider."
             )
 
             t.blank()
@@ -108,21 +108,20 @@ class CannotOverrideRegisteredProvider(HelpfulException):
 
     def failsafe_explanation(self) -> str:
         return (
-            "Attempted to install a provider for a module that already "
-            "has a registered provider."
+            "Attempted to install a provider for a module that already " "has a installed provider."
         )
 
 
-class ModuleWithoutRegisteredOrDefaultProvider(HelpfulException):
+class ModuleWithoutInstalledOrDefaultProvider(HelpfulException):
     def __init__(self, module: ModuleType):
         self.module = module
 
     def explanation(self) -> str:
-        t = Text(f"Module {qname(self.module)} has no registered or default provider.")
+        t = Text(f"Module {qname(self.module)} has no installed or default provider.")
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "A registered module has no registered or default provider."
+        return "A installed module has no installed or default provider."
 
 
 class CannotProvideUntilApplicationIsReady(HelpfulException):
@@ -313,18 +312,18 @@ class CannotTamperAfterHavingProvidedResources(HelpfulException):
         return "Attempted tamper with a application, but it has already provided resources."
 
 
-class RegisteredProvidersNotUsed(HelpfulException):
+class InstalledProvidersNotUsed(HelpfulException):
     def __init__(self, providers: set[ProviderType]):
         self.providers = providers
 
     def explanation(self) -> str:
-        t = Text("The following providers were registered, but not used:")
+        t = Text("The following providers were installed, but not used:")
         with t.indented_block():
             for provider in self.providers:
                 t.newline(f"- {point_to_definition(provider)}")
 
         t.newline(
-            "Those providers were explicitly registered, "
+            "Those providers were explicitly installed, "
             "but the modules they provide for were not, "
             "and those modules are also not part "
             "of the dependency graph of any other used provider"
@@ -332,10 +331,10 @@ class RegisteredProvidersNotUsed(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Some registered providers were not used."
+        return "Some installed providers were not used."
 
 
-class ProviderResourceOfUnregisteredProvider(HelpfulException):
+class ProviderResourceOfNotInstalledProvider(HelpfulException):
     def __init__(self, resource: ProviderResource[Any], provider_in_use: ProviderType):
         self.resource = resource
         self.provider_in_use = provider_in_use
@@ -344,7 +343,7 @@ class ProviderResourceOfUnregisteredProvider(HelpfulException):
         provider = self.resource.provider
         t = Text(
             f"Requested to provide {rname(self.resource)}, "
-            f"but {qname(provider)} was not registered."
+            f"but {qname(provider)} was not installed."
         )
 
         t.blank()
@@ -357,7 +356,7 @@ class ProviderResourceOfUnregisteredProvider(HelpfulException):
         return str(t)
 
     def failsafe_explanation(self) -> str:
-        return "Requested to provide a resource of an unregistered provider."
+        return "Requested to provide a resource of a non installed provider."
 
 
 class CannotTamperWithApplicationTwice(HelpfulException):

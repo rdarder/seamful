@@ -1,10 +1,10 @@
 from typing import Any, Optional, cast, Dict, Set, List
 
 from seamful.application.errors import (
-    ModuleWithoutRegisteredOrDefaultProvider,
+    ModuleWithoutInstalledOrDefaultProvider,
     CircularDependency,
     ResolutionStep,
-    RegisteredProvidersNotUsed,
+    InstalledProvidersNotUsed,
 )
 from seamful.application.graph_provider import ModuleGraphProvider
 from seamful.module.module_type import ModuleType
@@ -20,14 +20,14 @@ from seamful.resource import (
 class ModuleGraphSolver:
     def __init__(
         self,
-        registered_modules: Set[ModuleType],
-        registered_providers: Dict[ModuleType, ProviderType],
+        installed_modules: Set[ModuleType],
+        installed_providers: Dict[ModuleType, ProviderType],
     ):
-        self._registered_modules = registered_modules
+        self._installed_modules = installed_modules
 
         self._providers_by_module: Dict[ModuleType, ProviderType] = {}
-        self._needed_modules_without_providers: Set[ModuleType] = registered_modules.copy()
-        self._unused_providers_by_module = registered_providers.copy()
+        self._needed_modules_without_providers: Set[ModuleType] = installed_modules.copy()
+        self._unused_providers_by_module = installed_providers.copy()
 
     def solve(self, allow_provider_resources: bool) -> ModuleGraphProvider:
         while len(self._needed_modules_without_providers) > 0:
@@ -40,7 +40,7 @@ class ModuleGraphSolver:
         self._fail_on_circular_dependencies()
         self._fail_on_unused_implicit_modules()
         return ModuleGraphProvider(
-            self._registered_modules,
+            self._installed_modules,
             self._providers_by_module,
             allow_provider_resources,
         )
@@ -51,7 +51,7 @@ class ModuleGraphSolver:
         elif module.default_provider is not None:
             return module.default_provider
         else:
-            raise ModuleWithoutRegisteredOrDefaultProvider(module)
+            raise ModuleWithoutInstalledOrDefaultProvider(module)
 
     def _add_modules_needed_by_provider(self, provider: ProviderType) -> None:
         for provider_method in provider:
@@ -62,7 +62,7 @@ class ModuleGraphSolver:
     def _fail_on_circular_dependencies(self) -> None:
         solved: set[BoundResource[Any]] = set()
         loops: list[list[ResolutionStep]] = []
-        for module in self._registered_modules:
+        for module in self._installed_modules:
             for resource in module:
                 stack: set[BoundResource[Any]] = set()
                 loop = self._find_circular_dependency(resource, in_stack=stack, solved=solved)
@@ -108,4 +108,4 @@ class ModuleGraphSolver:
 
     def _fail_on_unused_implicit_modules(self) -> None:
         if len(self._unused_providers_by_module) > 0:
-            raise RegisteredProvidersNotUsed(set(self._unused_providers_by_module.values()))
+            raise InstalledProvidersNotUsed(set(self._unused_providers_by_module.values()))
