@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "seamful"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dependency management for python"
 authors = ["Rafael Darder <darder@gmail.com>"]
 license = "MIT"
