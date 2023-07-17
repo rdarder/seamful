@@ -84,26 +84,23 @@ class CannotOverrideInstalledProvider(HelpfulException):
 
     def explanation(self) -> str:
         t = Text(f"Attempted to install provider {qname(self.registering)}")
-        if self.installed is self.registering:
-            t.sentence("which is already installed.")
-        else:
-            t.sentence(
-                f"which provides for {qname(self.module)}, "
-                f"but {qname(self.installed)} was already installed as its provider."
-            )
+        t.sentence(
+            f"which provides for {qname(self.module)}, "
+            f"but {qname(self.installed)} was already installed as its provider."
+        )
 
-            t.blank()
+        t.blank()
 
-            t.newline(
-                "Overriding providers is not allowed. You can enable overriding a provider "
-                "after the application is ready tampering with it:"
-            )
-            t.indented_line("application.tamper(allow_overrides=True)")
-            t.blank()
-            t.newline(
-                "Keep in mind that overriding providers is mostly meant for testing "
-                "and alternative running scenarios."
-            )
+        t.newline(
+            "Overriding providers is not allowed. You can enable overriding a provider "
+            "after the application is ready tampering with it:"
+        )
+        t.indented_line("application.tamper(allow_overrides=True)")
+        t.blank()
+        t.newline(
+            "Keep in mind that overriding providers is mostly meant for testing "
+            "and alternative running scenarios."
+        )
         return str(t)
 
     def failsafe_explanation(self) -> str:

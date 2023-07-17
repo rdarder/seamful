@@ -28,7 +28,9 @@ class Registry:
 
     def register_provider(self, provider: ProviderType, allow_override: bool) -> None:
         module = provider.module
-        if module in self._explicit_providers and not allow_override:
+        installed_provider = self._explicit_providers.get(module)
+        is_overriding = installed_provider is not None and installed_provider is not provider
+        if is_overriding and not allow_override:
             raise CannotOverrideInstalledProvider(
                 module,
                 installed=self._explicit_providers[module],

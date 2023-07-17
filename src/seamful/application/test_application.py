@@ -1,4 +1,6 @@
+import sys
 from typing import Sequence, Type, cast, TypeVar, List
+from unittest import skipIf
 
 from seamful.errors import HelpfulException
 from seamful.module import Module
@@ -468,24 +470,6 @@ class TestApplicationRegistration(TestCaseWithOutputFixtures):
         return ctx.exception
 
     @validate_output
-    def test_cannot_install_same_provider_twice(self) -> HelpfulException:
-        class SomeModule(Module):
-            pass
-
-        class SomeProvider(Provider, module=SomeModule):
-            pass
-
-        application = Application.empty()
-        application.install_module(SomeModule, SomeProvider)
-        with self.assertRaises(CannotOverrideInstalledProvider) as ctx:
-            application.install_provider(SomeProvider)
-
-        self.assertEqual(ctx.exception.module, SomeModule)
-        self.assertEqual(ctx.exception.installed, SomeProvider)
-        self.assertEqual(ctx.exception.registering, SomeProvider)
-        return ctx.exception
-
-    @validate_output
     def test_cant_install_module_after_ready(self) -> HelpfulException:
         class SomeModule(Module):
             pass
@@ -773,6 +757,67 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
         with self.assertRaises(ModuleNotInstalledForResource) as ctx:
             application.provide(AnotherModule.b)
         return ctx.exception
+
+    @skipIf(sys.version_info < (3, 10), "Type aliases are not supported")
+    def test_can_install_private_provider_twice(self) -> None:
+        """Private provider installs can happen in different, isolated places, thus repeated.
+
+        A common use case is to have a library or third party module that has an "install_x"
+        function that installs the providers for the exposed modules, so one can depend on those
+        modules. Different libraries may depend on a common one that itself exposes an install_x
+        function, that would be called more than once when setting up each of the depending
+        libraries. It makes sense to allow each library to provide its self-contained setup
+        and not raise an error when the same provider is registered more than once, as long as
+        it's used by any of the installed modules.
+        """
+
+        from typing import TypeAlias
+
+        class CoreModule(Module):
+            a: TypeAlias = int
+
+        class CoreProvider(Provider, module=CoreModule):
+            def provide_a(self) -> int:
+                return 10
+
+        def use_core(app: Application) -> None:
+            app.install_provider(CoreProvider)
+
+        class SomeLibraryModule(Module):
+            b: TypeAlias = int
+
+        class SomeLibraryProvider(Provider, module=SomeLibraryModule):
+            def provide_b(self, base: CoreModule.a) -> int:
+                return base + 1
+
+        def use_some_library(app: Application) -> None:
+            app.install_provider(SomeLibraryProvider)
+            use_core(app)
+
+        class AnotherLibraryModule(Module):
+            c: TypeAlias = int
+
+        class AnotherLibraryProvider(Provider, module=AnotherLibraryModule):
+            def provide_c(self, base: CoreModule.a) -> int:
+                return base + 2
+
+        def use_another_library(app: Application) -> None:
+            app.install_provider(AnotherLibraryProvider)
+            use_core(app)
+
+        class AppModule(Module):
+            d: TypeAlias = int
+
+        class AppProvider(Provider, module=AppModule):
+            def provide_d(self, some: SomeLibraryModule.b, another: AnotherLibraryModule.c) -> int:
+                return some + another + 1
+
+        app = Application.empty()
+        app.install_module(AppModule, AppProvider)
+        use_some_library(app)
+        use_another_library(app)
+        app.ready()
+        self.assertEqual(app.provide(AppModule.d), 24)
 
     @validate_output
     def test_cant_install_private_provider_if_module_is_not_used(self) -> HelpfulException:
