@@ -3,7 +3,6 @@ from typing import TypeVar
 
 from seamful.application.errors import (
     ModuleAlreadyRegistered,
-    CannotRegisterProviderToNotRegisteredModule,
     CannotOverrideRegisteredProvider,
 )
 from seamful.application.graph_provider import ModuleGraphProvider
@@ -27,12 +26,8 @@ class Registry:
 
         self._explicit_modules.add(module)
 
-    def register_provider(
-        self, provider: ProviderType, allow_override: bool, allow_implicit_module: bool
-    ) -> None:
+    def register_provider(self, provider: ProviderType, allow_override: bool) -> None:
         module = provider.module
-        if module not in self._explicit_modules and not allow_implicit_module:
-            raise CannotRegisterProviderToNotRegisteredModule(provider, self._explicit_modules)
         if module in self._explicit_providers and not allow_override:
             raise CannotOverrideRegisteredProvider(
                 module,

@@ -35,7 +35,7 @@ class Application:
     which is meant to be used solely on these alternative setups (typically in `TestCase.setUp()`)
 
     The methods of an Application have rather strict rules on when they can be called. This is
-    because an Appplicatio is really two different things bundled together:
+    because an Application is really two different things bundled together:
 
      - A registry for modules and providers.
      - A factory for those module resources.
@@ -92,7 +92,6 @@ class Application:
             self._registry.register_provider(
                 provider,
                 allow_override=self._allow_overrides,
-                allow_implicit_module=False,
             )
 
     def install_provider(self, provider: ProviderType) -> None:
@@ -117,7 +116,6 @@ class Application:
         self._registry.register_provider(
             provider,
             allow_override=self._allow_overrides,
-            allow_implicit_module=self._allow_implicit_modules,
         )
 
     def ready(self, allow_provider_resources: bool = False) -> None:
@@ -189,7 +187,6 @@ class Application:
         self,
         *,
         allow_overrides: bool = False,
-        allow_implicit_modules: bool = False,
     ) -> None:
         """Tamper with a ready application. Useful for changing providers when testing.
 
@@ -207,14 +204,12 @@ class Application:
 
         - An explicitly set provider can be overriden by using install_provider() when
         allow_overrides=True. (Default providers can always be overriden when tampering.)
-        - A provider can be set for a non explicitly registered module when
-        allow_implicit_modules=True
 
         After tampering with an application, calling `ready()` again is needed for it to be
         ready for providing resources.
 
         Note that an application cannot be tampered many times in sequence. Once tampered (and
-        possibly having used module reources), an application can go back to it's original state
+        possibly having used module resources), an application can go back to its original state
         via restore().
         """
         if self._is_providing:
@@ -228,10 +223,9 @@ class Application:
         self._provider = None
         self._is_registering = True
         self._allow_overrides = allow_overrides
-        self._allow_implicit_modules = allow_implicit_modules
 
     def restore(self) -> None:
-        """Restores the state of an application that was tampered with to it's previous state.
+        """Restores the state of an application that was tampered with to its previous state.
 
         This effectively undoes all the module and provider registrations and overrides that
         happened after calling tamper().

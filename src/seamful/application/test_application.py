@@ -7,7 +7,6 @@ from seamful.application.errors import (
     ModuleNotRegisteredForResource,
     ModuleAlreadyRegistered,
     ProviderModuleMismatch,
-    CannotRegisterProviderToNotRegisteredModule,
     CannotOverrideRegisteredProvider,
     ModuleWithoutRegisteredOrDefaultProvider,
     CannotProvideUntilApplicationIsReady,
@@ -741,7 +740,15 @@ class TestApplicationTampering(TestCaseWithOutputFixtures):
 
 class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
     @validate_output
-    def test_cant_install_implicit_provider(self) -> HelpfulException:
+    def test_can_install_private_provider_if_module_is_used(self) -> HelpfulException:
+        """An application that doesn't install a module may transitively depend on it.
+
+        In those cases, one should be able to install a provider for that module without
+        installing the module. This results on the resources of the module being available
+        for the provider that depends on it, but application.provide() will refuse to
+        provide that resource.
+        """
+
         class SomeModule(Module):
             a = Resource(int)
 
@@ -758,11 +765,35 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
 
         application = Application.empty()
         application.install_module(SomeModule, SomeProvider)
-        with self.assertRaises(CannotRegisterProviderToNotRegisteredModule) as ctx:
-            application.install_provider(AnotherProvider)
+        application.install_provider(AnotherProvider)
+        application.ready()
 
-        self.assertEqual(ctx.exception.provider, AnotherProvider)
-        self.assertEqual(ctx.exception.registered_modules, {SomeModule})
+        self.assertEqual(application.provide(SomeModule.a), 11)
+
+        with self.assertRaises(ModuleNotRegisteredForResource) as ctx:
+            application.provide(AnotherModule.b)
+        return ctx.exception
+
+    @validate_output
+    def test_cant_install_private_provider_if_module_is_not_used(self) -> HelpfulException:
+        """When installing a provider without its module must transitively depend on the module.
+
+        An application may install a provider for a non installed module, but the application will
+        refuse to become ready unless the module is transitively used by another provider.
+        """
+
+        class SomeModule(Module):
+            a = Resource(int)
+
+        class SomeProvider(Provider, module=SomeModule):
+            def provide_a(self) -> int:
+                return 10
+
+        app = Application.empty()
+        app.install_provider(SomeProvider)
+        with self.assertRaises(RegisteredProvidersNotUsed) as ctx:
+            app.ready()
+
         return ctx.exception
 
     def test_can_install_implicit_provider_if_reopened_explicitly_and_module_is_used(
@@ -791,7 +822,7 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
         application = Application.empty()
         application.install_module(Module1, Provider1)
         application.ready()
-        application.tamper(allow_overrides=True, allow_implicit_modules=True)
+        application.tamper(allow_overrides=True)
         application.install_provider(AnotherProvider2)
         application.ready()
         self.assertEqual(application.provide(Module1.a), 12)
@@ -809,7 +840,7 @@ class TestApplicationImplicitProviders(TestCaseWithOutputFixtures):
 
         application = Application.empty()
         application.ready()
-        application.tamper(allow_overrides=True, allow_implicit_modules=True)
+        application.tamper(allow_overrides=True)
         application.install_provider(SomeProvider)
         with self.assertRaises(RegisteredProvidersNotUsed) as ctx:
             application.ready()

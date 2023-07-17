@@ -1,0 +1,4 @@
+Attempted to provide for resource:
+    AnotherModule.a = Resource(int)
+Which doesn't belong to any registered module. Registered modules are:
+    - SomeModule

@@ -1,0 +1,7 @@
+Attempted to tamper with a application, but it's not ready yet.
+Registrations on a application are open until the application is ready for
+providing. Only once the application is ready for providing, registrations will
+be closed, and then they can only be enabled again by calling
+application.tamper().
+Keep in mind that reopening a application is meant for testing or alternative
+scenarios

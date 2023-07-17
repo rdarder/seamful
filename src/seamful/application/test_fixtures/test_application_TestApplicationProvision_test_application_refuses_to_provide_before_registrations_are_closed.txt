@@ -1,0 +1,3 @@
+Attempted to provide a resource before application is ready for providing. You
+can make the application ready by calling:
+    application.ready()

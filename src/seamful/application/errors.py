@@ -76,39 +76,6 @@ class ProviderModuleMismatch(HelpfulException):
         )
 
 
-class CannotRegisterProviderToNotRegisteredModule(HelpfulException):
-    def __init__(self, provider: ProviderType, registered_modules: set[ModuleType]):
-        self.provider = provider
-        self.registered_modules = registered_modules
-
-    def explanation(self) -> str:
-        t = Text(f"Attempted to install provider {qname(self.provider)}")
-        t.sentence(
-            f"which provides for {qname(self.provider.module)}, "
-            f"which is not registered. Registered modules are:"
-        )
-        with t.indented_block(blank_before=False):
-            for module in self.registered_modules:
-                t.newline(f"- {sname(module)}")
-        t.newline(
-            "Registering providers for implicit modules is only meant to be used for "
-            "testing and secondary scenarios, and can be enabled by tampering with the application:"
-        )
-        t.indented_line("application.tamper(allow_implicit_modules=True)")
-        t.blank()
-        t.newline(
-            "If instead, the application is expected to provide resources for "
-            f"{qname(self.provider.module)}, you can register both at once by calling:"
-        )
-        t.indented_line(
-            f"application.register({sname(self.provider.module)}, provider={sname(self.provider)})"
-        )
-        return str(t)
-
-    def failsafe_explanation(self) -> str:
-        return "Attempted to install a provider for a module that is not registered."
-
-
 class CannotOverrideRegisteredProvider(HelpfulException):
     def __init__(self, module: ModuleType, *, registered: ProviderType, registering: ProviderType):
         self.module = module

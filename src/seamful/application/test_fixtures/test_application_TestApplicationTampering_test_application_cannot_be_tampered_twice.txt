@@ -1,0 +1,3 @@
+Attempted to tamper with a application twice.
+A application can be tampered once and used to provide resources, but it needs
+to be restore()'d before it can be tampered with again.

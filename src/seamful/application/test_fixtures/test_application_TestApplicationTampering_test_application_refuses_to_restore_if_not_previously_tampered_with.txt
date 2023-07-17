@@ -1,0 +1,3 @@
+Attempted to restore a application that was not tampered with, or one that was
+already restored
+A application can only be restored if it was tampered with before.
