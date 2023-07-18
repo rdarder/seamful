@@ -5,21 +5,41 @@ from functools import wraps
 from pathlib import Path
 from typing import Callable, Any, Type, TypeVar, Tuple
 from unittest import TestCase
+from seamful import errors as seamful_errors
 
 
 class TestCaseWithOutputFixtures(TestCase):
+    """Test case that compares a test method return value with a fixture.
+
+    While most of the fixture functionality is provided by @validate_output,
+    this adds support for regenerating fixture files and removing unused ones.
+    Since the fixture files include the test name as part of the file name, a test method
+    rename would need that fixture to be also renamed. In this case we just drop the original and
+    create a new one.
+
+    Note that this doesn't handle the case where we rename a whole test class. In those cases,
+    you'll need to remove all the associated fixtures and _then_ regenerate them.
+
+    This also patches seamful.errors.INCLUDE_DEFINITION_LINE to False. Using definition line
+    numbers in test error messages is prone to very often fixture edits, since any mid-file
+    edit to a test module will shift all the line numbers.
+    """
+
     maxDiff = 10_000
     regenerate_fixtures: bool
     fixture_location: Path
     fixture_prefix: str
+    original_include_definition_line: bool = seamful_errors.INCLUDE_DEFINITION_LINE
 
     @classmethod
     def setUpClass(cls) -> None:
+        seamful_errors.INCLUDE_DEFINITION_LINE = False
         cls.regenerate_fixtures = os.environ.get("REGENERATE_FIXTURES") is not None
         cls.fixture_location, cls.fixture_prefix = _get_fixture_location(cls)
 
     @classmethod
     def tearDownClass(cls) -> None:
+        seamful_errors.INCLUDE_DEFINITION_LINE = cls.original_include_definition_line
         if not cls.regenerate_fixtures:
             return
         used_fixtures = {

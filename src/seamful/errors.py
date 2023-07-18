@@ -143,12 +143,7 @@ def fname(value: Any) -> str:
         return str(value)
 
 
-if sys.version_info < (3, 9):
-    INCLUDE_DEFINITION_LINE = False
-elif os.environ.get("SEAMFUL_DISABLE_ERROR_DEFINITION_LINE") == "1":
-    INCLUDE_DEFINITION_LINE = False
-else:
-    INCLUDE_DEFINITION_LINE = True
+INCLUDE_DEFINITION_LINE = sys.version_info > (3, 9)
 
 
 def location(value: type) -> Optional[str]:
